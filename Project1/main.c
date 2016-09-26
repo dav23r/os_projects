@@ -1,5 +1,6 @@
 #include <stdio.h>
 #include <signal.h>
+#include "bool.h"
 
 void ignore (int sig){
     // do nothing
@@ -10,7 +11,7 @@ int main() {
         signal(SIGINT, ignore);
     if (signal(SIGTSTP, SIG_IGN) != SIG_IGN)
         signal(SIGINT, ignore);
-    while(1){
+    while(true){
 
 
 
