@@ -138,13 +138,9 @@ void tokenizer_dispose(tokenizer *this){
 	free(this->current_token);
 }
 
-static bool tokenizer_jump_over_patterns_from(tokenizer *this, const char **patterns){
-	while (true){
-		if ((*this->cursor) == '\0') return false;
-		int jump = string_find_pattern_from_strings(this->cursor, patterns, NULL);
-		if (jump > 0) this->cursor += jump;
-		else return true;
-	}
+static void tokenizer_jump_over_pattern_from(tokenizer *this, const char **patterns){
+    int jump = string_find_pattern_from_strings(this->cursor, patterns, NULL);
+    if (jump > 0) this->cursor += jump;
 }
 
 static bool tokenizer_move_replace_if_needed(tokenizer *this, char **token){
@@ -196,7 +192,6 @@ static bool tokenizer_move_jump_over_ignore_brackets(tokenizer *this){
 			}
 			else this->cursor++;
 		}
-		tokenizer_jump_over_patterns_from(this, this->delimiters);
 		return true;
 	}
 	else return false;
@@ -205,7 +200,7 @@ static bool tokenizer_move_jump_over_ignore_brackets(tokenizer *this){
 bool tokenizer_move_to_next(tokenizer *this){
 	char *token = this->current_token;
 	this->last_delimiter = NULL;
-	tokenizer_jump_over_patterns_from(this, this->delimiters);
+    tokenizer_jump_over_pattern_from(this, this->delimiters);
 	while (true){
 		if ((*this->cursor) == '\0') break;
 		if (!tokenizer_move_replace_if_needed(this, &token)){
@@ -218,16 +213,34 @@ bool tokenizer_move_to_next(tokenizer *this){
 		}
 	}
 	(*token) = '\0';
-	return (token != this->current_token);
+	return (token != this->current_token || (*this->cursor) != '\0');
 }
 char* tokenizer_get_next_token(tokenizer *this){
-	if (tokenizer_get_current_token(this))
+	if (tokenizer_move_to_next(this))
 		return this->current_token;
 	else return NULL;
 }
 char* tokenizer_get_current_token(tokenizer *this){
 	return this->current_token;
 }
+
+bool tokenizer_move_to_next_valid_token(tokenizer *this){
+    while(true){
+		if(!tokenizer_move_to_next(this)) return false;
+		else if((*tokenizer_get_current_token(this)) != '\0') return true;
+	}
+}
+
+char* tokenizer_get_next_valid_token(tokenizer *this){
+	if (tokenizer_move_to_next_valid_token(this))
+		return this->current_token;
+	else return NULL;
+}
+
 const char *tokenizer_get_last_delimiter(tokenizer *this){
 	return this->last_delimiter;
+}
+
+const char* tokenizer_get_cursor(tokenizer *this){
+	return this->cursor;
 }

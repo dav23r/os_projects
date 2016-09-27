@@ -2,6 +2,7 @@
 #ifndef __tokenizer__
 #define __tokenizer__
 #include "util.h"
+#include "bool.h"
 
 typedef struct{
 	const char *string;
@@ -41,8 +42,19 @@ char* tokenizer_get_next_token(tokenizer *this);
 		2. Freeing the returned value will cause undefined behaviour. */
 char* tokenizer_get_current_token(tokenizer *this);
 
+/** Returns true if gets to a token with non-zero length */
+bool tokenizer_move_to_next_valid_token(tokenizer *this);
+
+/** Moves to the next non-empty token(if available) and returns it(NULL if unable) */
+char* tokenizer_get_next_valid_token(tokenizer *this);
+
 /** Returns last delimiter (NULL if end of line)
 	Note: no need for free. */
 const char *tokenizer_get_last_delimiter(tokenizer *this);
+
+/** Retrieves the iterator to the first character from the string,
+	that is not yet a part of any previously returned token(pointer to the raw data)
+ 	Note: This might be useful, if one has to divide the string by some delimiters */
+const char* tokenizer_get_cursor(tokenizer *this);
 
 #endif

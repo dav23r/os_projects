@@ -4,7 +4,7 @@
 
 
 typedef struct{
-	int i // Temporary; may not compile if empty...
+	int i; // Temporary; may not compile if empty...
 } context;
 
 void context_init(context *this);
