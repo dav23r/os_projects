@@ -1,12 +1,13 @@
 
 #ifndef __tokenizer__
 #define __tokenizer__
+#include "util.h"
 
 typedef struct{
 	const char *string;
 	const char **delimiters;
-	const char **ignored_starts;
-	const char **ignored_ends;
+	const string_pair *ignored;
+	const string_pair *replacements;
 	const char *cursor;
 	char *current_token;
 	const char *last_delimiter;
@@ -16,10 +17,10 @@ typedef struct{
 	Notes:
 		1. Constructor copies both the string and the delimiters on heap
 			(so no worries aboud data being damaged or something);
-		2. delimiters, ignored_starts and ignored_ends sizes are determined
+		2. delimiters, ignored and replacements sizes are determined
 			from the number of strings in them before encountering NULL
 		3. tokenizer constructed with this function requires calling tokenizer_dispose() function. */
-bool tokenizer_init(tokenizer *this, const char *string, const char **delimiters, const char **ignored_starts, const char **ignored_ends);
+bool tokenizer_init(tokenizer *this, const char *string, const char **delimiters, const string_pair *ignored, const string_pair *replacements);
 
 /** Disposes of the tokenizer */
 void tokenizer_dispose(tokenizer *this);
