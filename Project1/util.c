@@ -4,6 +4,8 @@
 
 #ifndef PROJECT1_UTIL_C_H
 #define PROJECT1_UTIL_C_H
+#include "util.h"
+#include<string.h>
 
 //error handling from tutorialspoint.com
 void error_handler(int errnum, char * errmsg){
@@ -14,6 +16,29 @@ void error_handler(int errnum, char * errmsg){
 
 
 
+
+bool string_pair_init(string_pair *this, const char *a, const char *b){
+	if (a == NULL) this->a = NULL;
+	else this->a = strdup(a);
+	if (b == NULL) this->b = NULL;
+	else this->b = strdup(b);
+	if ((this->a == NULL && a != NULL) || (this->b == NULL && b != NULL)){
+		string_pair_dispose(this);
+		return false;
+	}
+	else return true;
+}
+void string_pair_dispose(string_pair *this){
+	if (this->a != NULL) free(this->a);
+	if (this->b != NULL) free(this->b);
+}
+bool string_pair_cpy_construct(string_pair *this, const string_pair *src){
+	return string_pair_init(this, src->a, src->b);
+}
+bool string_pair_cpy(string_pair *dst, const string_pair *src){
+	string_pair_dispose(dst);
+	return string_pair_cpy_construct(dst, src);
+}
 
 
 
