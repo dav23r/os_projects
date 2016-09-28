@@ -1,6 +1,6 @@
 #include "functions.h"
 
-typedef void (*r_limit)(char, int, int);
+
 void fsh_info(){
     printf("This Free Shell was made by an awesome group of four cs undergraduates\n");
     printf("Enjoy while it lasts\n");
@@ -68,35 +68,94 @@ int get_rlim_max(char flag, int limit, int resource){
     return  limit;
 }
 
-void set_limit(char s_h_flag, int limit, int resource){
+bool set_limit(char s_h_flag, int limit, int resource){
     struct rlimit rl;
     rl.rlim_cur = get_rlim_cur(s_h_flag, limit,resource);
     rl.rlim_max = get_rlim_max(s_h_flag, limit,resource);
     if (rl.rlim_cur<0||rl.rlim_max<0){
         printf("error while getting limit\n");
-        return;
+        return false;
     }
     if (setrlimit(resource, &rl) == -1){
         printf("error while setting limit\n");
-        return;
+        return false;
     }
+
+    return true;
 }
-void get_limit(char s_h_flag, int limit, int resource){
+bool get_limit(char s_h_flag, int limit, int resource){
     struct rlimit rl;
     rl.rlim_cur = get_rlim_cur(s_h_flag, limit,resource);
     if (rl.rlim_cur<0){
         printf("error while getting limit\n");
-        return;
+        return false;
     }else{
         printf("%d\n",rl.rlim_cur);
     }
+
+    return true;
 }
 
+bool is_valid_integer(char *arg) {
+    int i;
+    for (i = 0; i < strlen(arg); i++) {
+        if (arg[i] < '0' || arg[i] > '9' || i > 9)  // also if larger than integer can store
+            return false;
+    }
+    return true;
+}
 
-void fsh_ulimit(r_limit fn){
-    char flag = ;
-    int limit  = ;
-    char s_h_flag = ;
+/*
+ * Checks if user asks for soft limit, hard limit or both;
+ * only -H means hard limit.
+ * only -S or nothinf meeans soft limit.
+ * both flags means both limits and we return 'B' as special character for caller.
+ */
+char find_limit_type(args_and_flags *rest) {
+    bool soft_found = false;
+    bool hard_found = false;
+
+    int i;
+    for (i = 0; i < rest->num_flags; i++) {
+        char flag = rest->flags[i].flag;
+        if (flag == 'S')
+            soft_found = true;
+        else if (flag == 'H')
+            hard_found = true;
+    }
+
+    if ((!soft_found && !hard_found) || soft_found && !hard_found) return 'S';
+    if (soft_found && hard_found) return 'B'; // both
+    return 'H';
+}
+
+bool fsh_ulimit(args_and_flags *rest) {
+    int i;
+    char soft_or_hard_limit = find_limit_type(rest);
+    for (i = 0; i < rest->num_flags; i++) {
+        char flag = rest->flags[i].flag;
+        if (flag == 'S' || flag == 'H') continue;
+        
+        pos_arguments *flag_args = &rest->flags[i].flag_arguments;
+        int limit;
+
+        if (pos_arguments->num_args == 0) {
+            limit = 0;
+        } else {
+            char *arg = pos_arguments->arguments[1];
+            if (!is_valid_integer(arg)) {
+                printf("invalid limit value (must be integer)\n");
+                return false;
+            }
+            limit = atoi(arg);
+        }
+
+        fsh_ulimit_helper((limit == 0 ? set_limit : get_limit), flag, limit, soft_or_hard_limit);
+    }
+}
+
+bool fsh_ulimit_helper(r_limit fn, char flag, int limit, char s_h_flag){
+
     struct rlimit rl;
     switch (flag){
         case 'c':
