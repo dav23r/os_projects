@@ -42,6 +42,21 @@ bool string_pair_cpy(string_pair *dst, const string_pair *src){
 
 
 
+/* constants */
+const string_pair ESCAPE_SEQUENCES[] = {
+		{ "\\\a", "\a" },
+		{ "\\\b", "\b" },
+		{ "\\\f", "\f" },
+		{ "\\\n", "\n" },
+		{ "\\\r", "\r" },
+		{ "\\\t", "\t" },
+		{ "\\\v", "\v" },
+		{ "\\\\", "\\" },
+		{ "\\\'", "\'" },
+		{ "\\\"", "\"" },
+		{ "\\\?", "\?" },
+		STRING_PAIR_END };
+
 
 
 
