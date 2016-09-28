@@ -122,9 +122,8 @@ bool tokenizer_init(tokenizer *this, const char *string, const char **delimiters
 		this->ignored = ignored_cln;
 		this->replacements = replacements_cln;
 
-		this->cursor = this->string;
 		this->current_token = token;
-		this->last_delimiter = NULL;
+		tokenizer_reset(this);
 
 		return true;
 	}
@@ -201,6 +200,7 @@ bool tokenizer_move_to_next(tokenizer *this){
 	char *token = this->current_token;
 	this->last_delimiter = NULL;
     tokenizer_jump_over_pattern_from(this, this->delimiters);
+	this->tok_start = this->cursor;
 	while (true){
 		if ((*this->cursor) == '\0') break;
 		if (!tokenizer_move_replace_if_needed(this, &token)){
@@ -243,4 +243,27 @@ const char *tokenizer_get_last_delimiter(tokenizer *this){
 
 const char* tokenizer_get_cursor(tokenizer *this){
 	return this->cursor;
+}
+
+const char* tokenizer_get_raw_iterator_start(tokenizer *this){
+	return this->tok_start;
+}
+const char* tokenizer_get_raw_iterator_end(tokenizer *this){
+	return this->cursor;
+}
+
+bool tokenizer_load_raw_token(tokenizer *this, char *buffer){
+	const char *cursor;
+	for (cursor = this->tok_start; cursor != this->cursor; cursor++){
+		(*buffer) = (*cursor);
+		buffer++;
+	}
+	(*buffer) = '\0';
+	return ((*(this->tok_start)) == '\0');
+}
+
+void tokenizer_reset(tokenizer *this){
+	this->cursor = this->string;
+	this->tok_start = this->string;
+	this->last_delimiter = NULL;
 }

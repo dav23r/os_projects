@@ -9,10 +9,15 @@ typedef struct{
 	const char **delimiters;
 	const string_pair *ignored;
 	const string_pair *replacements;
-	const char *cursor;
+	const char *cursor, *tok_start;
 	char *current_token;
 	const char *last_delimiter;
 } tokenizer;
+
+#define DELIMITER_END ((char*)NULL)
+#define STRING_PAIR_END ((string_pair){ NULL, NULL })
+#define IGNORED_END STRING_PAIR_END
+#define REPLACEMENT_END STRING_PAIR_END
 
 /** Initializes given tokenizer;
 	Notes:
@@ -52,9 +57,21 @@ char* tokenizer_get_next_valid_token(tokenizer *this);
 	Note: no need for free. */
 const char *tokenizer_get_last_delimiter(tokenizer *this);
 
-/** Retrieves the iterator to the first character from the string,
-	that is not yet a part of any previously returned token(pointer to the raw data)
- 	Note: This might be useful, if one has to divide the string by some delimiters */
+/** Returns the current unexplored character address */
 const char* tokenizer_get_cursor(tokenizer *this);
+
+/** Iterators to the segment of the string from which the token was extracted */
+const char* tokenizer_get_raw_iterator_start(tokenizer *this);
+const char* tokenizer_get_raw_iterator_end(tokenizer *this);
+
+/** Provided the string sized buffer, the raw token(segment from the original string)
+	will be loaded in it; returns true, if not end of line(therefore, token can be free as well);
+ 	Note: shorter than needed buffer will cause undefined behaviour. */
+bool tokenizer_load_raw_token(tokenizer *this, char *buffer);
+
+/** Resets the tokenizer
+	Note: tokenizer_get_current_token() will return the same as before,
+ 		but iterators and tokenizer_load_raw_token() will not work any more. */
+void tokenizer_reset(tokenizer *this);
 
 #endif
