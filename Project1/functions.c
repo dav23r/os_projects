@@ -1,6 +1,6 @@
 #include "functions.h"
 
-
+typedef void (*r_limit)(char, int, int);
 void fsh_info(){
     printf("This Free Shell was made by an awesome group of four cs undergraduates\n");
     printf("Enjoy while it lasts\n");
@@ -53,7 +53,7 @@ int get_rlim_cur(char flag, int limit, int resource){
         }else{
             return rlim.rlim_cur;
         }
-
+    return  limit;
 }
 int get_rlim_max(char flag, int limit, int resource){
     if (flag=='H')
@@ -65,9 +65,11 @@ int get_rlim_max(char flag, int limit, int resource){
         }else{
             return rlim.rlim_max;
         }
+    return  limit;
 }
 
 void set_limit(char s_h_flag, int limit, int resource){
+    struct rlimit rl;
     rl.rlim_cur = get_rlim_cur(s_h_flag, limit,resource);
     rl.rlim_max = get_rlim_max(s_h_flag, limit,resource);
     if (rl.rlim_cur<0||rl.rlim_max<0){
@@ -79,61 +81,74 @@ void set_limit(char s_h_flag, int limit, int resource){
         return;
     }
 }
+void get_limit(char s_h_flag, int limit, int resource){
+    struct rlimit rl;
+    rl.rlim_cur = get_rlim_cur(s_h_flag, limit,resource);
+    if (rl.rlim_cur<0){
+        printf("error while getting limit\n");
+        return;
+    }else{
+        printf("%d\n",rl.rlim_cur);
+    }
+}
 
-void fsh_ulimit(){
+
+void fsh_ulimit(r_limit fn){
     char flag = ;
     int limit  = ;
     char s_h_flag = ;
     struct rlimit rl;
     switch (flag){
         case 'c':
-            set_limit(s_h_flag,limit,RLIMIT_CORE);
+            fn(s_h_flag,limit,RLIMIT_CORE);
             break;
         case 'd':
-            set_limit(s_h_flag,limit,RLIMIT_DATA);
+            fn(s_h_flag,limit,RLIMIT_DATA);
             break;
         case 'f':
-            set_limit(s_h_flag,limit,RLIMIT_FSIZE);
+            fn(s_h_flag,limit,RLIMIT_FSIZE);
             break;
         case 'e':
-            set_limit(s_h_flag,limit,RLIMIT_NICE);
+            fn(s_h_flag,limit,RLIMIT_NICE);
             break;
         case 'm':
-            set_limit(s_h_flag,limit,RLIMIT_RSS);
+            fn(s_h_flag,limit,RLIMIT_RSS);
             break;
         case 'n':
-            set_limit(s_h_flag,limit,RLIMIT_NOFILE);
+            fn(s_h_flag,limit,RLIMIT_NOFILE);
             break;
         case 'p':
-            set_limit(s_h_flag,limit,RLIMIT_);
+            fn(s_h_flag,limit,RLIMIT_);
             break;
         case 'q':
-            set_limit(s_h_flag,limit,RLIMIT_MSGQUEUE);
+            fn(s_h_flag,limit,RLIMIT_MSGQUEUE);
             break;
         case 'r':
-            set_limit(s_h_flag,limit,RLIMIT_RTPRIO);
+            fn(s_h_flag,limit,RLIMIT_RTPRIO);
             break;
         case 's':
-            set_limit(s_h_flag,limit,RLIMIT_STACK);
+            fn(s_h_flag,limit,RLIMIT_STACK);
             break;
         case 't':
-            set_limit(s_h_flag,limit,RLIMIT_CPU);
+            fn(s_h_flag,limit,RLIMIT_CPU);
             break;
         case 'u':
-            set_limit(s_h_flag,limit,RLIMIT_NPROC);
+            fn(s_h_flag,limit,RLIMIT_NPROC);
             break;
         case 'v':
-            set_limit(s_h_flag,limit,RLIMIT_AS);
+            fn(s_h_flag,limit,RLIMIT_AS);
             break;
         case 'x':
-            set_limit(s_h_flag,limit,RLIMIT_LOCKS);
+            fn(s_h_flag,limit,RLIMIT_LOCKS);
             break;
         case 'i':
-            set_limit(s_h_flag,limit,RLIMIT_SIGPENDING);
+            fn(s_h_flag,limit,RLIMIT_SIGPENDING);
             break;
         case 'l':
-            set_limit(s_h_flag,limit,RLIMIT_MEMLOCK);
+            fn(s_h_flag,limit,RLIMIT_MEMLOCK);
             break;
+        case 'T':
+            fn(s_h_flag,limit,RLIMIT_NTHR);
     }
 
 
