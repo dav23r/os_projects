@@ -96,6 +96,7 @@ bool get_limit(char s_h_flag, int limit, int resource){
     return true;
 }
 
+// checks if arg contains only digits
 bool is_valid_integer(char *arg) {
     int i;
     for (i = 0; i < strlen(arg); i++) {
