@@ -19,5 +19,8 @@ void string_pair_dispose(string_pair *this);
 bool string_pair_cpy_construct(string_pair *this, const string_pair *src);
 bool string_pair_cpy(string_pair *dst, const string_pair *src);
 
+/* constants */
+const string_pair ESCAPE_SEQUENCES[];
+
 
 #endif //PROJECT1_UTIL_H

@@ -15,22 +15,87 @@ static const char STRING_START_1[] = "\'";
 static const char SEMICOLON[] = ";";
 static const char COMMENT_START[] = "#";
 
-static const string_pair ESCAPE_SEQUENCES[] = {
-		{ "\\\a", "\a" },
-		{ "\\\b", "\b" },
-		{ "\\\f", "\f" },
-		{ "\\\n", "\n" },
-		{ "\\\r", "\r" },
-		{ "\\\t", "\t" },
-		{ "\\\v", "\v" },
-		{ "\\\\", "\\" },
-		{ "\\\'", "\'" },
-		{ "\\\"", "\"" },
-		{ "\\\?", "\?" },
-		STRING_PAIR_END };
-
 static const char *STRING_START_ENDS[] = { STRING_START_0, STRING_START_1, DELIMITER_END };
 
+static const char AND_OPERATOR[] = "&&";
+static const char OR_OPERATOR[] = "||";
+
+static const string_pair INPUT_PARSER_IGNORED[] = {
+		{ (char*)COMMENT_START, NULL },
+		{ (char*)STRING_START_0, (char*)STRING_START_0},
+		{ (char*)STRING_START_1, (char*)STRING_START_1},
+		REPLACEMENT_END };
+
+
+
+
+
+/* /////////////////////////// PIPELINE: //////////////////////////// */
+/* ////////////////////////////////////////////////////////////////// */
+/* ////////////////////////////////////////////////////////////////// */
+/* ////////////////////////////////////////////////////////////////// */
+/* ////////////////////////////////////////////////////////////////// */
+
+static bool execute_command(const char *command, context *c, bool *error){
+	printf("Command: <%s>\n", command);
+	return true;
+}
+
+
+
+
+
+/* /////////////////////// COMMAND SEQUENCE: //////////////////////// */
+/* ////////////////////////////////////////////////////////////////// */
+/* ////////////////////////////////////////////////////////////////// */
+/* ////////////////////////////////////////////////////////////////// */
+/* ////////////////////////////////////////////////////////////////// */
+
+static const char *COMMAND_SEQUENCE_DELIMITERS[] = { AND_OPERATOR, OR_OPERATOR, DELIMITER_END };
+
+static bool parse_command_sequence(const char *sequence, context *c){
+	char *command = malloc(sizeof(char) * (strlen(sequence) + 1));
+	if (command == NULL) return false;
+	tokenizer tok;
+	if(!tokenizer_init(&tok, sequence, COMMAND_SEQUENCE_DELIMITERS, INPUT_PARSER_IGNORED, ESCAPE_SEQUENCES)){ free(command); return false; }
+
+	bool error = false;
+	const char *operator = NULL;
+
+	while (true){
+		bool br = (!tokenizer_move_to_next(&tok));
+		if(br){
+			if(operator != NULL)
+				printf("-Shell syntax warning: operator not followed by anything (%s)\n", operator);
+			break;
+		}
+		tokenizer_load_raw_token(&tok, command);
+		operator = tokenizer_get_last_delimiter(&tok);
+		bool result = execute_command(command, c, &error);
+		if(operator != NULL){
+			const char *cursor = tokenizer_get_cursor(&tok) + strlen(operator);
+			if ((*cursor) == '&' || (*cursor) == '|'){
+				printf("-Shell syntax error:  Unexpected token: %c\n", (*cursor));
+				error = true;
+				break;
+			}
+			else {
+				if (error) break;
+				else if (strcmp(operator, AND_OPERATOR) == 0) {
+					if(result) continue;
+					else break;
+				} else if (strcmp(operator, OR_OPERATOR) == 0) {
+					if(result) break;
+					else continue;
+				}
+			}
+		}
+	}
+
+	free(command);
+	tokenizer_dispose(&tok);
+	return (!error);
+}
 
 
 
@@ -42,32 +107,29 @@ static const char *STRING_START_ENDS[] = { STRING_START_0, STRING_START_1, DELIM
 /* ////////////////////////////////////////////////////////////////// */
 
 static const char *COMMAND_SEQUENCE_BREAKS[] = { SEMICOLON, DELIMITER_END };
-static const string_pair COMMAND_LIST_IGNORED[] = {
-		{ (char*)COMMENT_START, NULL },
-		{ (char*)STRING_START_0, (char*)STRING_START_0},
-		{ (char*)STRING_START_1, (char*)STRING_START_1},
-		{ NULL, NULL } };
 
 bool parse_input_line(const char *line, context *c){
 	char *command_sequence = malloc(sizeof(char) * (strlen(line) + 1));
 	if (command_sequence == NULL) return false;
 	tokenizer tok;
-	if (!tokenizer_init(&tok, line, COMMAND_SEQUENCE_BREAKS, COMMAND_LIST_IGNORED, ESCAPE_SEQUENCES)){ free(command_sequence); return false; }
+	if (!tokenizer_init(&tok, line, COMMAND_SEQUENCE_BREAKS, INPUT_PARSER_IGNORED, ESCAPE_SEQUENCES)){ free(command_sequence); return false; }
+
+	bool success = true;
 
 	while (true){
-		const char *start;
 		bool br = (!tokenizer_move_to_next(&tok));
 		if(br) break;
 		tokenizer_load_raw_token(&tok, command_sequence);
 		if((*command_sequence) == '\0') continue;
-
-		printf("Sequence: <%s>\n", command_sequence);
-
-		if(br) break;
+		else if(!parse_command_sequence(command_sequence, c)){
+			success = false;
+			break;
+		}
 	}
 
 	free(command_sequence);
-	return true;
+	tokenizer_dispose(&tok);
+	return success;
 }
 
 
