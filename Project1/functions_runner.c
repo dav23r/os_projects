@@ -3,6 +3,14 @@
 #include "functions.h"
 
 
+void toLowerCase(char *str) {
+	char *res = malloc(strlen(str) + 1);
+	for(int i = 0; str[i]; i++)
+  		res[i] = tolower(str[i]);
+
+  	return res;
+}
+
 bool token_init(token_t *this, const char *string, token_type type) {
 	this->string = strdup(string);
 	if(this->string == NULL){
@@ -39,6 +47,10 @@ bool execute_command(const token_t *command, context *c, bool *error) {
 	
 	if (command == NULL || token_null(&command[0]) || strlen(command[0].string) == 0) return false;
 	char *funcname = command[0].string;
+	char *lower_case = toLowerCase(funcname);
+	if (strcmp("true", lower_case)) return true;
+	if (strcmp("false", lower_case)) return false;
+	free(lower_case);
 
 	if (!strcmp(funcname, "ulimit")) {
 		if (token_null(&command[1])) // prosta 'ulimit'-ze ras vshvrebit? return;
@@ -78,11 +90,29 @@ bool execute_command(const token_t *command, context *c, bool *error) {
 		//return fsh_ulimit(args);
 		return true;
 	} else if (!strcmp(funcname, "type")) {
-
+		bool has_a_flag = find_a_flag_for_type(&command[1], error);
 	} else {
 
 	}
 
 	return true;
 }
+
+bool find_a_flag_for_type(const token_t *command, bool *error) {
+	if (command == NULL) return false;
+
+	int i;
+	for (i = 0; !token_null(command + 1); i++) {
+		token_t curr = command[i];
+		if (strlen(curr.string) == 0) continue;
+
+		if (curr.string[0] == '-') {
+			if (strlen(curr.string) == 1 || curr.string[1] != 'p') {
+				error = true;
+				return false;
+			} else return true;
+		}
+	}
+}
+
 
