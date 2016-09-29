@@ -66,10 +66,93 @@ static bool string_in_list(const char *string, const char **list){
 /* ////////////////////////////////////////////////////////////////// */
 /* ////////////////////////////////////////////////////////////////// */
 
-static bool execute_pipeline(const token_t **pipeline, context *context, bool *error){
+//#define PIPELINE_TESTING_MODE
+
+#ifdef PIPELINE_TESTING_MODE
+static void pipeline_test_scan_print(){
+	int i;
+	scanf("%d", &i);
+	printf("%d\n", i);
+}
+#endif
+
+static bool execute_pipeline_process(const token_t **pipeline, context *c, bool *error){
+	if(pipeline == NULL || (*pipeline) == NULL) return false;
+	else if((*(pipeline + 1)) == NULL){
+		bool rv = true;
+#ifdef PIPELINE_TESTING_MODE
+		pipeline_test_scan_print();
+#else
+		rv = execute_command(*pipeline, c, error);
+#endif
+		return (rv && (!(*error)));
+	}
+	int pipe_fd[2];
+	if(pipe(pipe_fd) == -1){
+		printf("error creating pipe");
+		(*error) = true;
+		return false;
+	}
+	pid_t child_pid = fork();
+	if(child_pid == -1){
+		printf("Error occurred while trying to fork\n");
+		(*error) = false;
+		return false;
+	}
+	else if(child_pid == 0){
+		close(pipe_fd[1]);
+		bool redirection_success = (dup2(pipe_fd[0], STDIN_FILENO) != -1);
+		close(pipe_fd[0]);
+		if(redirection_success) {
+			bool rv = execute_pipeline_process(pipeline + 1, c, error);
+			rv &= (!(error));
+			exit(rv ? 0 : (-1));
+		}
+		else{
+			error_handler(errno, "redirection");
+			exit(-1);
+		}
+	}
+	else{
+		close(pipe_fd[0]);
+		bool redirection_success = (dup2(pipe_fd[1], STDOUT_FILENO) != -1);
+		close(pipe_fd[1]);
+		if(redirection_success) {
+			bool rv = true;
+#ifdef PIPELINE_TESTING_MODE
+			pipeline_test_scan_print();
+#else
+			rv = execute_command(*pipeline, c, error);
+			if(*error) rv = false;
+#endif
+			if (wait(NULL) != 0) {
+				(*error) = true;
+				rv = false;
+			}
+			return rv;
+		}
+		else{
+			error_handler(errno, "redirection");
+			(*error) = false;
+			return false;
+		}
+	}
 	return true;
 }
 
+static bool execute_pipeline(const token_t **pipeline, context *c, bool *error){
+	pid_t child_pid = fork();
+	if(child_pid == -1){
+		printf("Error occurred while trying to fork\n");
+		(*error) = false;
+		return false;
+	}
+	else if(child_pid == 0)
+		exit(execute_pipeline_process(pipeline, c, error) ? 0 : (-1));
+	else return (wait(NULL) == 0);
+}
+
+#ifdef PIPELINE_TESTING_MODE
 static void log_pipeline(const token_t **pipeline){
 	printf("Pipeline:\n");
 	const token_t **pipeline_cursor;
@@ -96,6 +179,7 @@ static void log_pipeline(const token_t **pipeline){
 	}
 	printf("\n");
 }
+#endif
 
 static void free_command_tokens(token_t *tokens){
 	token_t *command_cursor;
@@ -209,7 +293,9 @@ static bool parse_pipeline(const char *command, context *c, bool *error) {
 		return false;
 	}
 
+#ifdef PIPELINE_TESTING_MODE
 	log_pipeline((const token_t**)pipeline);
+#endif
 	bool result;
 	if((*pipeline) == NULL){
 		(*error) = true;
