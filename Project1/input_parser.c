@@ -67,7 +67,7 @@ static  char **tokenize_command(const char *command){
 		return NULL;
 	}
 
-	
+
 
 	tokenizer_dispose(&tok);
 	free(buffer);
