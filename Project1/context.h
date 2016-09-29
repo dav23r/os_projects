@@ -2,9 +2,12 @@
 #ifndef __context__
 #define __context__
 
+#include "hashset.h"
+
 
 typedef struct{
 	int i; // Temporary; may not compile if empty...
+	hashset *map;
 } context;
 
 void context_init(context *this);

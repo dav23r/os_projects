@@ -1,6 +1,6 @@
 #include "functions_runner.h"
 #include "vector.h"
-#include "functions.h"
+//#include "functions.h"
 
 
 char * toLowerCase(char *str) {
@@ -114,7 +114,21 @@ bool execute_command(const token_t *command, context *c, bool *error) {
 		//return fsh_type(has_a_flag, args);
 		return true;
 	} else {
+		pos_arguments *args = malloc(sizeof(pos_arguments));
+		int len = get_tokens_len(command);
+		char **arguments = malloc(len * sizeof(char *));
 
+		int k;
+		for (k = 1; !token_null(&command[k]); k++) {
+			arguments[k-1] = command[k].string;
+		}
+
+		args->arguments = arguments;
+		args->num_args = len - 1;
+
+		func_pointer fn = searchFn(c->map, funcname);
+
+		return fn(args);
 	}
 
 	return true;
@@ -147,3 +161,10 @@ int get_tokens_len(const token_t *command) {
 	return k+1;
 }
 
+func_pointer searchFn(hashset *map, char *name) {
+
+	void *elem = HashSetLookup(map, &name);
+
+	func_pointer fn = *(func_pointer *) ((char *) elem + sizeof(char **));
+	return fn;
+}
