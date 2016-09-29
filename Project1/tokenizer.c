@@ -137,11 +137,6 @@ void tokenizer_dispose(tokenizer *this){
 	free(this->current_token);
 }
 
-static void tokenizer_jump_over_pattern_from(tokenizer *this, const char **patterns){
-    int jump = string_find_pattern_from_strings(this->cursor, patterns, NULL);
-    if (jump > 0) this->cursor += jump;
-}
-
 static bool tokenizer_move_replace_if_needed(tokenizer *this, char **token){
 	const string_pair *pair;
 	int jump = string_find_pattern_from_pairs(this->cursor, this->replacements, &pair);
@@ -198,8 +193,8 @@ static bool tokenizer_move_jump_over_ignore_brackets(tokenizer *this){
 
 bool tokenizer_move_to_next(tokenizer *this){
 	char *token = this->current_token;
+	if(this->last_delimiter != NULL) this->cursor += strlen(this->last_delimiter);
 	this->last_delimiter = NULL;
-    tokenizer_jump_over_pattern_from(this, this->delimiters);
 	this->tok_start = this->cursor;
 	while (true){
 		if ((*this->cursor) == '\0') break;
