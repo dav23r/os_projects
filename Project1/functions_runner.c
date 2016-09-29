@@ -1,6 +1,6 @@
 #include "functions_runner.h"
 #include "vector.h"
-#include "functions.h"
+//#include "functions.h"
 
 
 bool token_init(token_t *this, const char *string, token_type type) {
