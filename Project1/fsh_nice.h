@@ -6,7 +6,7 @@
 #define PROJECT1_FSH_NICE_H
 
 
-void fsh_nice(char flag, int increment, char * program_name, char * const argv[]);
+bool fsh_nice(char flag, int increment, char * program_name, char * const argv[]);
 
 
 

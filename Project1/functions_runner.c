@@ -114,21 +114,26 @@ bool execute_command(const token_t *command, context *c, bool *error) {
 		//return fsh_type(has_a_flag, args);
 		return true;
 	} else {
-		pos_arguments *args = malloc(sizeof(pos_arguments));
-		int len = get_tokens_len(command);
-		char **arguments = malloc(len * sizeof(char *));
+		func_pointer fn;
+		if ((fn = searchFn(c->map, funcname)) != NULL) { // i.e. built in
+			pos_arguments *args = malloc(sizeof(pos_arguments));
+			int len = get_tokens_len(command);
+			char **arguments = malloc(len * sizeof(char *));
 
-		int k;
-		for (k = 1; !token_null(&command[k]); k++) {
-			arguments[k-1] = command[k].string;
+			int k;
+			for (k = 1; !token_null(&command[k]); k++) {
+				arguments[k-1] = command[k].string;
+			}
+
+			args->arguments = arguments;
+			args->num_args = len - 1;
+
+			func_pointer fn = searchFn(c->map, funcname);
+
+			return fn(args);
+		} else { // program call
+			return fsh_nice('n', 0, funcname, NULL);
 		}
-
-		args->arguments = arguments;
-		args->num_args = len - 1;
-
-		func_pointer fn = searchFn(c->map, funcname);
-
-		return fn(args);
 	}
 
 	return true;
