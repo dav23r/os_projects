@@ -2,8 +2,6 @@
 // Created by irakli on 9/27/16.
 //
 
-#ifndef PROJECT1_UTIL_C_H
-#define PROJECT1_UTIL_C_H
 #include "util.h"
 #include<string.h>
 

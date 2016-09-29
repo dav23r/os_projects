@@ -25,7 +25,7 @@ void fsh_pwd(){
     }
 }
 
-void fsh_nice(char flag, int increment){
+void fsh_nice(char flag, int increment, char * program_name, char * const argv[]){
     //getpriority can return negative values
 
     errno = 0;
@@ -47,22 +47,23 @@ void fsh_nice(char flag, int increment){
             return;
         case 0:
             errno = 0;
-            if (nice(increment)<0)
-                error_handler(errno,"nice");
-
-
+            if (nice(increment)<0) {
+                error_handler(errno, "nice");
+                return;
+            }
+            if (execvp(program_name,argv)<0){
+                error_handler(errno, "executing given program");
+                return;
+            }
             break;
         default:
-            sleep(3);
+            if (wait(NULL)==-1){
+                error_handler(errno, "waiting for child to terminate");
+                return;
+            }
+
             break;
     }
-
-    if child
-        execve(processed path);
-        nice();
-    return;
-
-
 
 }
 
