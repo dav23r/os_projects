@@ -3,6 +3,15 @@
 //#include "functions.h"
 
 
+char * toLowerCase(char *str) {
+	char *res = malloc(strlen(str) + 1);
+	int i;
+	for(i = 0; str[i]; i++)
+  		res[i] = tolower(str[i]);
+
+  	return res;
+}
+
 bool token_init(token_t *this, const char *string, token_type type) {
 	this->string = strdup(string);
 	if(this->string == NULL){
@@ -39,10 +48,17 @@ bool execute_command(const token_t *command, context *c, bool *error) {
 	
 	if (command == NULL || token_null(&command[0]) || strlen(command[0].string) == 0) return false;
 	char *funcname = command[0].string;
+	char *lower_case = toLowerCase(funcname);
+	if (strcmp("true", lower_case)) return true;
+	if (strcmp("false", lower_case)) return false;
+	free(lower_case);
 
 	if (!strcmp(funcname, "ulimit")) {
 		if (token_null(&command[1])) // prosta 'ulimit'-ze ras vshvrebit? return;
-		if (command[1].string[0] != '-') return false; // funqciis mere pirvelive flag ar aris
+		if (command[1].string[0] != '-') {
+			*error = true;
+			return false; // funqciis mere pirvelive flag ar aris
+		}
 		
 		args_and_flags *args = malloc(sizeof(args_and_flags));
 		args->num_flags = 0;
@@ -51,13 +67,15 @@ bool execute_command(const token_t *command, context *c, bool *error) {
 		VectorNew(flags, sizeof(flag *), NULL, 4);
 		flag *current = malloc(sizeof(flag)); current->flag = '0'; current->flag_arguments = NULL; // spec values for empty flag
 		
-		// asawyobia args-and-flags-is struqtura ro gadaeces fsh_ulimit-s pirdapir
 		int i;
 		for (i = 1; !token_null(&command[i]); i++) {
 			char *next = command[i].string;
 			if (strlen(next) == 0) continue;
 			if (next[0] == '-') {
-				if (strlen(next) == 1) return false;
+				if (strlen(next) == 1)  {
+					*error = true;
+					return false;
+				}
 				if (current->flag == '0') current->flag = next[1];
 			} else {
 				if (current->flag_arguments == NULL && current->flag == '0') {
@@ -78,11 +96,54 @@ bool execute_command(const token_t *command, context *c, bool *error) {
 		//return fsh_ulimit(args);
 		return true;
 	} else if (!strcmp(funcname, "type")) {
+		bool has_a_flag = find_a_flag_for_type(&command[1], error);
+		if (*error) return false;
 
+		pos_arguments *args = malloc(sizeof(pos_arguments));
+		int len = get_tokens_len(command);
+		char **arguments = malloc(len * sizeof(char *));
+
+		int k;
+		for (k = 1; !token_null(&command[k]); k++) {
+			arguments[k-1] = command[k].string;
+		}
+
+		args->arguments = arguments;
+		args->num_args = len - 1;
+
+		//return fsh_type(has_a_flag, args);
+		return true;
 	} else {
 
 	}
 
 	return true;
+}
+
+bool find_a_flag_for_type(const token_t *command, bool *error) {
+	if (command == NULL) return false;
+
+	int i;
+	for (i = 0; !token_null(command + 1); i++) {
+		token_t curr = command[i];
+		if (strlen(curr.string) == 0) continue;
+
+		if (curr.string[0] == '-') {
+			if (strlen(curr.string) == 1 || curr.string[1] != 'p') {
+				*error = true;
+				return false;
+			} else if (i == 0) {
+				return true;
+			} else return false;
+		}
+	}
+	return false;
+}
+
+int get_tokens_len(const token_t *command) {
+	int k;
+	for (k = 0; !token_null(&command[k]); k++){}
+
+	return k+1;
 }
 

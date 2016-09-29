@@ -79,3 +79,12 @@ bool get_path_of_program(char * program_name, char * res){
     tokenizer_dispose(&tok);
     return false;
 }
+
+bool is_valid_integer(char *arg) {
+	int i;
+	for (i = 0; i < strlen(arg); i++) {
+		if (arg[i] < '0' || arg[i] > '9' || i > 9)  // also if larger than integer can store
+			return false;
+	}
+	return true;
+}

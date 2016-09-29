@@ -30,5 +30,8 @@ bool token_null(const token_t *t);
 
 bool execute_command(const token_t *tokens, context *c, bool *error);
 
+bool find_a_flag_for_type(const token_t *command, bool *error);
+
+int get_tokens_len(const token_t *command);
 
 #endif
