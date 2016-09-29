@@ -7,8 +7,7 @@ void fsh_info(){
 }
 
 
-void fsh_cd(){
-    char * dir = ;
+void fsh_cd(char * dir){
     if (chdir(dir)<0){
         error_handler(errno," changing directory ");
     }
@@ -26,7 +25,43 @@ void fsh_pwd(){
     }
 }
 
-void fsh_nice(){
+void fsh_nice(char flag, int increment){
+    //getpriority can return negative values
+
+    errno = 0;
+    if (flag!='n'){
+        int prior = getpriority(PRIO_PROCESS,getpid());
+        if (errno!=0){
+            error_handler(errno,"getting niceness");
+            return;
+        }else {
+            printf("%d\n", prior);
+            return;
+        }
+    }
+    //TLPI
+    pid_t childPid;
+    switch (childPid = fork()) {
+        case -1:
+            printf("error while trying to fork");
+            return;
+        case 0:
+            errno = 0;
+            if (nice(increment)<0)
+                error_handler(errno,"nice");
+
+
+            break;
+        default:
+            sleep(3);
+            break;
+    }
+
+    if child
+        execve(processed path);
+        nice();
+    return;
+
 
 
 }
@@ -156,7 +191,6 @@ bool fsh_ulimit(args_and_flags *rest) {
 }
 
 bool fsh_ulimit_helper(r_limit fn, char flag, int limit, char s_h_flag){
-
     struct rlimit rl;
     switch (flag){
         case 'c':
