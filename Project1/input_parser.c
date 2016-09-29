@@ -66,7 +66,12 @@ static bool string_in_list(const char *string, const char **list){
 /* ////////////////////////////////////////////////////////////////// */
 /* ////////////////////////////////////////////////////////////////// */
 
+static bool execute_pipeline(const token_t **pipeline, context *context, bool *error){
+	return true;
+}
+
 static void log_pipeline(const token_t **pipeline){
+	printf("Pipeline:\n");
 	const token_t **pipeline_cursor;
 	for(pipeline_cursor = pipeline; (*pipeline_cursor) != NULL; pipeline_cursor++){
 		printf("Command: [");
@@ -89,6 +94,7 @@ static void log_pipeline(const token_t **pipeline){
 		}
 		printf("]\n");
 	}
+	printf("\n");
 }
 
 static void free_command_tokens(token_t *tokens){
@@ -204,8 +210,18 @@ static bool parse_pipeline(const char *command, context *c, bool *error) {
 	}
 
 	log_pipeline((const token_t**)pipeline);
+	bool result;
+	if((*pipeline) == NULL){
+		(*error) = true;
+		result = false;
+	}
+	else if((*(pipeline + 1)) == NULL)
+		result = execute_command(*pipeline, c, error);
+	else result = execute_pipeline((const token_t**)pipeline, c, error);
 
 	free_pipeline(pipeline);
+
+	return result;
 }
 
 

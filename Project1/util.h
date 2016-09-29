@@ -5,7 +5,7 @@
 #ifndef PROJECT1_UTIL_H
 #define PROJECT1_UTIL_H
 
-#include "tokenizer.h"
+#include "bool.h"
 /*receives an error number and displays it accordingly*/
 void error_handler(int errnum, char * errmsg);
 
