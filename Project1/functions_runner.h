@@ -28,7 +28,7 @@ bool token_equals(const token_t *t1, const token_t *t2);
 
 bool token_null(const token_t *t);
 
-bool execute_command(const toke_t *tokens, context *c, bool *error);
+bool execute_command(const token_t *tokens, context *c, bool *error);
 
 
 #endif
