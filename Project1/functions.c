@@ -137,13 +137,13 @@ bool fsh_ulimit(args_and_flags *rest) {
         char flag = rest->flags[i].flag;
         if (flag == 'S' || flag == 'H') continue;
         
-        pos_arguments *flag_args = &rest->flags[i].flag_arguments;
+        pos_arguments *flag_args = rest->flags[i].flag_arguments;
         int limit;
 
         if (pos_arguments->num_args == 0) {
             limit = 0;
         } else {
-            char *arg = pos_arguments->arguments[1];
+            char *arg = flag_args->arguments[1];
             if (!is_valid_integer(arg)) {
                 printf("invalid limit value (must be integer)\n");
                 return false;
