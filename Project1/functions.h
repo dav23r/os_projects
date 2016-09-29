@@ -6,8 +6,9 @@
 #include "context.h"
 #include "util.h"
 #include <stdlib.h>
-const int
+#include "arguments.h"
 
+typedef void (*r_limit)(char, int, int);
 
 /*displays some info for free shell*/
 void fsh_info();

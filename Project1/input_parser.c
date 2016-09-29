@@ -31,6 +31,47 @@ static const string_pair INPUT_PARSER_IGNORED[] = {
 
 
 
+/* //////////////////////////// COMMAND: //////////////////////////// */
+/* ////////////////////////////////////////////////////////////////// */
+/* ////////////////////////////////////////////////////////////////// */
+/* ////////////////////////////////////////////////////////////////// */
+/* ////////////////////////////////////////////////////////////////// */
+
+static bool execute_command(const char **command, int command_array_len, context *c, bool *error) {
+
+	if (command_array_len <= 0 || strlen(command[0]) == 0) return false;
+	const char *funcname = command[0];
+
+	if (!strcmp(funcname, "ulimit")) {
+		if (command_array_len == 1) // prosta 'ulimit'-ze ras vshvrebit? return;
+			if (command[1][0] != '-') return false; // funqciis mere pirvelive flag ar aris
+
+		args_and_flags *args = malloc(sizeof(args_and_flags));
+		args->num_flags = 0;
+		// asawyobia args-and-flags-is struqtura ro gadaeces fsh_ulimit-s pirdapir
+		int i;
+		for (i = 1; i < command_array_len; i++) {
+			const char *next = command[i];
+			if (strlen(next) == 0) continue;
+			if (next[0] == '-') {
+
+			} else {
+
+			}
+		}
+	} else if (!strcmp(funcname, "type")) {
+
+	} else {
+
+	}
+
+	return true;
+}
+
+
+
+
+
 /* /////////////////////////// PIPELINE: //////////////////////////// */
 /* ////////////////////////////////////////////////////////////////// */
 /* ////////////////////////////////////////////////////////////////// */
@@ -110,15 +151,14 @@ static char ***form_pipeline(const char *source){
 	return pipeline;
 }
 
-static bool parse_pipeline(const char *command, context *c, bool *error){
-	char ***pipeline = (char***)form_pipeline(command);
-	if(pipeline == NULL){
+static bool parse_pipeline(const char *command, context *c, bool *error) {
+	char ***pipeline = (char ***) form_pipeline(command);
+	if (pipeline == NULL) {
 		(*error) = true;
 		return false;
 	}
 	printf("Command: <%s>\n", command);
 	free_pipeline(pipeline);
-	return true;
 }
 
 
