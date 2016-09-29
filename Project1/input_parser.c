@@ -19,6 +19,7 @@ static const char *STRING_START_ENDS[] = { STRING_START_0, STRING_START_1, DELIM
 
 static const char AND_OPERATOR[] = "&&";
 static const char OR_OPERATOR[] = "||";
+static const char PIPE_OPERATOR[] = "|";
 
 static const string_pair INPUT_PARSER_IGNORED[] = {
 		{ (char*)COMMENT_START, NULL },
@@ -36,8 +37,87 @@ static const string_pair INPUT_PARSER_IGNORED[] = {
 /* ////////////////////////////////////////////////////////////////// */
 /* ////////////////////////////////////////////////////////////////// */
 
-static bool execute_command(const char *command, context *c, bool *error){
+static void free_command_tokens(char **tokens){
+	char **command_cursor;
+	for(command_cursor = tokens; (*command_cursor) != NULL; command_cursor++)
+		free(*command_cursor);
+	free(*tokens);
+}
+
+static void free_pipeline(char ***pipeline){
+	char ***cursor;
+	for(cursor = pipeline; (*cursor) != NULL; cursor++)
+		free_command_tokens(*cursor);
+	free(pipeline);
+}
+
+static  char **tokenize_command(const char *command){
 	printf("Command: <%s>\n", command);
+	int len = (strlen(command) + 1);
+	char **command_tokens = malloc(sizeof(char*) * len);
+	if(command_tokens == NULL) return NULL;
+
+	char *buffer = malloc(sizeof(char) * len);
+	if(buffer == NULL){ free(command_tokens); return NULL; }
+
+	tokenizer tok;
+	if(!tokenizer_init(&tok, command, NULL, NULL, ESCAPE_SEQUENCES)){
+		free(command_tokens);
+		free(buffer);
+		return NULL;
+	}
+
+	
+
+	tokenizer_dispose(&tok);
+	free(buffer);
+	return command_tokens;
+}
+
+static const char *PIPELINE_DELIMITERS[] = { PIPE_OPERATOR, DELIMITER_END };
+
+static char ***form_pipeline(const char *source){
+	int source_len = (strlen(source) + 1);
+
+	char ***pipeline = malloc(sizeof(char**) * source_len);
+	if(pipeline == NULL) return NULL;
+
+	char *buffer = malloc(sizeof(char) * source_len);
+	if(buffer == NULL){ free(pipeline); return NULL; }
+
+	tokenizer tok;
+	if(!tokenizer_init(&tok, source, PIPELINE_DELIMITERS, INPUT_PARSER_IGNORED, ESCAPE_SEQUENCES)){
+		free(pipeline);
+		free(buffer);
+		return NULL;
+	}
+
+	char ***pipeline_cursor = pipeline;
+	while (tokenizer_move_to_next(&tok)) {
+		tokenizer_load_raw_token(&tok, buffer);
+		(*pipeline_cursor) = tokenize_command(buffer);
+		if((*pipeline_cursor) == NULL){
+			free_pipeline(pipeline);
+			pipeline = NULL;
+			break;
+		}
+		pipeline_cursor++;
+	}
+	if(pipeline != NULL) (*pipeline_cursor) = NULL;
+
+	tokenizer_dispose(&tok);
+	free(buffer);
+	return pipeline;
+}
+
+static bool parse_pipeline(const char *command, context *c, bool *error){
+	char ***pipeline = (char***)form_pipeline(command);
+	if(pipeline == NULL){
+		(*error) = true;
+		return false;
+	}
+	printf("Command: <%s>\n", command);
+	free_pipeline(pipeline);
 	return true;
 }
 
@@ -63,15 +143,14 @@ static bool parse_command_sequence(const char *sequence, context *c){
 	const char *operator = NULL;
 
 	while (true){
-		bool br = (!tokenizer_move_to_next(&tok));
-		if(br){
+		if(!tokenizer_move_to_next(&tok)){
 			if(operator != NULL)
 				printf("-Shell syntax warning: operator not followed by anything (%s)\n", operator);
 			break;
 		}
 		tokenizer_load_raw_token(&tok, command);
 		operator = tokenizer_get_last_delimiter(&tok);
-		bool result = execute_command(command, c, &error);
+		bool result = parse_pipeline(command, c, &error);
 		if(operator != NULL){
 			const char *cursor = tokenizer_get_cursor(&tok) + strlen(operator);
 			if ((*cursor) == '&' || (*cursor) == '|'){
@@ -112,13 +191,14 @@ bool parse_input_line(const char *line, context *c){
 	char *command_sequence = malloc(sizeof(char) * (strlen(line) + 1));
 	if (command_sequence == NULL) return false;
 	tokenizer tok;
-	if (!tokenizer_init(&tok, line, COMMAND_SEQUENCE_BREAKS, INPUT_PARSER_IGNORED, ESCAPE_SEQUENCES)){ free(command_sequence); return false; }
+	if (!tokenizer_init(&tok, line, COMMAND_SEQUENCE_BREAKS, INPUT_PARSER_IGNORED, ESCAPE_SEQUENCES)){
+		free(command_sequence);
+		return false;
+	}
 
 	bool success = true;
 
-	while (true){
-		bool br = (!tokenizer_move_to_next(&tok));
-		if(br) break;
+	while (tokenizer_move_to_next(&tok)){
 		tokenizer_load_raw_token(&tok, command_sequence);
 		if((*command_sequence) == '\0') continue;
 		else if(!parse_command_sequence(command_sequence, c)){
