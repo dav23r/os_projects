@@ -20,22 +20,13 @@ static const char *STRING_START_ENDS[] = { STRING_START_0, STRING_START_1, DELIM
 
 static const char AND_OPERATOR[] = "&&";
 static const char OR_OPERATOR[] = "||";
+static const char PIPE_OPERATOR[] = "|";
 
 static const string_pair INPUT_PARSER_IGNORED[] = {
 		{ (char*)COMMENT_START, NULL },
 		{ (char*)STRING_START_0, (char*)STRING_START_0},
 		{ (char*)STRING_START_1, (char*)STRING_START_1},
 		IGNORED_END };
-
-
-
-
-
-/* ////////////////////////// STRUCTURES: /////////////////////////// */
-/* ////////////////////////////////////////////////////////////////// */
-/* ////////////////////////////////////////////////////////////////// */
-/* ////////////////////////////////////////////////////////////////// */
-/* ////////////////////////////////////////////////////////////////// */
 
 
 
@@ -67,13 +58,6 @@ static bool string_in_list(const char *string, const char **list){
 
 
 
-
-
-/* /////////////////////////// PIPELINE: //////////////////////////// */
-/* ////////////////////////////////////////////////////////////////// */
-/* ////////////////////////////////////////////////////////////////// */
-/* ////////////////////////////////////////////////////////////////// */
-/* ////////////////////////////////////////////////////////////////// */
 
 
 /* /////////////////////////// PIPELINE: //////////////////////////// */
@@ -253,7 +237,7 @@ static bool parse_command_sequence(const char *sequence, context *c){
 		}
 		tokenizer_load_raw_token(&tok, command);
 		operator = tokenizer_get_last_delimiter(&tok);
-		bool result = execute_command(command, c, &error);
+		bool result = parse_pipeline(command, c, &error);
 		if(operator != NULL){
 			const char *cursor = tokenizer_get_cursor(&tok) + strlen(operator);
 			if ((*cursor) == '&' || (*cursor) == '|'){
