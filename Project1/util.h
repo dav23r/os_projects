@@ -25,4 +25,6 @@ const string_pair ESCAPE_SEQUENCES[];
 /*returns path of program via passed argument res or returns false*/
 bool get_path_of_program(char * program_name, char * res);
 
+// checks if arg contains only digits
+bool is_valid_integer(char *arg);
 #endif //PROJECT1_UTIL_H
