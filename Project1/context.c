@@ -1,31 +1,26 @@
 #include"context.h"
 
 typedef struct{
-
+	hashset *aliases;
 	hashset *map;
 } context;
 
 void context_init(context *this){
-	hashset *map;
+	// Initilize map of functions
+	hashet *map = malloc(sizeof(hashset));
 	HashSetNew(map, sizeof(char **) + sizeof(func_pointer), 20, StringHash, StringCmp, StringFree);
-	
 	this->map = map;
+	// Initialize map of aliases
+	hashset *aliases = malloc(sizeof(hashset));
+	HashSetNew(aliases, sizeof(char *) + sizeof(char *), 20, StringHash, StringCmp, AliasFree);
+	this->aliases = aliases;
 }
+
 
 void context_dispose(context *this){
-	
+	HashSetDispose(this->aliases);
 	HashSetDispose(this->map);
 }
-
-void context_cpy(const context *from, context *to){
-	/* NOT YET IMPLEMETED */
-}
-
-void context_set_variable(context *this, const char *name, const char *value){
-	/* NOT YET IMPLEMETED */
-}
-
-
 
 static const signed long kHashMultiplier = -1664117991L;
 int StringHash(const void *elem, int numBuckets)
@@ -36,6 +31,12 @@ int StringHash(const void *elem, int numBuckets)
 	for (i = 0; i < strlen(s); i++)  
     	hashcode = hashcode * kHashMultiplier + tolower(s[i]);  
 	return hashcode % numBuckets;                                  
+}
+
+// Dealocates memory of alias -> program name pair
+void AliasFree(void *str){
+	StringFree(str);     // dealloc alias
+	StringFree(str + 1); // dealloc program name
 }
 
 /* Dealocates dinamically created C string */
