@@ -43,7 +43,7 @@ bool string_pair_cpy(string_pair *dst, const string_pair *src){
 
 /* constants */
 static const string_pair ESCAPE_SEQUENCES_STATIC[] = {
-		
+
 		{ "\\\a", "\a" },
 		{ "\\\b", "\b" },
 		{ "\\\f", "\f" },

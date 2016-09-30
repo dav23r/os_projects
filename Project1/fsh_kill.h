@@ -10,7 +10,13 @@
 #include "util.h"
 #include <stdio.h>
 
-void fsh_kill(pid_t pid, int signal);
+//void fsh_kill(pid_t pid, int signal);
+
+
+//bool fsh_kill(pid_t pid, int signal);
+
+bool fsh_kill(pos_arguments *args, context *context);
+
 
 
 #endif //PROJECT1_FSH_KILL_H
