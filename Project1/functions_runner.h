@@ -9,7 +9,7 @@
 #include "parser_util.h"
 #include <stdio.h>
 
-typedef bool (*func_pointer)(pos_arguments *);
+typedef bool (*func_pointer)(pos_arguments *, context *);
 
 bool execute_command(const token_t *tokens, context *c, bool *error);
 

@@ -1,5 +1,6 @@
 #include "input_parser.h"
 #include "tokenizer.h"
+#include "parser_exceptions.h"
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>

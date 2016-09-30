@@ -36,7 +36,7 @@ int main() {
 	printf("Shell started\n");
 	context con;
 	context_init(&con);
-	load_functions(con->map);
+	load_functions(con.map);
 	
 	while (true){
 		char * prompt = def_prompt();
