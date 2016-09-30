@@ -102,7 +102,7 @@ bool execute_command(const token_t *command, context *c, bool *error) {
 
 			func_pointer fn = searchFn(c->map, funcname);
 
-			return fn(args, c);
+			return fn(args);
 		} else { // program call
 			printf("noooot found in built ins\n");
 			return fsh_nice('n', 0, funcname, NULL);

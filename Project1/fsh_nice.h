@@ -13,6 +13,7 @@
 #include "util.h"
 #include <stdio.h>
 #include <stdlib.h>
+#include "arguments.h"
 
 bool fsh_nice_helper(char flag, int increment, char * program_name, char * const argv[]);
 

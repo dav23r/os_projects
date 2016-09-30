@@ -7,7 +7,7 @@
 
 
 typedef struct{
-
+	hashset *aliases;
 	hashset *map;
 } context;
 
@@ -24,5 +24,7 @@ int StringCmp(const void *elemAddr1, const void *elemAddr2);
 void StringFree(void *str);
 
 int StringHash(const void *elem, int numBuckets);
+
+void AliasFree(void *str);
 
 #endif

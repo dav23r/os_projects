@@ -1,16 +1,20 @@
 #include "functions.h"
 
 
-void fsh_info(pos_arguments *args){
+bool fsh_info(pos_arguments *args){
     printf("This Free Shell was made by an awesome group of four cs undergraduates\n");
     printf("Enjoy while it lasts\n");
+
+    return true;
 }
 
 
-void fsh_cd_helper(char * dir){
+bool fsh_cd_helper(char * dir){
     if (chdir(dir)<0){
         error_handler(errno," changing directory ");
+        return false;
     }
+    return true;
 }
 
 bool fsh_cd(pos_arguments *args) {
@@ -37,14 +41,16 @@ bool fsh_pwd(pos_arguments *args){
 }
 
 
-void fsh_echo_name_helper(char * variable_name) {
+bool fsh_echo_name_helper(char * variable_name) {
     char * res;
     res = getenv(variable_name);
     if (res==NULL){
         printf("no result\n");
+        return false;
     }else{
         printf("%s\n",res);
     }
+    return true;
 }
 
 bool fsh_echo_name(pos_arguments *args) {
@@ -56,8 +62,9 @@ bool fsh_echo_name(pos_arguments *args) {
     return fsh_echo_name_helper(args->arguments[0]);
 }
 
-void fsh_echo_string_helper(char * str){
+bool fsh_echo_string_helper(char * str){
     printf("%s\n",str);
+    return true;
 }
 
 bool fsh_echo_string(pos_arguments *args) {
@@ -71,7 +78,8 @@ bool fsh_echo_string(pos_arguments *args) {
 
 bool fsh_echo_export(pos_arguments *args) {
 
-
+    // not yet implemented
+    return true;
 
 }
 

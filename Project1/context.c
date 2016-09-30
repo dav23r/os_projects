@@ -3,14 +3,10 @@
 #include <stdlib.h>
 #include <string.h>
 
-typedef struct{
-	hashset *aliases;
-	hashset *map;
-} context;
 
 void context_init(context *this){
 	// Initilize map of functions
-	hashet *map = malloc(sizeof(hashset));
+	hashset *map = malloc(sizeof(hashset));
 	HashSetNew(map, sizeof(char **) + sizeof(func_pointer), 20, StringHash, StringCmp, StringFree);
 	this->map = map;
 	// Initialize map of aliases

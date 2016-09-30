@@ -3,9 +3,8 @@
 #include <stdlib.h>
 #include <string.h>
 
-void storeFuncIntoMap(hashset *map, char *fname, func_pointer fn);
 
-bool load_functions(hashset *map) {
+void load_functions(hashset *map) {
 
 	storeFuncIntoMap(map, "fsh_kill",		fsh_kill);
 	storeFuncIntoMap(map, "fsh_nice",		fsh_nice);
