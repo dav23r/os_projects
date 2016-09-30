@@ -5,6 +5,7 @@
 #include <readline/history.h>
 #include "bool.h"
 #include "input_parser.h"
+#include "load_functions.h"
 
 void ignore (int sig){
     // do nothing
@@ -35,6 +36,8 @@ int main() {
 	printf("Shell started\n");
 	context con;
 	context_init(&con);
+	load_functions(con->map);
+	
 	while (true){
 		char * prompt = def_prompt();
 		if(prompt == NULL) break;
