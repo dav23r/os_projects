@@ -1,5 +1,7 @@
 #include <stdio.h>
 #include <signal.h>
+#include <readline/readline.h>
+#include <readline/history.h>
 #include "bool.h"
 #include "input_parser.h"
 

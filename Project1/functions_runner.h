@@ -4,7 +4,9 @@
 
 #include "bool.h"
 #include "hashset.h"
-
+#include "arguments.h"
+#include "context.h"
+#include <stdio.h>
 
 typedef bool (*func_pointer)(pos_arguments *);
 

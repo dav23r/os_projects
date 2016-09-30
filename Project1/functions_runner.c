@@ -1,6 +1,8 @@
 #include "functions_runner.h"
 #include "vector.h"
-//#include "functions.h"
+#include <stdlib.h>
+#include <string.h>
+#include "functions.h"
 
 
 char * toLowerCase(char *str) {
