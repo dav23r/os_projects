@@ -28,7 +28,7 @@ void fsh_pwd(){
 
 void fsh_echo_name(char * variable_name){
     char * res;
-    res = getenv(variable_namename);
+    res = getenv(variable_name);
     if (res==NULL){
         printf("\n");
     }else{

@@ -25,6 +25,6 @@ typedef struct{
 
 /********* functions *********/
 
-pos_arguments* getCommandArguments(args_and_flags *this);
+// pos_arguments* getCommandArguments(args_and_flags *this);
 
 #endif 

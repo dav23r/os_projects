@@ -16,8 +16,6 @@ static const char STRING_START_1[] = "\'";
 static const char SEMICOLON[] = ";";
 static const char COMMENT_START[] = "#";
 
-static const char *STRING_START_ENDS[] = { STRING_START_0, STRING_START_1, DELIMITER_END };
-
 static const char AND_OPERATOR[] = "&&";
 static const char OR_OPERATOR[] = "||";
 static const char PIPE_OPERATOR[] = "|";
@@ -27,34 +25,6 @@ static const string_pair INPUT_PARSER_IGNORED[] = {
 		{ (char*)STRING_START_0, (char*)STRING_START_0},
 		{ (char*)STRING_START_1, (char*)STRING_START_1},
 		IGNORED_END };
-
-
-
-
-
-/* /////////////////////////// HELPERS: ///////////////////////////// */
-/* ////////////////////////////////////////////////////////////////// */
-/* ////////////////////////////////////////////////////////////////// */
-/* ////////////////////////////////////////////////////////////////// */
-/* ////////////////////////////////////////////////////////////////// */
-
-static void string_condense(char **buffer, const char *source){
-	while(true){
-		(**buffer) = (*source);
-		if((*source) == '\0') break;
-		(*buffer)++;
-		source++;
-	}
-}
-
-static bool string_in_list(const char *string, const char **list){
-	if(string == NULL ||  list == NULL) return false;
-	while((*list) != NULL){
-		if(strcmp(string, (*list)) == 0) return true;
-		list++;
-	}
-	return false;
-}
 
 
 
@@ -181,73 +151,11 @@ static void log_pipeline(const token_t **pipeline){
 }
 #endif
 
-static void free_command_tokens(token_t *tokens){
-	token_t *command_cursor;
-	for(command_cursor = tokens; (!token_null(command_cursor)); command_cursor++)
-		token_dispose(command_cursor);
-	free(tokens);
-}
-
 static void free_pipeline(token_t **pipeline){
 	token_t **cursor;
 	for(cursor = pipeline; (*cursor) != NULL; cursor++)
 		free_command_tokens(*cursor);
 	free(pipeline);
-}
-
-static const char *COMMAND_DELIMITERS[] = { " ", "\t", "\r", "\n", "\v", "\f", STRING_START_0, STRING_START_1, DELIMITER_END };
-static const string_pair COMMAND_COMMENTS[] = { { (char*)COMMENT_START, NULL }, IGNORED_END };
-
-static token_t *tokenize_command(const char *command){
-	int len = (strlen(command) + 1);
-	token_t *command_tokens = malloc(sizeof(token_t) * len);
-	if(command_tokens == NULL) return NULL;
-
-	char *buffer = malloc(sizeof(char) * len);
-	if(buffer == NULL){ free(command_tokens); return NULL; }
-
-	tokenizer tok;
-	if(!tokenizer_init(&tok, command, COMMAND_DELIMITERS, COMMAND_COMMENTS, ESCAPE_SEQUENCES)){
-		free(command_tokens);
-		free(buffer);
-		return NULL;
-	}
-
-	token_t *command_cursor = command_tokens;
-
-	while(tokenizer_move_to_next(&tok)){
-		const char *delimiter = tokenizer_get_last_delimiter(&tok);
-		const char *token = tokenizer_get_current_token(&tok);
-		const char *token_text = NULL;
-		token_type tok_type = NO_TYPE;
-		if(string_in_list(delimiter, STRING_START_ENDS)){
-			char *buffer_cursor = buffer;
-			while(tokenizer_move_to_next(&tok)){
-				const char *cur_delimiter = tokenizer_get_last_delimiter(&tok);
-				if(cur_delimiter == NULL || strcmp(delimiter, cur_delimiter) == 0) break;
-				string_condense(&buffer_cursor, token);
-				if(cur_delimiter != NULL) string_condense(&buffer_cursor, cur_delimiter);
-			}
-			token_text = buffer;
-			tok_type = STRING;
-		}
-		else if((*token) != '\0'){
-			token_text = token;
-			tok_type = UNKNOWN;
-		}
-		if(token_text != NULL) {
-			if (!token_init(command_cursor, token_text, tok_type)) {
-				free_command_tokens(command_tokens);
-				command_tokens = NULL;
-				break;
-			} else command_cursor++;
-		}
-	}
-
-	if(command_tokens != NULL) token_init_null(command_cursor);
-	tokenizer_dispose(&tok);
-	free(buffer);
-	return command_tokens;
 }
 
 static const char *PIPELINE_DELIMITERS[] = { PIPE_OPERATOR, DELIMITER_END };

@@ -9,7 +9,7 @@
 #include <sys/stat.h>
 #include "arguments.h"
 
-typedef void (*r_limit)(char, int, int);
+
 /*displays some info for free shell*/
 void fsh_info();
 /*changed directory*/

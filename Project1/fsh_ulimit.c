@@ -1,5 +1,7 @@
 #include "fsh_ulimit.h"
 
+bool fsh_ulimit_helper(r_limit fn, char flag, int limit, char s_h_flag);
+
 int get_rlim_cur(char flag, int limit, int resource){
     if (flag=='S')
         return  limit;
@@ -40,6 +42,14 @@ bool set_limit(char s_h_flag, int limit, int resource){
 
     return true;
 }
+//number by which it should be divided
+//to show what bash would've shown
+int resource_correspondence(int resource){
+    if (resource==RLIMIT_CPU||resource==RLIMIT_NPROC)
+        return 1;
+    return 1024;
+}
+
 bool get_limit(char s_h_flag, int limit, int resource){
     struct rlimit rl;
     rl.rlim_cur = get_rlim_cur(s_h_flag, limit,resource);
@@ -47,7 +57,7 @@ bool get_limit(char s_h_flag, int limit, int resource){
         printf("error while getting limit\n");
         return false;
     }else{
-        printf("%d\n",rl.rlim_cur);
+        printf("%ld\n",(long)rl.rlim_cur/resource_correspondence(resource));
     }
 
     return true;
@@ -87,7 +97,7 @@ bool fsh_ulimit(args_and_flags *rest) {
         pos_arguments *flag_args = rest->flags[i].flag_arguments;
         int limit;
 
-        if (pos_arguments->num_args == 0) {
+        if (flag_args->num_args == 0) {
             limit = 0;
         } else {
             char *arg = flag_args->arguments[1];
@@ -105,6 +115,22 @@ bool fsh_ulimit(args_and_flags *rest) {
 bool fsh_ulimit_helper(r_limit fn, char flag, int limit, char s_h_flag){
     struct rlimit rl;
     switch (flag){
+        case 'a':
+            fsh_ulimit_helper(fn,'c',limit, s_h_flag);
+            fsh_ulimit_helper(fn,'d',limit, s_h_flag);
+            fsh_ulimit_helper(fn,'e',limit, s_h_flag);
+            fsh_ulimit_helper(fn,'f',limit, s_h_flag);
+            fsh_ulimit_helper(fn,'i',limit, s_h_flag);
+            fsh_ulimit_helper(fn,'l',limit, s_h_flag);
+            fsh_ulimit_helper(fn,'m',limit, s_h_flag);
+            fsh_ulimit_helper(fn,'q',limit, s_h_flag);
+            fsh_ulimit_helper(fn,'r',limit, s_h_flag);
+            fsh_ulimit_helper(fn,'s',limit, s_h_flag);
+            fsh_ulimit_helper(fn,'t',limit, s_h_flag);
+            fsh_ulimit_helper(fn,'u',limit, s_h_flag);
+            fsh_ulimit_helper(fn,'v',limit, s_h_flag);
+            fsh_ulimit_helper(fn,'x',limit, s_h_flag);
+            break;
         case 'c':
             fn(s_h_flag,limit,RLIMIT_CORE);
             break;
@@ -122,9 +148,6 @@ bool fsh_ulimit_helper(r_limit fn, char flag, int limit, char s_h_flag){
             break;
         case 'n':
             fn(s_h_flag,limit,RLIMIT_NOFILE);
-            break;
-        case 'p':
-            fn(s_h_flag,limit,RLIMIT_);
             break;
         case 'q':
             fn(s_h_flag,limit,RLIMIT_MSGQUEUE);
@@ -153,7 +176,5 @@ bool fsh_ulimit_helper(r_limit fn, char flag, int limit, char s_h_flag){
         case 'l':
             fn(s_h_flag,limit,RLIMIT_MEMLOCK);
             break;
-        case 'T':
-            fn(s_h_flag,limit,RLIMIT_NTHR);
     }
 }
