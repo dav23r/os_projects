@@ -20,7 +20,7 @@
 // loads fshell built-in functions into functions map
 bool load_functions(hashset *map);
 
-void storeFuncIntoMap(hashset *map);
+// void storeFuncIntoMap(hashset *map);
 
 #endif
 
