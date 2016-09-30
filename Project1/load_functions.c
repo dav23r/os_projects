@@ -1,6 +1,9 @@
 
 #include "load_functions.h"
+#include <stdlib.h>
+#include <string.h>
 
+void storeFuncIntoMap(hashset *map, char *fname, func_pointer fn);
 
 bool load_functions(hashset *map) {
 

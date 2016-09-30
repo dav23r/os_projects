@@ -1,4 +1,7 @@
-#include"context.h"
+#include "context.h"
+#include "functions_runner.h"
+#include <stdlib.h>
+#include <string.h>
 
 typedef struct{
 	hashset *aliases;
