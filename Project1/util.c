@@ -57,7 +57,10 @@ const string_pair ESCAPE_SEQUENCES[] = {
 
 
 
-bool get_path_of_program(char * program_name, char * res){
+/* Prints paths where given program with given name resides
+   If first_only flag is present, search is terminated on the
+   very first occurence of the program */
+void print_locations_of_program(char *program_name, bool first_only){
     const char* s = getenv("PATH");
     tokenizer tok;
     const char * delims[] = {":",DELIMITER_END};
@@ -70,14 +73,16 @@ bool get_path_of_program(char * program_name, char * res){
         strcat(p,t);
         strcat(p,program_name);
         struct stat sb;
+        // If current path is a file, print it
         if (stat(p, &sb) == 0 && S_ISDIR(sb.st_mode)){
-            res = p;
-            tokenizer_dispose(&tok);
-            return true;
-        }
+            printf("%s is a program located at %s\n", t, p);
+            if (first_only){
+                tokenizer_dispose(&tok);
+                return;
+            }
+        } 
     }
     tokenizer_dispose(&tok);
-    return false;
 }
 
 bool is_valid_integer(char *arg) {
