@@ -1,5 +1,6 @@
 #ifndef _functions_
 #define _functions_
+
 #include <unistd.h>
 #include <stdio.h>
 #include <errno.h>
@@ -11,9 +12,25 @@
 
 
 /*displays some info for free shell*/
-void fsh_info();
+bool fsh_info(pos_arguments *args);
+
 /*changed directory*/
-void fsh_cd();
+bool fsh_cd(pos_arguments *args);
+
+void fsh_cd_helper(char * dir);
+
 /*displays working directory*/
-void fsh_pwd();
+bool fsh_pwd(pos_arguments *args);
+
+bool fsh_echo_name(pos_arguments *args);
+
+void fsh_echo_name_helper(char * variable_name);
+
+bool fsh_echo_string(pos_arguments *args);
+
+void fsh_echo_string_helper(char * str);
+
+bool fsh_echo_export(pos_arguments *args);
+
+
 #endif

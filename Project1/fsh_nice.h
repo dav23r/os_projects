@@ -14,8 +14,8 @@
 #include <stdio.h>
 #include <stdlib.h>
 
-bool fsh_nice(char flag, int increment, char * program_name, char * const argv[]);
+bool fsh_nice_helper(char flag, int increment, char * program_name, char * const argv[]);
 
-
+bool fsh_nice(pos_arguments *args);
 
 #endif //PROJECT1_FSH_NICE_H
