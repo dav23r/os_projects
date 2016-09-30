@@ -9,6 +9,8 @@
 #include <errno.h>
 #include "util.h"
 #include <stdio.h>
+#include "arguments.h"
+#include "context.h"
 
 //void fsh_kill(pid_t pid, int signal);
 
