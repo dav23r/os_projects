@@ -24,19 +24,19 @@ bool execute_command(const token_t *command, context *c, bool *error) {
 	printf("Hello bros\n");
 	if (!strcmp(funcname, "ulimit")) {
 		printf("1\n");
-		if (token_null(&command[1])) // prosta 'ulimit'-ze ras vshvrebit? return;
+		if (token_null(&command[1])); // prosta 'ulimit'-ze ras vshvrebit? return;
 		if (command[1].string[0] != '-') {
 			*error = true;
 			return false; // funqciis mere pirvelive flag ar aris
 		}
-		
+
 		args_and_flags *args = malloc(sizeof(args_and_flags));
 		args->num_flags = 0;
 		args->command_arguments = NULL;
 		vector *flags;
 		VectorNew(flags, sizeof(flag *), NULL, 4);
 		flag *current = malloc(sizeof(flag)); current->flag = '0'; current->flag_arguments = NULL; // spec values for empty flag
-		
+
 		int i;
 		for (i = 1; !token_null(&command[i]); i++) {
 			char *next = command[i].string;
@@ -47,8 +47,9 @@ bool execute_command(const token_t *command, context *c, bool *error) {
 					return false;
 				}
 				if (current->flag == '0') current->flag = next[1];
+                if (token_null(&command[i+1])) VectorAppend(flags, current);
 			} else {
-				if (current->flag_arguments == NULL && current->flag == '0') {
+				if (current->flag_arguments == NULL && current->flag != '0') {
 					current->flag_arguments = malloc(sizeof(pos_arguments));
 					current->flag_arguments->num_args = 1;
 					current->flag_arguments->arguments = &next;
@@ -63,8 +64,7 @@ bool execute_command(const token_t *command, context *c, bool *error) {
 		}
 		args->flags = res;
 
-		//return fsh_ulimit(args);
-		return true;
+		return fsh_ulimit(args);
 	} else if (!strcmp(funcname, "type")) {
 		printf("2\n");
 
@@ -83,8 +83,7 @@ bool execute_command(const token_t *command, context *c, bool *error) {
 		args->arguments = arguments;
 		args->num_args = len - 1;
 
-		//return fsh_type(has_a_flag, args);
-		return true;
+		return true;// fsh_type(has_a_flag, args);
 	} else {
         printf("else-shi var\n");
 		func_pointer fn = searchFn(c->map, funcname);

@@ -89,14 +89,19 @@ char find_limit_type(args_and_flags *rest) {
 
 bool fsh_ulimit(args_and_flags *rest) {
     int i;
+    printf("HEEEEEEEEEEEEHE\n");
+
     char soft_or_hard_limit = find_limit_type(rest);
     for (i = 0; i < rest->num_flags; i++) {
+
         char flag = rest->flags[i].flag;
+        printf("flag is = %c\n",flag);
         if (flag == 'S' || flag == 'H') continue;
-
+        printf("if passed\n");
         pos_arguments *flag_args = rest->flags[i].flag_arguments;
-        int limit;
 
+        int limit;
+printf("%d\n", flag_args->num_args);
         if (flag_args->num_args == 0) {
             limit = 0;
         } else {
@@ -107,12 +112,13 @@ bool fsh_ulimit(args_and_flags *rest) {
             }
             limit = atoi(arg);
         }
-
+        printf("%c\n",flag);
         fsh_ulimit_helper((limit == 0 ? set_limit : get_limit), flag, limit, soft_or_hard_limit);
     }
 }
 
 bool fsh_ulimit_helper(r_limit fn, char flag, int limit, char s_h_flag){
+    printf("sdfssssddss\n");
     struct rlimit rl;
     switch (flag){
         case 'a':
