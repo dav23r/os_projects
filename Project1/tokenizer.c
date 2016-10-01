@@ -2,6 +2,13 @@
 #include<string.h>
 #include<stdlib.h>
 
+static const char *DELIMITERS_NONE_STATIC[] = { DELIMITER_END };
+const char **DELIMITERS_NONE = DELIMITERS_NONE_STATIC;
+static const string_pair STRING_PAIRS_NONE_STATIC[] = { STRING_PAIR_END };
+const string_pair *IGNORED_NONE = STRING_PAIRS_NONE_STATIC;
+const string_pair *ESCAPE_NONE = STRING_PAIRS_NONE_STATIC;
+
+
 static void free_list(const void *list, size_t elem_size, bool(*last_check)(const void*), void(*free_fn)(void*)){
 	if (list == NULL) return;
 	const char* clist = (const char*)list;

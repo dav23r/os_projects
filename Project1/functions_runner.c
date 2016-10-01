@@ -1,6 +1,8 @@
 #include "functions_runner.h"
 #include "vector.h"
-//#include "functions.h"
+#include <stdlib.h>
+#include <string.h>
+#include "functions.h"
 
 
 char * toLowerCase(char *str) {
@@ -12,48 +14,15 @@ char * toLowerCase(char *str) {
   	return res;
 }
 
-bool token_init(token_t *this, const char *string, token_type type) {
-	this->string = strdup(string);
-	if(this->string == NULL){
-		this->type = NO_TYPE;
-		return false;
-	}
-	this->type = type;
-}
-
-void token_init_null(token_t *this){
-	this->string = NULL;
-	this->type = NO_TYPE;
-}
-
-token_t token_get_null(){
-	token_t token;
-	token_init_null(&token);
-	return token;
-}
-
-void token_dispose(token_t *this){
-	if(this->string != NULL) free(this->string);
-}
-
-bool token_equals(const token_t *t1, const token_t *t2){
-	return ((t1->type == t2->type) && (t1->string == NULL && t2->string == NULL) || ((t1->string != NULL && t2->string != NULL) && (strcmp(t1->string, t2->string) == 0)));
-}
-
-bool token_null(const token_t *t) {
-	return (t->string == NULL);
-}
-
 bool execute_command(const token_t *command, context *c, bool *error) {
-	
 	if (command == NULL || token_null(&command[0]) || strlen(command[0].string) == 0) return false;
 	char *funcname = command[0].string;
 	char *lower_case = toLowerCase(funcname);
-	if (strcmp("true", lower_case)) return true;
-	if (strcmp("false", lower_case)) return false;
+	if (!strcmp("true", lower_case)) return true;
+	if (!strcmp("false", lower_case)) return false;
 	free(lower_case);
-
 	if (!strcmp(funcname, "ulimit")) {
+		printf("1\n");
 		if (token_null(&command[1])) // prosta 'ulimit'-ze ras vshvrebit? return;
 		if (command[1].string[0] != '-') {
 			*error = true;
@@ -96,6 +65,8 @@ bool execute_command(const token_t *command, context *c, bool *error) {
 		//return fsh_ulimit(args);
 		return true;
 	} else if (!strcmp(funcname, "type")) {
+		printf("2\n");
+
 		bool has_a_flag = find_a_flag_for_type(&command[1], error);
 		if (*error) return false;
 
@@ -116,6 +87,7 @@ bool execute_command(const token_t *command, context *c, bool *error) {
 	} else {
 		func_pointer fn;
 		if ((fn = searchFn(c->map, funcname)) != NULL) { // i.e. built in
+
 			pos_arguments *args = malloc(sizeof(pos_arguments));
 			int len = get_tokens_len(command);
 			char **arguments = malloc(len * sizeof(char *));
@@ -132,6 +104,7 @@ bool execute_command(const token_t *command, context *c, bool *error) {
 
 			return fn(args);
 		} else { // program call
+			printf("noooot found in built ins\n");
 			return fsh_nice('n', 0, funcname, NULL);
 		}
 	}

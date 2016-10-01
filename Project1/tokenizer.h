@@ -19,6 +19,10 @@ typedef struct{
 #define IGNORED_END STRING_PAIR_END
 #define REPLACEMENT_END STRING_PAIR_END
 
+const char **DELIMITERS_NONE;
+const string_pair *IGNORED_NONE;
+const string_pair *ESCAPE_NONE;
+
 /** Initializes given tokenizer;
 	Notes:
 		1. Constructor copies both the string and the delimiters on heap

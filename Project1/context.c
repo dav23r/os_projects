@@ -1,17 +1,52 @@
-#include"context.h"
+#include "context.h"
+#include "functions_runner.h"
+#include <stdlib.h>
+#include <string.h>
 
 
 void context_init(context *this){
-	/* NOT YET IMPLEMETED */
+	// Initilize map of functions
+	hashset *map = malloc(sizeof(hashset));
+	HashSetNew(map, sizeof(char **) + sizeof(func_pointer), 20, StringHash, StringCmp, StringFree);
+	this->map = map;
+	// Initialize map of aliases
+	hashset *aliases = malloc(sizeof(hashset));
+	HashSetNew(aliases, sizeof(char *) + sizeof(char *), 20, StringHash, StringCmp, AliasFree);
+	this->aliases = aliases;
 }
+
+
 void context_dispose(context *this){
-	/* NOT YET IMPLEMETED */
+	HashSetDispose(this->aliases);
+	HashSetDispose(this->map);
 }
 
-void context_cpy(const context *from, context *to){
-	/* NOT YET IMPLEMETED */
+static const signed long kHashMultiplier = -1664117991L;
+int StringHash(const void *elem, int numBuckets)
+{
+	char *s = *(char **) elem;
+	unsigned long hashcode = 0;
+	int i;
+	for (i = 0; i < strlen(s); i++)  
+    	hashcode = hashcode * kHashMultiplier + tolower(s[i]);  
+	return hashcode % numBuckets;                                  
 }
 
-void context_set_variable(context *this, const char *name, const char *value){
-	/* NOT YET IMPLEMETED */
+// Dealocates memory of alias -> program name pair
+void AliasFree(void *str){
+	StringFree(str);     // dealloc alias
+	StringFree(str + 1); // dealloc program name
 }
+
+/* Dealocates dinamically created C string */
+void StringFree(void *str)
+{
+	free(*(char **)str);
+}
+
+/* Compare function for hashset, compares keys as c-strings [uses strcasecmp] */
+int StringCmp(const void *elemAddr1, const void *elemAddr2)
+{
+	return strcasecmp(*(char **) elemAddr1, *(char **) elemAddr2);
+}
+

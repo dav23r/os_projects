@@ -1,5 +1,7 @@
 #include "fsh_ulimit.h"
 
+bool fsh_ulimit_helper(r_limit fn, char flag, int limit, char s_h_flag);
+
 int get_rlim_cur(char flag, int limit, int resource){
     if (flag=='S')
         return  limit;
@@ -55,7 +57,7 @@ bool get_limit(char s_h_flag, int limit, int resource){
         printf("error while getting limit\n");
         return false;
     }else{
-        printf("%d\n",rl.rlim_cur/resource_correspondence(resource));
+        printf("%ld\n",(long)rl.rlim_cur/resource_correspondence(resource));
     }
 
     return true;
@@ -95,7 +97,7 @@ bool fsh_ulimit(args_and_flags *rest) {
         pos_arguments *flag_args = rest->flags[i].flag_arguments;
         int limit;
 
-        if (pos_arguments->num_args == 0) {
+        if (flag_args->num_args == 0) {
             limit = 0;
         } else {
             char *arg = flag_args->arguments[1];
