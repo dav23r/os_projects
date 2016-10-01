@@ -4,7 +4,6 @@
 #include <ctype.h>
 #include <string.h>
 
-
 void context_init(context *this){
 	int num_buckets = 50;
 	// Initilize map of functions

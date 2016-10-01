@@ -44,9 +44,11 @@ int main() {
 		char * line = readline(prompt);
 		free(prompt);
 		if (line == NULL) break;
-		add_history(line);
-		if (strcmp(line, "exit") == 0) break;
-		parse_input_line(line, &con);
+		if (strlen(line) > 0) {
+			add_history(line);
+			if (strcmp(line, "exit") == 0) break;
+			parse_input_line(line, &con);
+		}
 		free(line);
 	}
 	context_dispose(&con);
