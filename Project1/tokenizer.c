@@ -215,7 +215,7 @@ bool tokenizer_move_to_next(tokenizer *this){
 		}
 	}
 	(*token) = '\0';
-	return (token != this->current_token || (*this->cursor) != '\0');
+	return ((this->tok_start != this->cursor) || (*this->cursor) != '\0');
 }
 char* tokenizer_get_next_token(tokenizer *this){
 	if (tokenizer_move_to_next(this))

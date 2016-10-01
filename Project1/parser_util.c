@@ -73,6 +73,15 @@ bool string_in_list(const char *string, const char **list){
 	return false;
 }
 
+bool token_add(token_t **command_tokens, token_t **command_cursor, const char *token_text, token_type tok_type, char last_cursor){
+	if (!token_init(*command_cursor, token_text, tok_type, last_cursor)) {
+		free_command_tokens(*command_tokens);
+		(*command_tokens) = NULL;
+		return false;
+	} else (*command_cursor)++;
+	return true;
+}
+
 token_t *tokenize_command(const char *command){
 	int len = (strlen(command) + 1);
 	token_t *command_tokens = malloc(sizeof(token_t) * len);
@@ -90,12 +99,15 @@ token_t *tokenize_command(const char *command){
 
 	token_t *command_cursor = command_tokens;
 	char last_cursor = '\0';
+	const char *last_delimiter = NULL;
 
 	while(tokenizer_move_to_next(&tok)){
 		const char *delimiter = tokenizer_get_last_delimiter(&tok);
 		const char *token = tokenizer_get_current_token(&tok);
-		const char *token_text = NULL;
-		token_type tok_type = NO_TYPE;
+		if((*token) != '\0') {
+			if (!token_add(&command_tokens, &command_cursor, token, UNKNOWN, last_cursor)) break;
+			last_cursor = token[strlen(token) - 1];
+		}
 		if(string_in_list(delimiter, STRING_START_ENDS)){
 			char *buffer_cursor = buffer;
 			while(tokenizer_move_to_next(&tok)){
@@ -104,22 +116,9 @@ token_t *tokenize_command(const char *command){
 				if(cur_delimiter == NULL || strcmp(delimiter, cur_delimiter) == 0) break;
 				if(cur_delimiter != NULL) string_condense(&buffer_cursor, cur_delimiter);
 			}
-			token_text = buffer;
-			tok_type = STRING;
+			if(!token_add(&command_tokens, &command_cursor, buffer, STRING, last_cursor)) break;
 		}
-		else if((*token) != '\0'){
-			token_text = token;
-			tok_type = UNKNOWN;
-		}
-		if(token_text != NULL) {
-			const char *last_symbol = (tokenizer_get_cursor(&tok) - 1);
-			if (!token_init(command_cursor, token_text, tok_type, last_cursor)) {
-				free_command_tokens(command_tokens);
-				command_tokens = NULL;
-				break;
-			} else command_cursor++;
-		}
-		last_cursor = (*(tokenizer_get_cursor(&tok) + 1));
+		else last_cursor = ((delimiter != NULL) ? delimiter[strlen(delimiter) - 1] : '\0');
 	}
 
 	if(command_tokens != NULL) token_init_null(command_cursor);
