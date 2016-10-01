@@ -12,7 +12,7 @@ void load_functions(hashset *map) {
 	storeFuncIntoMap(map, "fsh_pwd",		fsh_pwd);
 	storeFuncIntoMap(map, "fsh_echo_name",	fsh_echo_name);
 	storeFuncIntoMap(map, "fsh_echo_string",fsh_echo_string);
-	storeFuncIntoMap(map, "fsh_echo_export",fsh_echo_export);
+	storeFuncIntoMap(map, "export",			fsh_echo_export);
 }
 
 void storeFuncIntoMap(hashset *map, char *fname, func_pointer fn) {

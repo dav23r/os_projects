@@ -77,10 +77,12 @@ bool fsh_echo_string(pos_arguments *args) {
 }
 
 bool fsh_echo_export(pos_arguments *args) {
-
-    // not yet implemented
-    return true;
-
+    if (args == NULL || args->num_args < 2) {
+        printf("Syntax error in calling 'export'\n");
+        return false;
+    }
+    
+    return fsh_echo_export_helper(args->arguments[0], args->arguments[1]);
 }
 
 bool fsh_echo_export_helper(char * name, char * value){
