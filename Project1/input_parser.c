@@ -286,6 +286,10 @@ static bool parse_command_sequence(const char *sequence, context *c){
 static const char *COMMAND_SEQUENCE_BREAKS[] = { SEMICOLON, DELIMITER_END };
 
 bool parse_input_line(const char *line, context *c){
+	bool err = false;
+	if(catch_input_exception(line, c, &err)) return false;
+	if(err) return false;
+
 	char *command_sequence = malloc(sizeof(char) * (strlen(line) + 1));
 	if (command_sequence == NULL) return false;
 	tokenizer tok;

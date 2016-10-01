@@ -2,6 +2,7 @@
 #define PARSER_UTIL
 
 #include "bool.h"
+#include "util.h"
 
 typedef enum{
 	UNKNOWN,
@@ -12,9 +13,10 @@ typedef enum{
 typedef struct{
 	char *string;
 	token_type type;
+	char last_char;
 } token_t;
 
-bool token_init(token_t *this, const char *string, token_type type);
+bool token_init(token_t *this, const char *string, token_type type, char last_char);
 
 void token_init_null(token_t *this);
 
@@ -31,5 +33,10 @@ void free_command_tokens(token_t *tokens);
 token_t *tokenize_command(const char *command);
 
 bool string_in_list(const char *string, const char **list);
+
+const char **STRING_START_ENDS;
+const char **COMMAND_DELIMITERS;
+const char **WHITE_SPACES;
+const string_pair *COMMAND_COMMENTS;
 
 #endif
