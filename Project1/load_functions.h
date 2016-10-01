@@ -18,9 +18,9 @@
 
 
 // loads fshell built-in functions into functions map
-bool load_functions(hashset *map);
+void load_functions(hashset *map);
 
-// void storeFuncIntoMap(hashset *map);
+void storeFuncIntoMap(hashset *map, char *fname, func_pointer fn);
 
 #endif
 

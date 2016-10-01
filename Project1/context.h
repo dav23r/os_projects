@@ -25,4 +25,6 @@ void StringFree(void *str);
 
 int StringHash(const void *elem, int numBuckets);
 
+void AliasFree(void *str);
+
 #endif
