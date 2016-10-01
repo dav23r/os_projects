@@ -21,6 +21,7 @@ bool execute_command(const token_t *command, context *c, bool *error) {
 	if (!strcmp("true", lower_case)) return true;
 	if (!strcmp("false", lower_case)) return false;
 	free(lower_case);
+	printf("Hello bros\n");
 	if (!strcmp(funcname, "ulimit")) {
 		printf("1\n");
 		if (token_null(&command[1])) // prosta 'ulimit'-ze ras vshvrebit? return;
@@ -85,9 +86,10 @@ bool execute_command(const token_t *command, context *c, bool *error) {
 		//return fsh_type(has_a_flag, args);
 		return true;
 	} else {
+        printf("else-shi var\n");
 		func_pointer fn;
 		if ((fn = searchFn(c->map, funcname)) != NULL) { // i.e. built in
-
+            printf("ifshic broooo\n");
 			pos_arguments *args = malloc(sizeof(pos_arguments));
 			int len = get_tokens_len(command);
 			char **arguments = malloc(len * sizeof(char *));
@@ -142,7 +144,9 @@ int get_tokens_len(const token_t *command) {
 func_pointer searchFn(hashset *map, char *name) {
 
 	void *elem = HashSetLookup(map, &name);
-
-	func_pointer fn = *(func_pointer *) ((char *) elem + sizeof(char **));
+    if (!elem) return NULL;
+    printf("Hashset lookup passed\n");
+	func_pointer fn = *((func_pointer *) ((char *) elem + sizeof(char **)));
+    printf("func_pinter passed\n");
 	return fn;
 }

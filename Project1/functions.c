@@ -1,5 +1,5 @@
 #include "functions.h"
-
+#include "constants.h"
 
 bool fsh_info(pos_arguments *args){
     printf("This Free Shell was made by an awesome group of four cs undergraduates\n");
@@ -96,7 +96,7 @@ bool fsh_echo_export_helper(char * name, char * value){
 
 long long fsh_echo_last_status(long long  t){
     static long long rv = 0LL;
-    if (t==STATUS_CODE){
+    if (t==STATUS_CODE_ECHO){
         return  rv;
     }
     rv = t;

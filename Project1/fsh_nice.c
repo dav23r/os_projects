@@ -24,6 +24,7 @@ bool fsh_nice_helper(char flag, int increment, char * program_name, char * const
             printf("error while trying to fork");
             return;
         case 0:
+            printf("Child bro\n");
             errno = 0;
             if (nice(increment)<0) {
                 error_handler(errno, "nice");
@@ -33,6 +34,7 @@ bool fsh_nice_helper(char flag, int increment, char * program_name, char * const
                 error_handler(errno, "executing given program");
                 return;
             }
+            printf("all done and well");
             exit(-1);
             break;
         default:
@@ -40,7 +42,7 @@ bool fsh_nice_helper(char flag, int increment, char * program_name, char * const
                 error_handler(errno, "waiting for child to terminate");
                 return;
             }
-
+            printf("asdaaas");
             break;
     }
 
