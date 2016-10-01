@@ -10,7 +10,7 @@
 #include <sys/stat.h>
 #include "arguments.h"
 
-
+const long long STATUS_CODE = -123456789101112LL;
 /*displays some info for free shell*/
 bool fsh_info(pos_arguments *args);
 
@@ -31,6 +31,9 @@ bool fsh_echo_string(pos_arguments *args);
 bool fsh_echo_string_helper(char * str);
 
 bool fsh_echo_export(pos_arguments *args);
-
+/*returns last status code or 0 if none
+ *were evoked. t should be STATUS_CODE
+ * if the value must be updated.*/
+long long fsh_echo_last_status(long long  t);
 
 #endif

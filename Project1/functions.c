@@ -83,9 +83,24 @@ bool fsh_echo_export(pos_arguments *args) {
 
 }
 
+bool fsh_echo_export_helper(char * name, char * value){
+    errno = 0;
+    if (setenv(name, value, 1)<0){
+        error_handler(errno, "setting environment variable");
+        return false;
+    }
+    return  true;
+
+}
 
 
-
-
+long long fsh_echo_last_status(long long  t){
+    static long long rv = 0LL;
+    if (t==STATUS_CODE){
+        return  rv;
+    }
+    rv = t;
+    return rv;
+}
 
 
