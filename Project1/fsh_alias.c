@@ -1,5 +1,6 @@
 #include "fsh_alias.h"
 #include "tokenizer.h"
+#include "string.h"
 
 bool fsh_alias(pos_arguments *args, context *context){
 	int arg_len = args->num_args;
@@ -9,12 +10,11 @@ bool fsh_alias(pos_arguments *args, context *context){
 	hashset *aliases = context->aliases;
 	// Parse the only argument, ensure to be of type var=value
 	tokenizer tok;
-	char *delims[] = { "=", DELIMITER_END };
+	const char *delims[] = { "=", DELIMITER_END };
 	string_pair empty[] = { STRING_PAIR_END };
-	tokenizer_init(&tokenizer, argument);
+	tokenizer_init(&tok, argument, delims, empty, empty);
 	char *alias, *prog_name;
-	int num_tokens = 0;
-	bool success = true;
+	int num_tokens = 0; bool success = true;
 	while (tokenizer_move_to_next(&tok)){
 		if (num_tokens > 2) {
 			success = false;
@@ -26,6 +26,7 @@ bool fsh_alias(pos_arguments *args, context *context){
 			success = false;
 			printf("Don't use whitespaces between tokens\n");
 			break;
+		}
 		if (num_tokens == 0) 
 			alias = strdup(cur_token);
 		else 
