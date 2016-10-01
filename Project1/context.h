@@ -7,7 +7,7 @@
 
 
 typedef struct{
-
+	hashset *aliases;
 	hashset *map;
 } context;
 
