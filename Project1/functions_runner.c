@@ -33,8 +33,8 @@ bool execute_command(const token_t *command, context *c, bool *error) {
 		args_and_flags *args = malloc(sizeof(args_and_flags));
 		args->num_flags = 0;
 		args->command_arguments = NULL;
-		vector *flags;
-		VectorNew(flags, sizeof(flag *), NULL, 4);
+        int len = get_tokens_len(command);
+        flag *flags = malloc(len * sizeof(flag));
 		flag *current = malloc(sizeof(flag)); current->flag = '0'; current->flag_arguments = NULL; // spec values for empty flag
 
 		int i;
@@ -46,23 +46,22 @@ bool execute_command(const token_t *command, context *c, bool *error) {
 					*error = true;
 					return false;
 				}
+
 				if (current->flag == '0') current->flag = next[1];
-                if (token_null(&command[i+1])) VectorAppend(flags, current);
+                if (token_null(&command[i+1])) flags[i-1] = *current;
+                ++args->num_flags;
 			} else {
 				if (current->flag_arguments == NULL && current->flag != '0') {
 					current->flag_arguments = malloc(sizeof(pos_arguments));
 					current->flag_arguments->num_args = 1;
 					current->flag_arguments->arguments = &next;
-					VectorAppend(flags, current);
+                    flags[i-1] = *current;
 					current = malloc(sizeof(flag)); current->flag = '0'; current->flag_arguments = NULL;
+                    args->num_flags;
 				}
 			}
 		}
-		flag *res = malloc(VectorLength(flags) * sizeof(flag *));
-		for (i = 0; i < VectorLength(flags); i++) {
-			res[i] = *((flag *)VectorNth(flags, i));
-		}
-		args->flags = res;
+		args->flags = flags;
 
 		return fsh_ulimit(args);
 	} else if (!strcmp(funcname, "type")) {
