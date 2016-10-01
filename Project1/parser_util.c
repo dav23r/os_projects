@@ -4,18 +4,21 @@
 #include <string.h>
 
 
-bool token_init(token_t *this, const char *string, token_type type) {
+bool token_init(token_t *this, const char *string, token_type type, char last_char) {
 	this->string = strdup(string);
 	if(this->string == NULL){
-		this->type = NO_TYPE;
+		token_init_null(this);
 		return false;
 	}
 	this->type = type;
+	this->last_char = last_char;
+	return true;
 }
 
 void token_init_null(token_t *this){
 	this->string = NULL;
 	this->type = NO_TYPE;
+	this->last_char = '\0';
 }
 
 token_t token_get_null(){
@@ -43,10 +46,14 @@ void free_command_tokens(token_t *tokens){
 	free(tokens);
 }
 
-
-static const char *STRING_START_ENDS[] = { "\"", "\'", DELIMITER_END };
-static const char *COMMAND_DELIMITERS[] = { " ", "\t", "\r", "\n", "\v", "\f", "\"", "\'", DELIMITER_END };
-static const string_pair COMMAND_COMMENTS[] = { { (char*)"#", NULL }, IGNORED_END };
+static const char *STRING_START_ENDS_STATIC[] = { "\"", "\'", DELIMITER_END };
+const char **STRING_START_ENDS = STRING_START_ENDS_STATIC;
+static const char *WHITE_SPACES_STATIC[] = { " ", "\t", "\r", "\n", "\v", "\f", DELIMITER_END };
+const char **WHITE_SPACES = WHITE_SPACES_STATIC;
+static const char *COMMAND_DELIMITERS_STATIC[] = { " ", "\t", "\r", "\n", "\v", "\f", "\"", "\'", DELIMITER_END };
+const char **COMMAND_DELIMITERS = COMMAND_DELIMITERS_STATIC;
+static const string_pair COMMAND_COMMENTS_STATIC[] = { { (char*)"#", NULL }, IGNORED_END };
+const string_pair *COMMAND_COMMENTS = COMMAND_COMMENTS_STATIC;
 
 static void string_condense(char **buffer, const char *source){
 	while(true){
@@ -82,6 +89,7 @@ token_t *tokenize_command(const char *command){
 	}
 
 	token_t *command_cursor = command_tokens;
+	char last_cursor = '\0';
 
 	while(tokenizer_move_to_next(&tok)){
 		const char *delimiter = tokenizer_get_last_delimiter(&tok);
@@ -91,9 +99,9 @@ token_t *tokenize_command(const char *command){
 		if(string_in_list(delimiter, STRING_START_ENDS)){
 			char *buffer_cursor = buffer;
 			while(tokenizer_move_to_next(&tok)){
+				string_condense(&buffer_cursor, token);
 				const char *cur_delimiter = tokenizer_get_last_delimiter(&tok);
 				if(cur_delimiter == NULL || strcmp(delimiter, cur_delimiter) == 0) break;
-				string_condense(&buffer_cursor, token);
 				if(cur_delimiter != NULL) string_condense(&buffer_cursor, cur_delimiter);
 			}
 			token_text = buffer;
@@ -104,12 +112,14 @@ token_t *tokenize_command(const char *command){
 			tok_type = UNKNOWN;
 		}
 		if(token_text != NULL) {
-			if (!token_init(command_cursor, token_text, tok_type)) {
+			const char *last_symbol = (tokenizer_get_cursor(&tok) - 1);
+			if (!token_init(command_cursor, token_text, tok_type, last_cursor)) {
 				free_command_tokens(command_tokens);
 				command_tokens = NULL;
 				break;
 			} else command_cursor++;
 		}
+		last_cursor = (*(tokenizer_get_cursor(&tok) + 1));
 	}
 
 	if(command_tokens != NULL) token_init_null(command_cursor);
