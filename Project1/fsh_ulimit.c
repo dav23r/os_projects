@@ -3,31 +3,32 @@
 bool fsh_ulimit_helper(r_limit fn, char flag, int limit, char s_h_flag);
 
 int get_rlim_cur(char flag, int limit, int resource){
-    if (flag=='S')
-        return  limit;
     struct rlimit  rlim;
-    if (flag=='H')
+    if (limit == 0 ||flag=='H')
     if (getrlimit(resource, &rlim)<0){
         return -1;
     }else{
         return rlim.rlim_cur;
     }
+    if (flag=='S')
+        return  limit;
     return  limit;
 }
 int get_rlim_max(char flag, int limit, int resource){
-    if (flag=='H')
-        return  limit;
     struct rlimit  rlim;
-    if (flag=='S')
+    if (limit == 0 ||flag=='S')
     if (getrlimit(resource, &rlim)<0){
         return -1;
     }else{
         return rlim.rlim_max;
     }
+    if (flag=='H')
+        return  limit;
     return  limit;
 }
 
 bool set_limit(char s_h_flag, int limit, int resource){
+    printf("dfvdf");
     struct rlimit rl;
     rl.rlim_cur = get_rlim_cur(s_h_flag, limit,resource);
     rl.rlim_max = get_rlim_max(s_h_flag, limit,resource);
@@ -45,8 +46,10 @@ bool set_limit(char s_h_flag, int limit, int resource){
 //number by which it should be divided
 //to show what bash would've shown
 int resource_correspondence(int resource){
-    if (resource==RLIMIT_CPU||resource==RLIMIT_NPROC)
+    if (resource==RLIMIT_CPU||resource==RLIMIT_NPROC||resource==RLIMIT_SIGPENDING||resource==RLIMIT_MSGQUEUE)
         return 1;
+    if (resource==RLIMIT_NOFILE)
+        return 512;
     return 1024;
 }
 
@@ -57,7 +60,10 @@ bool get_limit(char s_h_flag, int limit, int resource){
         printf("error while getting limit\n");
         return false;
     }else{
-        printf("%ld\n",(long)rl.rlim_cur/resource_correspondence(resource));
+        if (rl.rlim_cur==RLIM_INFINITY)
+            printf("unlimited\n");
+        else
+            printf("%ld\n",(long)rl.rlim_cur/resource_correspondence(resource));
     }
 
     return true;
@@ -89,20 +95,15 @@ char find_limit_type(args_and_flags *rest) {
 
 bool fsh_ulimit(args_and_flags *rest) {
     int i;
-    printf("HEEEEEEEEEEEEHE\n");
-
     char soft_or_hard_limit = find_limit_type(rest);
     for (i = 0; i < rest->num_flags; i++) {
 
         char flag = rest->flags[i].flag;
-        printf("flag is = %c\n",flag);
         if (flag == 'S' || flag == 'H') continue;
-        printf("if passed\n");
         pos_arguments *flag_args = rest->flags[i].flag_arguments;
 
         int limit;
-printf("%d\n", flag_args->num_args);
-        if (flag_args->num_args == 0) {
+        if (!flag_args || flag_args->num_args == 0) {
             limit = 0;
         } else {
             char *arg = flag_args->arguments[1];
@@ -112,13 +113,11 @@ printf("%d\n", flag_args->num_args);
             }
             limit = atoi(arg);
         }
-        printf("%c\n",flag);
-        fsh_ulimit_helper((limit == 0 ? set_limit : get_limit), flag, limit, soft_or_hard_limit);
+        fsh_ulimit_helper((limit == 0 ? get_limit : set_limit), flag, limit, soft_or_hard_limit);
     }
 }
 
 bool fsh_ulimit_helper(r_limit fn, char flag, int limit, char s_h_flag){
-    printf("sdfssssddss\n");
     struct rlimit rl;
     switch (flag){
         case 'a':
@@ -129,6 +128,7 @@ bool fsh_ulimit_helper(r_limit fn, char flag, int limit, char s_h_flag){
             fsh_ulimit_helper(fn,'i',limit, s_h_flag);
             fsh_ulimit_helper(fn,'l',limit, s_h_flag);
             fsh_ulimit_helper(fn,'m',limit, s_h_flag);
+            fsh_ulimit_helper(fn,'p',limit, s_h_flag);
             fsh_ulimit_helper(fn,'q',limit, s_h_flag);
             fsh_ulimit_helper(fn,'r',limit, s_h_flag);
             fsh_ulimit_helper(fn,'s',limit, s_h_flag);
@@ -152,7 +152,7 @@ bool fsh_ulimit_helper(r_limit fn, char flag, int limit, char s_h_flag){
         case 'm':
             fn(s_h_flag,limit,RLIMIT_RSS);
             break;
-        case 'n':
+        case 'n': case 'p':
             fn(s_h_flag,limit,RLIMIT_NOFILE);
             break;
         case 'q':
