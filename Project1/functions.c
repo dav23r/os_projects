@@ -83,7 +83,15 @@ bool fsh_echo_export(pos_arguments *args) {
 
 }
 
-
+bool fsh_echo_export_helper(char * name, char * value){
+    errno = 0;
+    if (setenv(name, value, 1)<0){
+        error_handler(errno, "setting environment variable");
+        return false;
+    }
+    return  true;
+    
+}
 
 
 
