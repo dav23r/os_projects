@@ -1,7 +1,10 @@
 #ifndef PROJECT1_FSH_UNALIAS_H
 #define PROJECT1_FSH_UNALIAS_H
+
 #include <unistd.h>
 #include "util.h"
+#include "hashset.h"
+#include "string.h"
 #include <stdio.h>
 #include "arguments.h"
 #include "context.h"

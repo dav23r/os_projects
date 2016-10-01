@@ -7,6 +7,7 @@
 #include "arguments.h"
 #include "context.h"
 
+/* Implements shell built-in 'alias' */
 bool fsh_alias(pos_arguments *args, context *context);
 
 /* Rest is private and should not be used directly */
