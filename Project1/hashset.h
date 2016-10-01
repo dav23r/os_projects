@@ -201,5 +201,11 @@ void *HashSetLookup(const hashset *h, const void *elemAddr);
  */
 
 void HashSetMap(hashset *h, HashSetMapFunction mapfn, void *auxData);
+
+/* Removes element from hashset. As a precondition, given element
+ * should be contained in the set, i.e before calling the method 
+ * below, user should first call HashSetLookup on the same element
+ */
+void HashSetDelete(hashset *h, const void *elemAddr);
      
 #endif

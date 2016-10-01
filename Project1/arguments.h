@@ -1,6 +1,5 @@
 #ifndef __arguments__
 #define __arguments__
-
 /********* structures ********/
 /* Represents an array of pointers to null-terminated strings */
 typedef struct{

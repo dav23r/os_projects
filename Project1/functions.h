@@ -10,7 +10,7 @@
 #include <sys/stat.h>
 #include "arguments.h"
 
-const long long STATUS_CODE = -123456789101112LL;
+
 /*displays some info for free shell*/
 bool fsh_info(pos_arguments *args);
 

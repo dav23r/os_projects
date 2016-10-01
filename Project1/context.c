@@ -1,12 +1,13 @@
 #include "context.h"
 #include "functions_runner.h"
 #include <stdlib.h>
+#include <ctype.h>
 #include <string.h>
 
 void context_init(context *this){
 	int num_buckets = 50;
 	// Initilize map of functions
-	hashet *map = malloc(sizeof(hashset));
+	hashset *map = malloc(sizeof(hashset));
 	// format: pointer to null terminated function name -> function pointer
 	HashSetNew(map, sizeof(char *) + sizeof(func_pointer), num_buckets, StringHash, StringCmp, StringFree);
 	this->map = map;
