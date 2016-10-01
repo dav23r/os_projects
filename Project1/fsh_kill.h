@@ -17,7 +17,9 @@
 
 //bool fsh_kill(pid_t pid, int signal);
 
-bool fsh_kill(pos_arguments *args, context *context);
+bool fsh_kill_helper(pid_t pid, int signal);
+
+bool fsh_kill(pos_arguments *args);
 
 
 

@@ -3,7 +3,7 @@
 //
 #include "fsh_nice.h"
 
-bool fsh_nice(char flag, int increment, char * program_name, char * const argv[]){
+bool fsh_nice_helper(char flag, int increment, char * program_name, char * const argv[]){
     //getpriority can return negative values
     printf("niceeeeeeeeeeeeeeeeeeeeee\n");
     errno = 0;
@@ -44,4 +44,8 @@ bool fsh_nice(char flag, int increment, char * program_name, char * const argv[]
             break;
     }
 
+}
+
+bool fsh_nice(pos_arguments *args) {
+    
 }

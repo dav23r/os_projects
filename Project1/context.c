@@ -3,10 +3,6 @@
 #include <stdlib.h>
 #include <string.h>
 
-typedef struct{
-	hashset *aliases;
-	hashset *map;
-} context;
 
 void context_init(context *this){
 	int num_buckets = 50;
