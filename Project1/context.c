@@ -5,13 +5,16 @@
 
 
 void context_init(context *this){
+	int num_buckets = 50;
 	// Initilize map of functions
-	hashset *map = malloc(sizeof(hashset));
-	HashSetNew(map, sizeof(char **) + sizeof(func_pointer), 20, StringHash, StringCmp, StringFree);
+	hashet *map = malloc(sizeof(hashset));
+	// format: pointer to null terminated function name -> function pointer
+	HashSetNew(map, sizeof(char *) + sizeof(func_pointer), num_buckets, StringHash, StringCmp, StringFree);
 	this->map = map;
 	// Initialize map of aliases
 	hashset *aliases = malloc(sizeof(hashset));
-	HashSetNew(aliases, sizeof(char *) + sizeof(char *), 20, StringHash, StringCmp, AliasFree);
+	// format: pointer to null terminated alias -> pointer to null terminated program name
+	HashSetNew(aliases, sizeof(char *) + sizeof(char *), num_buckets, StringHash, StringCmp, AliasFree);
 	this->aliases = aliases;
 }
 
