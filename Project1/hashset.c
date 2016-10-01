@@ -71,6 +71,7 @@ void HashSetEnter(hashset *h, const void *elemAddr)
 
 void HashSetDelete(hashset *h, const void *elemAddr){
 	
+	int hashCode = h->hashfn(elemAddr, h->numBuckets);
 	vector *v = Nth_Vector_Addr(h->buckets, sizeof(vector), hashCode);
 	int pos = VectorSearch(v, elemAddr, h->comparefn, 0, false);
 	VectorDelete(v, pos);

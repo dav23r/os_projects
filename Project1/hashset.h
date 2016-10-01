@@ -206,6 +206,6 @@ void HashSetMap(hashset *h, HashSetMapFunction mapfn, void *auxData);
  * should be contained in the set, i.e before calling the method 
  * below, user should first call HashSetLookup on the same element
  */
-void HashSetDelete(hashset *h, void *elemAddr);
+void HashSetDelete(hashset *h, const void *elemAddr);
      
 #endif
