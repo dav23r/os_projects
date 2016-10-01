@@ -7,6 +7,7 @@
 #include "arguments.h"
 #include "context.h"
 #include "parser_util.h"
+#include "fsh_type.h"
 #include <stdio.h>
 
 typedef bool (*func_pointer)(pos_arguments *);
