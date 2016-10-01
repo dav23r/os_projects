@@ -134,17 +134,19 @@ static void log_pipeline(const token_t **pipeline){
 			printf("(<%s>:", command_cursor->string);
 			switch (command_cursor->type){
 				case UNKNOWN:
-					printf("UNKNOWN)");
+					printf("UNKNOWN:");
 					break;
 				case STRING:
-					printf("STRING)");
+					printf("STRING:");
 					break;
 				case NO_TYPE:
-					printf("NO TYPE)");
+					printf("NO TYPE:");
 					break;
 				default:
-					printf(")");
+					printf(":");
 			}
+			if(command_cursor->last_char == '\0') printf("<\\0>)");
+			else printf("<%c>)", command_cursor->last_char);
 		}
 		printf("]\n");
 	}
