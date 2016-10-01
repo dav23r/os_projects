@@ -90,10 +90,17 @@ bool fsh_echo_export_helper(char * name, char * value){
         return false;
     }
     return  true;
-    
+
 }
 
 
-
+long long fsh_echo_last_status(long long  t){
+    static long long rv = 0LL;
+    if (t==STATUS_CODE){
+        return  rv;
+    }
+    rv = t;
+    return rv;
+}
 
 
