@@ -85,7 +85,7 @@ bool fsh_echo_export(pos_arguments *args) {
     return fsh_echo_export_helper(args->arguments[0], args->arguments[1]);
 }
 
-bool fsh_echo_export_helper(char * name, char * value){
+bool fsh_echo_export_helper(char * name, char * value) {
     errno = 0;
     if (setenv(name, value, 1)<0){
         error_handler(errno, "setting environment variable");
@@ -96,13 +96,33 @@ bool fsh_echo_export_helper(char * name, char * value){
 }
 
 
-long long fsh_echo_last_status(long long  t){
+long long fsh_echo_last_status(long long  t) {
     static long long rv = 0LL;
     if (t==STATUS_CODE_ECHO){
         return  rv;
     }
     rv = t;
     return rv;
+}
+
+bool fsh_echo(pos_arguments *args) {
+    if (args == NULL) {
+        printf("Syntax error in calling 'export'\n");
+        return false;
+    }
+
+    if (args->num_args == 0)
+        return fsh_echo_string_helper("");
+
+    if (strcmp(args->arguments[0], "$?") == 0) {
+        printf("%lld\n", fsh_echo_last_status(STATUS_CODE_ECHO));
+        return true;
+    }
+
+    if (args->arguments[0][0] == '$')
+        return fsh_echo_name_helper(&args->arguments[0][1]);
+
+    return fsh_echo_string_helper(args->arguments[0]);
 }
 
 
