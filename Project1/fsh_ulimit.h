@@ -8,10 +8,16 @@
 #include <sys/time.h>
 #include <sys/resource.h>
 #include "arguments.h"
+#include <stdlib.h>
+#include <string.h>
 
-/*sets or gets limits, depending on flag*/
+/*
+ * an implementation of ulimit for free shell
+ * to see what the flags mean type help ulimit
+ * sets or gets limits, depending on flag
+ * */
 bool fsh_ulimit(args_and_flags *rest);
-//void fsh_ulimit(r_limit fn, char flag, int limit, char s_h_flag);
-typedef bool (*r_limit)(char, int, int);
+
+typedef bool (*r_limit)(char, int, int, char,bool);
 
 #endif

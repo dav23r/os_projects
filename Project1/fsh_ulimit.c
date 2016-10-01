@@ -1,6 +1,13 @@
 #include "fsh_ulimit.h"
 
 bool fsh_ulimit_helper(r_limit fn, char flag, int limit, char s_h_flag);
+/*
+ * A helper function that returns rlimit.rlim_cur
+ * on demand, depending on flag passed.
+ * -1 returned on error.
+ * Passed limit is returned
+ * if it must be set as rlim_cur
+ * */
 
 int get_rlim_cur(char flag, int limit, int resource){
     struct rlimit  rlim;
@@ -14,6 +21,14 @@ int get_rlim_cur(char flag, int limit, int resource){
         return  limit;
     return  limit;
 }
+/*
+ * A helper function that returns rlimit.rlim_max
+ * on demand, depending on flag passed.
+ * -1 returned on error.
+ * Passed limit is returned
+ * if it must be set as rlim_max
+ * */
+
 int get_rlim_max(char flag, int limit, int resource){
     struct rlimit  rlim;
     if (limit == 0 ||flag=='S')
@@ -26,9 +41,58 @@ int get_rlim_max(char flag, int limit, int resource){
         return  limit;
     return  limit;
 }
+/*
+ * description as in bash shell
+ * for ulimit flags.
+ * */
+char * get_description(char flag){
+    switch (flag){
+        case 'c':
+            return strdup("core file size         ");
+        case 'd':
+            return strdup("data seg size          ");
+        case 'f':
+            return strdup("fiel size              ");
+        case 'e':
+            return strdup("scheduling priority    ");
+        case 'm':
+            return strdup("max memory size        ");
+        case 'n':
+            return strdup("open files             ");
+        case 'q':
+            return strdup("POSIX message queues   ");
+        case 'r':
+            return strdup("reali-time priority    ");
+        case 's':
+            return strdup("stack size             ");
+        case 't':
+            return strdup("cpu time               ");
+        case 'u':
+            return strdup("max user process       ");
+        case 'v':
+            return strdup("virtual memory         ");
+        case 'x':
+            return strdup("file locks             ");
+        case 'i':
+            return strdup("pending signals        ");
+        case 'l':
+            return strdup("max locked memory      ");
+        case 'p':
+            return strdup("pipe size              ");
+        default:
+            return strdup("");
+    }
+}
 
-bool set_limit(char s_h_flag, int limit, int resource){
-    printf("dfvdf");
+/*
+ * sets limit in accordance with
+ * passed flag and resource.
+ * returns false on error and true
+ * on success. the last two arguments
+ * are to be ignored, but are used to
+ * make the code way less.
+ * * */
+bool set_limit(char s_h_flag, int limit, int resource, char flag, bool print_info){
     struct rlimit rl;
     rl.rlim_cur = get_rlim_cur(s_h_flag, limit,resource);
     rl.rlim_max = get_rlim_max(s_h_flag, limit,resource);
@@ -45,25 +109,35 @@ bool set_limit(char s_h_flag, int limit, int resource){
 }
 //number by which it should be divided
 //to show what bash would've shown
-int resource_correspondence(int resource){
+int resource_correspondence(int resource, char flag){
     if (resource==RLIMIT_CPU||resource==RLIMIT_NPROC||resource==RLIMIT_SIGPENDING||resource==RLIMIT_MSGQUEUE)
         return 1;
+    if (resource==RLIMIT_NOFILE&&flag=='p')
+        return 128;
     if (resource==RLIMIT_NOFILE)
-        return 512;
+        return 1;
     return 1024;
 }
 
-bool get_limit(char s_h_flag, int limit, int resource){
+/*
+ * prints limit according to flags.
+ * gets description to print more information
+ * so that suer actually understands the info
+ * he's receiving.
+ * */
+bool get_limit(char s_h_flag, int limit, int resource, char flag, bool print_info){
     struct rlimit rl;
     rl.rlim_cur = get_rlim_cur(s_h_flag, limit,resource);
     if (rl.rlim_cur<0){
         printf("error while getting limit\n");
         return false;
     }else{
+        char * description = (print_info? get_description(flag):strdup(""));
         if (rl.rlim_cur==RLIM_INFINITY)
-            printf("unlimited\n");
+            printf("%sunlimited\n",description);
         else
-            printf("%ld\n",(long)rl.rlim_cur/resource_correspondence(resource));
+            printf("%s%ld\n",description,(long)rl.rlim_cur/resource_correspondence(resource,flag));
+        free(description);
     }
 
     return true;
@@ -116,71 +190,75 @@ bool fsh_ulimit(args_and_flags *rest) {
         fsh_ulimit_helper((limit == 0 ? get_limit : set_limit), flag, limit, soft_or_hard_limit);
     }
 }
-
+/**
+ * a helper function which is called from
+ * fsh_ulimit wrapper.
+ * */
 bool fsh_ulimit_helper(r_limit fn, char flag, int limit, char s_h_flag){
     struct rlimit rl;
     switch (flag){
         case 'a':
-            fsh_ulimit_helper(fn,'c',limit, s_h_flag);
-            fsh_ulimit_helper(fn,'d',limit, s_h_flag);
-            fsh_ulimit_helper(fn,'e',limit, s_h_flag);
-            fsh_ulimit_helper(fn,'f',limit, s_h_flag);
-            fsh_ulimit_helper(fn,'i',limit, s_h_flag);
-            fsh_ulimit_helper(fn,'l',limit, s_h_flag);
-            fsh_ulimit_helper(fn,'m',limit, s_h_flag);
-            fsh_ulimit_helper(fn,'p',limit, s_h_flag);
-            fsh_ulimit_helper(fn,'q',limit, s_h_flag);
-            fsh_ulimit_helper(fn,'r',limit, s_h_flag);
-            fsh_ulimit_helper(fn,'s',limit, s_h_flag);
-            fsh_ulimit_helper(fn,'t',limit, s_h_flag);
-            fsh_ulimit_helper(fn,'u',limit, s_h_flag);
-            fsh_ulimit_helper(fn,'v',limit, s_h_flag);
-            fsh_ulimit_helper(fn,'x',limit, s_h_flag);
+            fn(s_h_flag,limit,RLIMIT_CORE,'c',true);
+            fn(s_h_flag,limit,RLIMIT_DATA,'d',true);
+            fn(s_h_flag,limit,RLIMIT_NICE,'e',true);
+            fn(s_h_flag,limit,RLIMIT_FSIZE,'f',true);
+            fn(s_h_flag,limit,RLIMIT_SIGPENDING,'i',true);
+            fn(s_h_flag,limit,RLIMIT_MEMLOCK,'l',true);
+            fn(s_h_flag,limit,RLIMIT_RSS,'m',true);
+            fn(s_h_flag,limit,RLIMIT_NOFILE,'n',true);
+            fn(s_h_flag,limit,RLIMIT_NOFILE,'p',true);
+            fn(s_h_flag,limit,RLIMIT_MSGQUEUE,'q',true);
+            fn(s_h_flag,limit,RLIMIT_RTPRIO,'r',true);
+            fn(s_h_flag,limit,RLIMIT_STACK,'s',true);
+            fn(s_h_flag,limit,RLIMIT_CPU,'t',true);
+            fn(s_h_flag,limit,RLIMIT_NPROC,'u',true);
+            fn(s_h_flag,limit,RLIMIT_AS,'v',true);
+            fn(s_h_flag,limit,RLIMIT_LOCKS,'x',true);
             break;
         case 'c':
-            fn(s_h_flag,limit,RLIMIT_CORE);
+            fn(s_h_flag,limit,RLIMIT_CORE,flag,false);
             break;
         case 'd':
-            fn(s_h_flag,limit,RLIMIT_DATA);
+            fn(s_h_flag,limit,RLIMIT_DATA,flag,false);
             break;
         case 'f':
-            fn(s_h_flag,limit,RLIMIT_FSIZE);
+            fn(s_h_flag,limit,RLIMIT_FSIZE,flag,false);
             break;
         case 'e':
-            fn(s_h_flag,limit,RLIMIT_NICE);
+            fn(s_h_flag,limit,RLIMIT_NICE,flag,false);
             break;
         case 'm':
-            fn(s_h_flag,limit,RLIMIT_RSS);
+            fn(s_h_flag,limit,RLIMIT_RSS,flag,false);
             break;
         case 'n': case 'p':
-            fn(s_h_flag,limit,RLIMIT_NOFILE);
+            fn(s_h_flag,limit,RLIMIT_NOFILE,flag,false);
             break;
         case 'q':
-            fn(s_h_flag,limit,RLIMIT_MSGQUEUE);
+            fn(s_h_flag,limit,RLIMIT_MSGQUEUE,flag,false);
             break;
         case 'r':
-            fn(s_h_flag,limit,RLIMIT_RTPRIO);
+            fn(s_h_flag,limit,RLIMIT_RTPRIO,flag,false);
             break;
         case 's':
-            fn(s_h_flag,limit,RLIMIT_STACK);
+            fn(s_h_flag,limit,RLIMIT_STACK,flag,false);
             break;
         case 't':
-            fn(s_h_flag,limit,RLIMIT_CPU);
+            fn(s_h_flag,limit,RLIMIT_CPU,flag,false);
             break;
         case 'u':
-            fn(s_h_flag,limit,RLIMIT_NPROC);
+            fn(s_h_flag,limit,RLIMIT_NPROC,flag,false);
             break;
         case 'v':
-            fn(s_h_flag,limit,RLIMIT_AS);
+            fn(s_h_flag,limit,RLIMIT_AS,flag,false);
             break;
         case 'x':
-            fn(s_h_flag,limit,RLIMIT_LOCKS);
+            fn(s_h_flag,limit,RLIMIT_LOCKS,flag,false);
             break;
         case 'i':
-            fn(s_h_flag,limit,RLIMIT_SIGPENDING);
+            fn(s_h_flag,limit,RLIMIT_SIGPENDING,flag,false);
             break;
         case 'l':
-            fn(s_h_flag,limit,RLIMIT_MEMLOCK);
+            fn(s_h_flag,limit,RLIMIT_MEMLOCK,flag,false);
             break;
     }
 }
