@@ -3,9 +3,10 @@ bool fsh_type(bool has_a_flag, pos_arguments *args, context *cont){
 	// Acquire pointer to hashset of built-in functions
 	hashset *builtins = cont->map;
 	for (int i = 0; i < args->num_args; i++){
+		printf("here\n");
 		char *cur_token = args->arguments[i];
 		bool is_shell_builtin = false;
-		if (HashSetLookup(builtins) != NULL){
+		if (HashSetLookup(builtins, cur_token) != NULL){
 			printf ("%s is shell built-in", cur_token);
 			is_shell_builtin = true;         
 		}

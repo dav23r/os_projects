@@ -2,6 +2,8 @@
 // Created by irakli on 9/29/16.
 //
 
+#include <sys/types.h>
+#include <signal.h>
 #include "fsh_kill.h"
 #include <stdio.h>
 #include <stdlib.h>
