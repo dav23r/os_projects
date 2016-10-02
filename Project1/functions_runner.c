@@ -176,11 +176,13 @@ bool execute_command(const token_t *command, context *c, bool *error) {
 
 		int k;
 		for (k = 1; !token_null(&command[k]); k++) {
+			printf("%s\n", command[k].string);
 			arguments[k-1] = command[k].string;
 		}
 
 		args->arguments = arguments;
 		args->num_args = len - 1;
+		printf("%d\n", len);
 
 		return fsh_type(has_a_flag, args, c);
 	} else if (!strcmp(funcname, "alias")) {
@@ -249,7 +251,7 @@ bool find_a_flag_for_type(const token_t *command, bool *error) {
 int get_tokens_len(const token_t *command) {
 	int k;
 	for (k = 0; !token_null(&command[k]); k++){}
-	return k+1;
+	return k;
 }
 
 func_pointer searchFn(hashset *map, char *name) {
