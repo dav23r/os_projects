@@ -1,4 +1,5 @@
 #include "functions.h"
+#include "string.h"
 #include "constants.h"
 
 bool fsh_info(pos_arguments *args){
