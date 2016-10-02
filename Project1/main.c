@@ -30,10 +30,9 @@ char * def_prompt(){
 }
 
 void analise_argv(int argc, char **argv, context *c){
-	if(argc > 2){
+	if(argc > 2)
 		if(strcmp(*(argv + 1), "-c") == 0)
 			exit(parse_input_line(*(argv + 2), c) ? 0 : -1);
-	}
 }
 
 int main(int argc, char **argv) {
