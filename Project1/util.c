@@ -99,8 +99,10 @@ bool print_locations_of_program(char *program_name, bool first_only){
 }
 
 bool is_valid_integer(char *arg) {
-	int i;
-	for (i = 0; i < strlen(arg); i++) {
+	if (strlen(arg) == 0) return false;
+	
+	int i = (arg[0] == '-' ? 1 : 0);
+	for (; i < strlen(arg); i++) {
 		if (arg[i] < '0' || arg[i] > '9' || i > 9)  // also if larger than integer can store
 			return false;
 	}
