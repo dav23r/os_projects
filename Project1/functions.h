@@ -21,15 +21,22 @@ bool fsh_cd_helper(char * dir);
 
 /*displays working directory*/
 bool fsh_pwd(pos_arguments *args);
-
+/**
+ * prints according to given variable
+ * name. or prints error if an
+ * incorrect call was made.
+ * */
 bool fsh_echo_name(pos_arguments *args);
-
+//a helper functions to call putenv
 bool fsh_echo_name_helper(char * variable_name);
-
+/*prints given string, if null raises error*/
 bool fsh_echo_string(pos_arguments *args);
-
+//prints given string, basically
+// a printf with extra steps
 bool fsh_echo_string_helper(char * str);
-
+/*
+ * exports given variable
+ * */
 bool fsh_echo_export(pos_arguments *args);
 
 bool fsh_echo_export_helper(char * name, char * value);
