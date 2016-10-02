@@ -66,6 +66,7 @@ bool contains_io_redir(const token_t *command, bool *operand_result, context *c)
 
 	bool operand_found = false;
 	for (; pointer != &command[0]; pointer--) {
+		printf("%s\n", pointer->string);
 		for (k = 0; IO_REDIRECT_OPERATORS[k]; k++) {
 			if (strcmp(pointer->string, IO_REDIRECT_OPERATORS[k]) == 0) {
 				operand = pointer->string;
@@ -94,6 +95,9 @@ bool contains_io_redir(const token_t *command, bool *operand_result, context *c)
 }
 
 bool execute_command(const token_t *command, context *c, bool *error) {
+	/*printf("%s\n", command[0].string);
+	printf("%s\n", command[1].string);
+	printf("%s\n", command[2].string);*/
 	if (command == NULL || token_null(&command[0]) || strlen(command[0].string) == 0) return false;
 	char *funcname = command[0].string;
 	char *lower_case = toLowerCase(funcname);
@@ -124,6 +128,7 @@ bool execute_command(const token_t *command, context *c, bool *error) {
 		HashSetEnter(c->variables, buffer);
 		
 	} else if (!strcmp(funcname, "ulimit")) {
+		printf("1\n");
 		if (token_null(&command[1])) { // prosta 'ulimit'
 			return fsh_ulimit_helper(get_limit, 'f', 0, 'S');
 		}
@@ -135,7 +140,7 @@ bool execute_command(const token_t *command, context *c, bool *error) {
 		args_and_flags *args = malloc(sizeof(args_and_flags));
 		args->num_flags = 0;
 		args->command_arguments = NULL;
-        int len = get_tokens_len(command);
+        int len = get_tokens_len(command) + 1;
         flag *flags = malloc(len * sizeof(flag));
 		flag *current = malloc(sizeof(flag)); current->flag = '0'; current->flag_arguments = NULL; // spec values for empty flag
 
@@ -176,13 +181,11 @@ bool execute_command(const token_t *command, context *c, bool *error) {
 
 		int k;
 		for (k = 1; !token_null(&command[k]); k++) {
-			printf("%s\n", command[k].string);
 			arguments[k-1] = command[k].string;
 		}
 
 		args->arguments = arguments;
 		args->num_args = len - 1;
-		printf("%d\n", len);
 
 		return fsh_type(has_a_flag, args, c);
 	} else if (!strcmp(funcname, "alias")) {
@@ -212,7 +215,7 @@ bool execute_command(const token_t *command, context *c, bool *error) {
 	} else {
 		func_pointer fn = searchFn(c->map, funcname);
         pos_arguments *args = malloc(sizeof(pos_arguments));
-        int len = get_tokens_len(command);
+        int len = get_tokens_len(command) + 1;
         char **arguments = malloc(len * sizeof(char *));
         int k = (fn == NULL || !strcmp(funcname, "nice") ? 0 : 1), n = 0;
         for (; !token_null(&command[k]); k++) {
