@@ -108,8 +108,7 @@ bool execute_command(const token_t *command, context *c, bool *error) {
 		exit(atoi(command[1].string));
 	}
 	free(lower_case);
-	printf("Hello bros\n");
-	
+
 	bool operand_result;
 	if (contains_io_redir(command, &operand_result, c)) {
 		return operand_result;
@@ -171,8 +170,6 @@ bool execute_command(const token_t *command, context *c, bool *error) {
 
 		return fsh_ulimit(args);
 	} else if (!strcmp(funcname, "type")) {
-		printf("2\n");
-
 		bool has_a_flag = find_a_flag_for_type(&command[1], error);
 		if (*error) return false;
 
@@ -207,8 +204,6 @@ bool execute_command(const token_t *command, context *c, bool *error) {
 		}
 
 		if (!prog_name) return false;
-		//printf("alias ==== %s\n", alias);
-		//printf("%s\n", prog_name);
 		pos_arguments *args = malloc(sizeof(pos_arguments));
 		args->arguments = malloc(2 * sizeof(char *));
 		args->arguments[0] = alias;
@@ -216,19 +211,14 @@ bool execute_command(const token_t *command, context *c, bool *error) {
 		args->num_args = 2;
 		fsh_alias(args, c);
 	} else {
-        printf("else-shi var\n");
 		func_pointer fn = searchFn(c->map, funcname);
-
-        printf("ifshic broooo\n");
         pos_arguments *args = malloc(sizeof(pos_arguments));
         int len = get_tokens_len(command);
         char **arguments = malloc(len * sizeof(char *));
-
         int k = (fn == NULL ? 0 : 1), n = 0;
         for (; !token_null(&command[k]); k++) {
             arguments[n++] = command[k].string;
         }
-
         args->arguments = arguments;
         args->num_args = len - 1;
 
@@ -242,7 +232,6 @@ bool execute_command(const token_t *command, context *c, bool *error) {
 
 bool find_a_flag_for_type(const token_t *command, bool *error) {
 	if (command == NULL) return false;
-
 	int i;
 	for (i = 0; !token_null(command + 1); i++) {
 		token_t curr = command[i];
@@ -263,7 +252,6 @@ bool find_a_flag_for_type(const token_t *command, bool *error) {
 int get_tokens_len(const token_t *command) {
 	int k;
 	for (k = 0; !token_null(&command[k]); k++){}
-
 	return k+1;
 }
 
@@ -271,8 +259,6 @@ func_pointer searchFn(hashset *map, char *name) {
 
 	void *elem = HashSetLookup(map, &name);
     if (!elem) return NULL;
-    printf("Hashset lookup passed\n");
 	func_pointer fn = *((func_pointer *) ((char *) elem + sizeof(char **)));
-    printf("func_pinter passed\n");
 	return fn;
 }
