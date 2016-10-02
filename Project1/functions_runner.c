@@ -52,14 +52,15 @@ bool contains_io_redir(const token_t *command, bool *operand_result, context *c)
 	int i, k;
 	token_t *pointer;
 	for (i = 0; !token_null(&command[i]); i++) {
-		pointer = (token_t *) &command[i];
+		pointer = (token_t *) &command[i]; // cast for non-static = static
 	}
 
 	bool operand_found = false;
 	for (; pointer != &command[0]; pointer--) {
-		for (k = 0; IO_REDIRECT_OPERATORS[k]; i++) {
+		printf("%s\n", pointer->string);
+		for (k = 0; IO_REDIRECT_OPERATORS[k]; k++) {
 			if (strcmp(pointer->string, IO_REDIRECT_OPERATORS[k]) == 0) {
-				operand = IO_REDIRECT_OPERATORS[k];
+				operand = pointer->string;
 				operand_found = true;
 				break;
 			}
