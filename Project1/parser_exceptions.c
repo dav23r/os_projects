@@ -107,7 +107,7 @@ static bool check_minus_c(const char *input, context *c, bool *internal_error){
 					int j;
 					for(j = 0; j < n; j++) args[j] = tokens[j].string;
 					args[n] = NULL;
-					(*internal_error) = fsh_nice_helper('n', 10, tokens->string, (char * const *)args);
+					(*internal_error) = fsh_nice_helper('n', 10, tokens->string, (char * const *)args, c);
 					free(args);
 				} else (*internal_error) = true;
 			}

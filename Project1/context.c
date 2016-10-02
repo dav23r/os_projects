@@ -24,6 +24,8 @@ void context_init(context *this){
 	// format: pointer to null terminated variable name -> pointer to null terminated string value
 	HashSetNew(variables, sizeof(char *) + sizeof(char *), num_buckets, StringHash, StringCmp, StringPairFree);
 	this->variables = variables;
+
+	this->no_fork = false;
 }
 
 
