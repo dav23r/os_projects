@@ -265,6 +265,9 @@ static bool parse_command_sequence(const char *sequence, context *c){
 				break;
 			}
 			else {
+#ifdef PIPELINE_TESTING_MODE
+				printf("delimiter: <%s>; and: <%s>; or: <%s>; result: %d; input: <%s>\n", operator, AND_OPERATOR, OR_OPERATOR, (int)result, command);
+#endif
 				if (error) break;
 				else if (strcmp(operator, AND_OPERATOR) == 0) {
 					if(result) continue;
