@@ -65,14 +65,10 @@ bool fsh_nice_helper(char flag, int increment, char * program_name, char * const
             return false;
         case 0:
             errno = 0;
-            if (nice(increment)<0) {
+            if (nice(increment)<0)
                 error_handler(errno, "nice");
-                return false;
-            }
-            if (execvp(program_name,argv)<0){
+            else if (execvp(program_name,argv)<0)
                 error_handler(errno, "executing given program");
-                return false;
-            }
             exit(-1);
             break;
         default:
