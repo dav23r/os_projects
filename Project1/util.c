@@ -64,6 +64,7 @@ const string_pair *ESCAPE_SEQUENCES = ESCAPE_SEQUENCES_STATIC;
    If first_only flag is present, search is terminated on the
    very first occurence of the program */
 bool print_locations_of_program(char *program_name, bool first_only){
+
     const char* s = getenv("PATH");
     // Initialize tokenizer to parse the 'path' env variable
     tokenizer tok;
@@ -87,7 +88,7 @@ bool print_locations_of_program(char *program_name, bool first_only){
         struct stat sb;
         // If current path is a file, print it
         if (stat(path_with_filename, &sb) == 0 && S_ISREG(sb.st_mode)){
-            printf("%s is a program located at %s\n", program_name, path_with_filename);
+            printf("'%s' is a program located at %s\n", program_name, path_with_filename);
             is_found = true;
 
             if (first_only){

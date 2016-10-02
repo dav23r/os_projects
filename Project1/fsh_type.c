@@ -21,13 +21,13 @@ bool fsh_type(bool has_a_flag, pos_arguments *args, context *cont){
 
 		// At each stage, stop execution if token was previously
 		// found and at the same time 'a' flag is off.
-		is_found = is_found || look_up_hashset(aliases, cur_argument, aliases_name);
+		is_found = look_up_hashset(aliases, cur_argument, aliases_name) || is_found;
 		if (!has_a_flag && is_found) continue; 
 
-		is_found = is_found || look_up_hashset(builtins, cur_argument, builtins_name);
+		is_found = look_up_hashset(builtins, cur_argument, builtins_name) || is_found;
 		if (!has_a_flag && is_found) continue;
-			
-		is_found = is_found || print_locations_of_program(cur_argument, !has_a_flag);
+
+		is_found = print_locations_of_program(cur_argument, !has_a_flag) || is_found;
 
 		// Remember that we failed to find some argument
 		if (!is_found) {
