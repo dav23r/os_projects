@@ -111,7 +111,7 @@ bool fsh_echo(pos_arguments *args) {
         printf("Syntax error in calling 'export'\n");
         return false;
     }
-    
+
     if (args->num_args == 0)
         return fsh_echo_string_helper("");
 
@@ -126,7 +126,8 @@ bool fsh_echo(pos_arguments *args) {
     char buffer[1024]; buffer[0] = '\0';
     int i;
     for (i = 0; i < args->num_args - 1; i++) {
-        strcat(buffer, strcat(args->arguments[i], " "));
+        if (i < args->num_args-1) strcat(buffer, strcat(args->arguments[i], " "));
+        else strcat(buffer, args->arguments[i]);
     }
 
     return fsh_echo_string_helper(buffer);
