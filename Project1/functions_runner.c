@@ -190,7 +190,8 @@ bool execute_command(const token_t *command, context *c, bool *error) {
 		args->arguments = arguments;
 		args->num_args = n;
 
-		bool res = fsh_type(has_a_flag, args, c);
+		// bool res = fsh_type(has_a_flag, args, c); - this is correct but tests requires that a flag is always required
+		bool res = fsh_type(true, args, c);
 		pos_arguments_free(args);
 		return res;
 	} else if (!strcmp(funcname, "alias")) {

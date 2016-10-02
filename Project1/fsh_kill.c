@@ -24,6 +24,7 @@ bool fsh_kill(pos_arguments *args) {
 		printf("syntax error in calling 'kill'\n");
 		return false;
 	}
+
 	int pid, signal;
 	if (is_valid_integer(args->arguments[1])) {
 		pid = atoi(args->arguments[1]);
@@ -38,5 +39,6 @@ bool fsh_kill(pos_arguments *args) {
 		printf("syntax error in calling 'kill'\n");
 		return false;
 	}
+	
 	return fsh_kill_helper(pid, -1*signal);
 }
