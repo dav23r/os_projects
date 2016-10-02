@@ -17,7 +17,6 @@ char ** get_changed_copy_array(int len, pos_arguments *args, char **funcname, in
 }
 
 bool fsh_nice(pos_arguments *args) {
-    printf("zero = %s\n", args->arguments[0]);
     if (!args || !args->arguments) {
         printf("syntax error in calling 'nice'\n");
         return false;
@@ -33,21 +32,16 @@ bool fsh_nice(pos_arguments *args) {
     char **argv;
 
     if (!strcmp(args->arguments[0], "nice")) {
-        printf("%s\n", "aa");
         if (!strcmp(args->arguments[1], "-n")) {
-            printf("%s\n", "bb");
             if (args->num_args < 3 || !is_valid_integer(args->arguments[2]) || args->num_args < 4) {
-                printf("%s\n", "ccc");
                 printf("syntax error in passing arguments in 'nice'\n");
                 return false;
             } else {
-                printf("%s\n", "ddd");
                 program_name = args->arguments[3];
                 increment = atoi(args->arguments[2]);
                 argv = get_changed_copy_array(args->num_args - 4, args, &program_name, 4);
             }
         } else {
-            printf("%s\n", "vvv");
             program_name = args->arguments[1];
             argv = get_changed_copy_array(args->num_args - 2, args, &program_name, 2);
         }
@@ -62,10 +56,6 @@ bool fsh_nice(pos_arguments *args) {
     program_name = args->arguments[0];
     argv = get_changed_copy_array(args->num_args - 1, args, &program_name, 1);
 
-    printf("flag = %c\n", flag);
-    printf("inc = %d\n", increment);
-    printf("name = %s\n", program_name);
-    printf("%d\n", argv == NULL);
     bool res = fsh_nice_helper(flag, increment, program_name, argv);
     free(argv);
     return res;
