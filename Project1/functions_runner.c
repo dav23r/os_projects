@@ -14,7 +14,41 @@ char * toLowerCase(char *str) {
   	return res;
 }
 
+char * get_alias_name(char *token, int *index) {
+	char buffer[128];
+	int i;
+	for (i = 0; i < strlen(token); i++) {
+		if (token[i] == '=') {
+			*index = i+1;
+			buffer[i] = '\0';
+			break;
+		}
+		if (token[i] == ' ') return NULL;
+		buffer[i] = token[i];
+	}
+
+	return strdup(buffer);
+}
+
+char * get_alias_value(char *token, int i) {
+	char buffer[128];
+	int k = 0;
+	
+	for (; i < strlen(token); i++) {
+		if (token[i] == ' ') {
+			return NULL;
+		}
+		buffer[k++] = token[i];
+	}
+	buffer[k] = '\0';
+
+	return strdup(buffer);
+}
+
 bool execute_command(const token_t *command, context *c, bool *error) {
+	/*printf("%s\n", command[0].string);
+	printf("%s\n", command[1].string);
+	printf("%s\n", command[2].string);*/
 	if (command == NULL || token_null(&command[0]) || strlen(command[0].string) == 0) return false;
 	char *funcname = command[0].string;
 	char *lower_case = toLowerCase(funcname);
@@ -83,6 +117,32 @@ bool execute_command(const token_t *command, context *c, bool *error) {
 		args->num_args = len - 1;
 
 		return fsh_type(has_a_flag, args, c);
+	} else if (!strcmp(funcname, "alias")) {
+		if (token_null(&command[1])) {
+			printf("syntax error in calling 'alias'\n");
+			return false;
+		}
+		int index;
+		char *alias = get_alias_name(command[1].string, &index);
+		if (!alias) {printf("aaaa\n"); return false;}
+		char *prog_name;
+		if (index < strlen(command[1].string)) {
+			prog_name = get_alias_value(command[1].string, index);
+		} else {
+			if (token_null(&command[2]) || command[2].type != STRING || command[2].last_char != '=')
+				{printf("asxs\n"); return false;}
+			prog_name = command[2].string;
+		}
+
+		if (!prog_name) return false;
+		//printf("alias ==== %s\n", alias);
+		//printf("%s\n", prog_name);
+		pos_arguments *args = malloc(sizeof(pos_arguments));
+		args->arguments = malloc(2 * sizeof(char *));
+		args->arguments[0] = alias;
+		args->arguments[1] = prog_name;
+		args->num_args = 2;
+		fsh_alias(args, c);
 	} else {
         printf("else-shi var\n");
 		func_pointer fn = searchFn(c->map, funcname);
