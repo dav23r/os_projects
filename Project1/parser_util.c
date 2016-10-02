@@ -142,8 +142,9 @@ bool replace_variables(token_t *tokens, context *c){
 			}
 			if(map != NULL && HashSetCount(map) > 0) {
 				const char **result = NULL;
-				result = (const char **) HashSetLookup(map, key);
+				result = (const char **) HashSetLookup(map, &key);
 				if (result != NULL) {
+				printf("aaaaaaaaaaaaaaa%s\n", *(result+1));
 					char *copy = strdup(*(result + 1));
 					if (copy != NULL) {
 						free(iterator->string);

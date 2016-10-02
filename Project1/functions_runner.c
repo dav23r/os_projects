@@ -14,6 +14,15 @@ char * toLowerCase(char *str) {
   	return res;
 }
 
+bool is_assign(char *str) {
+	int i;
+	for (i = 0; i < strlen(str); i++) {
+		if (str[i] == '=') return true;
+	}
+
+	return false;
+}
+
 char * get_alias_name(char *token, int *index) {
 	char buffer[128];
 	int i;
@@ -94,12 +103,31 @@ bool execute_command(const token_t *command, context *c, bool *error) {
 	char *lower_case = toLowerCase(funcname);
 	if (!strcmp("true", lower_case)) return true;
 	if (!strcmp("false", lower_case)) return false;
+	if (!strcmp("exit", lower_case)) {
+		if (token_null(&command[1]) || !is_valid_integer(command[1].string)) exit(0);
+		exit(atoi(command[1].string));
+	}
 	free(lower_case);
 	printf("Hello bros\n");
 	
 	bool operand_result;
 	if (contains_io_redir(command, &operand_result, c)) {
 		return operand_result;
+	} else if (is_assign(command[0].string)) {
+		int index;
+		char *key = get_alias_name(command[0].string, &index);
+		if (!key) return false;
+		char *value;
+		if (index < strlen(command[0].string)) {
+			value = get_alias_value(command[0].string, index);
+		} else {
+			if (token_null(&command[1]) || command[1].type != STRING || command[1].last_char != '=')
+				return false;
+			value = command[1].string;
+		}
+		char *buffer[] = {key, value};
+		HashSetEnter(c->variables, buffer);
+		
 	} else if (!strcmp(funcname, "ulimit")) {
 		printf("1\n");
 		if (token_null(&command[1])); // prosta 'ulimit'-ze ras vshvrebit? return;
@@ -168,13 +196,13 @@ bool execute_command(const token_t *command, context *c, bool *error) {
 		}
 		int index;
 		char *alias = get_alias_name(command[1].string, &index);
-		if (!alias) {printf("aaaa\n"); return false;}
+		if (!alias) return false;
 		char *prog_name;
 		if (index < strlen(command[1].string)) {
 			prog_name = get_alias_value(command[1].string, index);
 		} else {
 			if (token_null(&command[2]) || command[2].type != STRING || command[2].last_char != '=')
-				{printf("asxs\n"); return false;}
+				return false;
 			prog_name = command[2].string;
 		}
 
