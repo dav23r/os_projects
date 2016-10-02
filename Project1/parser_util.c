@@ -127,6 +127,32 @@ token_t *tokenize_command(const char *command){
 	return command_tokens;
 }
 
+bool replace_variables(token_t *tokens, context *c){
+	token_t *iterator;
+	for(iterator = tokens; (!token_null(iterator)); iterator++)
+		if(iterator->type != STRING){
+			char *key;
+			hashset *map = NULL;
+			if ((*(iterator->string)) == '$'){
+				key = (iterator->string + 1);
+			} else{
+				key = (iterator->string);
+				map = c->aliases;
+			}
+			if(map != NULL) {
+				const char **result = NULL;
+				//result = (const char **) HashSetLookup(map, key);
+				if (result != NULL) {
+					char *copy = strdup(*(result + 1));
+					if (copy != NULL) {
+						free(iterator->string);
+						iterator->string = copy;
+					} else return false;
+				}
+			}
+		}
+	return true;
+}
 
 
 

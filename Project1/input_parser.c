@@ -203,22 +203,26 @@ static bool parse_pipeline(const char *command, context *c, bool *error) {
 		(*error) = true;
 		return false;
 	}
+	token_t **pipeline_cursor;
+	for(pipeline_cursor = pipeline; (*pipeline_cursor) != NULL; pipeline_cursor++)
+		if(!replace_variables(*pipeline_cursor, c)) (*error) = true;
 
-#ifdef PIPELINE_TESTING_MODE
-	log_pipeline((const token_t**)pipeline);
-#endif
 	bool result;
-	if((*pipeline) == NULL){
-		(*error) = true;
-		result = false;
+	if(!(*error)) {
+#ifdef PIPELINE_TESTING_MODE
+		log_pipeline((const token_t**)pipeline);
+#endif
+		if ((*pipeline) == NULL) {
+			(*error) = true;
+			result = false;
+		} else if ((*(pipeline + 1)) == NULL)
+			result = execute_command(*pipeline, c, error);
+		else result = execute_pipeline((const token_t **) pipeline, c, error);
 	}
-	else if((*(pipeline + 1)) == NULL)
-		result = execute_command(*pipeline, c, error);
-	else result = execute_pipeline((const token_t**)pipeline, c, error);
 
 	free_pipeline(pipeline);
 
-	return result;
+	return result && (!(*error));
 }
 
 

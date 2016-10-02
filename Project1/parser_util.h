@@ -3,6 +3,7 @@
 
 #include "bool.h"
 #include "util.h"
+#include "context.h"
 
 typedef enum{
 	UNKNOWN,
@@ -31,6 +32,8 @@ bool token_null(const token_t *t);
 void free_command_tokens(token_t *tokens);
 
 token_t *tokenize_command(const char *command);
+
+bool replace_variables(token_t *tokens, context *c);
 
 bool string_in_list(const char *string, const char **list);
 
