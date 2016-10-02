@@ -18,6 +18,8 @@
  * */
 bool fsh_ulimit(args_and_flags *rest);
 
+bool get_limit(char s_h_flag, int limit, int resource, char flag, bool print_info);
+
 typedef bool (*r_limit)(char, int, int, char,bool);
 
 #endif

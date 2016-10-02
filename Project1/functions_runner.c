@@ -122,14 +122,16 @@ bool execute_command(const token_t *command, context *c, bool *error) {
 		} else {
 			if (token_null(&command[1]) || command[1].type != STRING || command[1].last_char != '=')
 				return false;
-			value = command[1].string;
+			value = strdup(command[1].string);
 		}
 		char *buffer[] = {key, value};
 		HashSetEnter(c->variables, buffer);
 		
 	} else if (!strcmp(funcname, "ulimit")) {
 		printf("1\n");
-		if (token_null(&command[1])); // prosta 'ulimit'-ze ras vshvrebit? return;
+		if (token_null(&command[1])) { // prosta 'ulimit'
+			return fsh_ulimit_helper(get_limit, 'f', 0, 'S');
+		}
 		if (command[1].string[0] != '-') {
 			*error = true;
 			return false; // funqciis mere pirvelive flag ar aris
@@ -200,7 +202,7 @@ bool execute_command(const token_t *command, context *c, bool *error) {
 		} else {
 			if (token_null(&command[2]) || command[2].type != STRING || command[2].last_char != '=')
 				return false;
-			prog_name = command[2].string;
+			prog_name = strdup(command[2].string);
 		}
 
 		if (!prog_name) return false;
