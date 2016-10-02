@@ -72,13 +72,6 @@ bool fsh_nice(pos_arguments *args) {
 }
 
 bool fsh_nice_helper(char flag, int increment, char * program_name, char * const argv[]){
-   /* printf("%c\n", flag);
-      printf("%d\n", increment);
-    printf("%s\n", program_name);*/
-    //printf("%s\n", argv[0]);
-     //printf("%s\n", argv[1]);
-      printf("%d\n", argv == NULL);
-    //getpriority can return negative values
     errno = 0;
     if (flag!='n'){
         int prior = getpriority(PRIO_PROCESS,getpid());

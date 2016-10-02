@@ -30,16 +30,9 @@ char * def_prompt(){
 }
 
 void analise_argv(int argc, char **argv, context *c){
-	if(argc > 2){
-		if(strcmp(*(argv + 1), "-c") == 0){
-			token_t *tokens = tokenize_command(*(argv + 2));
-			if(tokens == NULL) exit(-1);
-			bool fail = false;
-			bool result = execute_command(tokens, c, &fail);
-			free_command_tokens(tokens);
-			exit((result && (!fail)) ? 0 : -1);
-		}
-	}
+	if(argc > 2)
+		if(strcmp(*(argv + 1), "-c") == 0)
+			exit(parse_input_line(*(argv + 2), c) ? 0 : -1);
 }
 
 int main(int argc, char **argv) {

@@ -66,7 +66,6 @@ bool contains_io_redir(const token_t *command, bool *operand_result, context *c)
 
 	bool operand_found = false;
 	for (; pointer != &command[0]; pointer--) {
-		printf("%s\n", pointer->string);
 		for (k = 0; IO_REDIRECT_OPERATORS[k]; k++) {
 			if (strcmp(pointer->string, IO_REDIRECT_OPERATORS[k]) == 0) {
 				operand = pointer->string;
@@ -95,9 +94,6 @@ bool contains_io_redir(const token_t *command, bool *operand_result, context *c)
 }
 
 bool execute_command(const token_t *command, context *c, bool *error) {
-	/*printf("%s\n", command[0].string);
-	printf("%s\n", command[1].string);
-	printf("%s\n", command[2].string);*/
 	if (command == NULL || token_null(&command[0]) || strlen(command[0].string) == 0) return false;
 	char *funcname = command[0].string;
 	char *lower_case = toLowerCase(funcname);
@@ -128,7 +124,6 @@ bool execute_command(const token_t *command, context *c, bool *error) {
 		HashSetEnter(c->variables, buffer);
 		
 	} else if (!strcmp(funcname, "ulimit")) {
-		printf("1\n");
 		if (token_null(&command[1])) { // prosta 'ulimit'
 			return fsh_ulimit_helper(get_limit, 'f', 0, 'S');
 		}
@@ -181,11 +176,13 @@ bool execute_command(const token_t *command, context *c, bool *error) {
 
 		int k;
 		for (k = 1; !token_null(&command[k]); k++) {
-			arguments[k-1] = strdup(command[k].string);
+			printf("%s\n", command[k].string);
+			arguments[k-1] = command[k].string;
 		}
 
 		args->arguments = arguments;
 		args->num_args = len - 1;
+		printf("%d\n", len);
 
 		return fsh_type(has_a_flag, args, c);
 	} else if (!strcmp(funcname, "alias")) {
@@ -254,7 +251,7 @@ bool find_a_flag_for_type(const token_t *command, bool *error) {
 int get_tokens_len(const token_t *command) {
 	int k;
 	for (k = 0; !token_null(&command[k]); k++){}
-	return k+1;
+	return k;
 }
 
 func_pointer searchFn(hashset *map, char *name) {
