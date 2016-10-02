@@ -135,13 +135,14 @@ bool replace_variables(token_t *tokens, context *c){
 			hashset *map = NULL;
 			if ((*(iterator->string)) == '$'){
 				key = (iterator->string + 1);
+				map = c->variables;
 			} else{
 				key = (iterator->string);
 				map = c->aliases;
 			}
-			if(map != NULL) {
+			if(map != NULL && HashSetCount(map) > 0) {
 				const char **result = NULL;
-				//result = (const char **) HashSetLookup(map, key);
+				result = (const char **) HashSetLookup(map, key);
 				if (result != NULL) {
 					char *copy = strdup(*(result + 1));
 					if (copy != NULL) {

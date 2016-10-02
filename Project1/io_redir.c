@@ -28,10 +28,10 @@ bool io_redirect(const token_t *command, const char *operand, const char *filena
 			flags = O_RDONLY;
 			stdio_desc = STDIN_FILENO;
 		} else if(strcmp(operand, IO_REDIRECT_STDOUT) == 0){
-			flags = O_WRONLY;
+			flags = O_CREAT | O_WRONLY;
 			stdio_desc = STDOUT_FILENO;
 		} else if(strcmp(operand, IO_REDIRECT_STDOUT_APPEND) == 0){
-			flags = O_WRONLY | O_APPEND;
+			flags = O_CREAT | O_WRONLY | O_APPEND;
 			stdio_desc = STDOUT_FILENO;
 		} else{
 			printf("Error: Invalid io redirect operand: %s\n", operand);

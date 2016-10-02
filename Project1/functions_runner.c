@@ -45,6 +45,46 @@ char * get_alias_value(char *token, int i) {
 	return strdup(buffer);
 }
 
+bool contains_io_redir(const token_t *command, bool *operand_result, context *c) {
+
+	const char *operand, *filename;
+	const token_t *left;
+	int i, k;
+	token_t *pointer;
+	for (i = 0; !token_null(&command[i]); i++) {
+		pointer = (token_t *) &command[i]; // cast for non-static = static
+	}
+
+	bool operand_found = false;
+	for (; pointer != &command[0]; pointer--) {
+		printf("%s\n", pointer->string);
+		for (k = 0; IO_REDIRECT_OPERATORS[k]; k++) {
+			if (strcmp(pointer->string, IO_REDIRECT_OPERATORS[k]) == 0) {
+				operand = pointer->string;
+				operand_found = true;
+				break;
+			}
+		}
+		if (operand_found) break;
+	}
+	if (!operand_found) return false;
+
+	pointer->string = NULL;
+	left = command;
+	filename = (pointer + 1)->string;
+
+	if (!filename) {
+		printf("syntax error in using operand\n");
+		pointer->string = (char *) operand;
+		return false;
+	}
+
+	*operand_result = io_redirect(left, operand, filename, c);
+	pointer->string = (char *) operand;
+
+	return true;
+}
+
 bool execute_command(const token_t *command, context *c, bool *error) {
 	/*printf("%s\n", command[0].string);
 	printf("%s\n", command[1].string);
@@ -55,8 +95,11 @@ bool execute_command(const token_t *command, context *c, bool *error) {
 	if (!strcmp("true", lower_case)) return true;
 	if (!strcmp("false", lower_case)) return false;
 	free(lower_case);
-	printf("Hello bros\n");
-	if (!strcmp(funcname, "ulimit")) {
+
+	bool operand_result;
+	if (contains_io_redir(command, &operand_result, c)) {
+		return operand_result;
+	} else if (!strcmp(funcname, "ulimit")) {
 		printf("1\n");
 		if (token_null(&command[1])); // prosta 'ulimit'-ze ras vshvrebit? return;
 		if (command[1].string[0] != '-') {
@@ -99,8 +142,6 @@ bool execute_command(const token_t *command, context *c, bool *error) {
 
 		return fsh_ulimit(args);
 	} else if (!strcmp(funcname, "type")) {
-		printf("2\n");
-
 		bool has_a_flag = find_a_flag_for_type(&command[1], error);
 		if (*error) return false;
 
@@ -135,8 +176,6 @@ bool execute_command(const token_t *command, context *c, bool *error) {
 		}
 
 		if (!prog_name) return false;
-		//printf("alias ==== %s\n", alias);
-		//printf("%s\n", prog_name);
 		pos_arguments *args = malloc(sizeof(pos_arguments));
 		args->arguments = malloc(2 * sizeof(char *));
 		args->arguments[0] = alias;
@@ -144,19 +183,14 @@ bool execute_command(const token_t *command, context *c, bool *error) {
 		args->num_args = 2;
 		fsh_alias(args, c);
 	} else {
-        printf("else-shi var\n");
 		func_pointer fn = searchFn(c->map, funcname);
-
-        printf("ifshic broooo\n");
         pos_arguments *args = malloc(sizeof(pos_arguments));
         int len = get_tokens_len(command);
         char **arguments = malloc(len * sizeof(char *));
-
         int k = (fn == NULL ? 0 : 1), n = 0;
         for (; !token_null(&command[k]); k++) {
             arguments[n++] = command[k].string;
         }
-
         args->arguments = arguments;
         args->num_args = len - 1;
 
@@ -170,7 +204,6 @@ bool execute_command(const token_t *command, context *c, bool *error) {
 
 bool find_a_flag_for_type(const token_t *command, bool *error) {
 	if (command == NULL) return false;
-
 	int i;
 	for (i = 0; !token_null(command + 1); i++) {
 		token_t curr = command[i];
@@ -191,7 +224,6 @@ bool find_a_flag_for_type(const token_t *command, bool *error) {
 int get_tokens_len(const token_t *command) {
 	int k;
 	for (k = 0; !token_null(&command[k]); k++){}
-
 	return k+1;
 }
 
@@ -199,8 +231,6 @@ func_pointer searchFn(hashset *map, char *name) {
 
 	void *elem = HashSetLookup(map, &name);
     if (!elem) return NULL;
-    printf("Hashset lookup passed\n");
 	func_pointer fn = *((func_pointer *) ((char *) elem + sizeof(char **)));
-    printf("func_pinter passed\n");
 	return fn;
 }
