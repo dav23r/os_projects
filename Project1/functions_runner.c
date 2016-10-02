@@ -10,7 +10,7 @@ char * toLowerCase(char *str) {
 	int i;
 	for(i = 0; str[i]; i++)
   		res[i] = tolower(str[i]);
-
+	res[i] = '\0';
   	return res;
 }
 

@@ -97,10 +97,12 @@ static bool execute_pipeline_process(const token_t **pipeline, context *c, bool 
 			rv = execute_command(*pipeline, c, error);
 			if(*error) rv = false;
 #endif
-			if (wait(NULL) != 0) {
+			int status;
+			if (wait(&status) < 0) {
 				(*error) = true;
 				rv = false;
 			}
+			else rv = (status == 0);
 			close(STDOUT_FILENO);
 			return rv;
 		}
@@ -122,7 +124,11 @@ static bool execute_pipeline(const token_t **pipeline, context *c, bool *error){
 	}
 	else if(child_pid == 0)
 		exit(execute_pipeline_process(pipeline, c, error) ? 0 : (-1));
-	else return (wait(NULL) == 0);
+	else{
+		int status;
+		int rv = wait(&status);
+		return (rv >= 0 && status == 0);
+	}
 }
 
 #ifdef PIPELINE_TESTING_MODE
@@ -265,6 +271,9 @@ static bool parse_command_sequence(const char *sequence, context *c){
 				break;
 			}
 			else {
+#ifdef PIPELINE_TESTING_MODE
+				printf("delimiter: <%s>; and: <%s>; or: <%s>; result: %d; input: <%s>; error: %d\n", operator, AND_OPERATOR, OR_OPERATOR, (int)result, command, (int)error);
+#endif
 				if (error) break;
 				else if (strcmp(operator, AND_OPERATOR) == 0) {
 					if(result) continue;
