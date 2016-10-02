@@ -21,13 +21,14 @@ void context_init(context *this){
 
 	// Initialize map of 
 	hashset *variables = malloc(sizeof(hashset));
+	// format: pointer to null terminated variable name -> pointer to null terminated string value
 	HashSetNew(variables, sizeof(char *) + sizeof(char *), num_buckets, StringHash, StringCmp, StringPairFree);
-	// format: pointer to null terminates variables name -> pointer to null terminated string 
 	this->variables = variables;
 }
 
 
 void context_dispose(context *this){
+	HashSetDispose(this->variables);
 	HashSetDispose(this->aliases);
 	HashSetDispose(this->map);
 }
@@ -45,8 +46,8 @@ int StringHash(const void *elem, int numBuckets)
 
 // Dealocates memory of alias -> program name pair
 void StringPairFree(void *str){
-	StringFree(str);     // dealloc alias
-	StringFree(str + 1); // dealloc program name
+	StringFree(str);     // dealloc key
+	StringFree((char **)str + 1); // dealloc value
 }
 
 /* Dealocates dinamically created C string */
