@@ -25,19 +25,18 @@ bool fsh_kill(pos_arguments *args) {
 		return false;
 	}
 	int pid, signal;
-	if (is_valid_integer(args->arguments[0])) {
-		pid = atoi(args->arguments[0]);
-	} else {
-		printf("syntax error in calling 'kill'\n");
-		return false;
-	}
-
 	if (is_valid_integer(args->arguments[1])) {
-		signal = atoi(args->arguments[1]);
+		pid = atoi(args->arguments[1]);
 	} else {
 		printf("syntax error in calling 'kill'\n");
 		return false;
 	}
 
-	return fsh_kill_helper(pid, signal);
+	if (is_valid_integer(args->arguments[0])) {
+		signal = atoi(args->arguments[0]);
+	} else {
+		printf("syntax error in calling 'kill'\n");
+		return false;
+	}
+	return fsh_kill_helper(pid, -1*signal);
 }
