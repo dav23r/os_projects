@@ -6,10 +6,10 @@
 
 void load_functions(hashset *map) {
 
-	storeFuncIntoMap(map, "fsh_kill",		fsh_kill);
-	storeFuncIntoMap(map, "fsh_nice",		fsh_nice);
+	storeFuncIntoMap(map, "kill",			fsh_kill);
+	storeFuncIntoMap(map, "nice",			fsh_nice);
 	storeFuncIntoMap(map, "cd",				fsh_cd);
-	storeFuncIntoMap(map, "fsh_pwd",		fsh_pwd);
+	storeFuncIntoMap(map, "pwd",			fsh_pwd);
 	storeFuncIntoMap(map, "echo",			fsh_echo);
 	storeFuncIntoMap(map, "export",			fsh_echo_export);
 	storeFuncIntoMap(map, "?",				fsh_info);
