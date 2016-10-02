@@ -12,8 +12,11 @@
 #include <errno.h>
 #include "util.h"
 #include <stdio.h>
+#include <string.h>
 #include <stdlib.h>
 #include "arguments.h"
+#include <signal.h>
+#include <sys/wait.h>
 
 bool fsh_nice_helper(char flag, int increment, char * program_name, char * const argv[]);
 
