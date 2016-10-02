@@ -116,13 +116,13 @@ static bool check_minus_c(const char *input, context *c, bool *internal_error){
 			(*internal_error) = true;
 		}
 		free_command_tokens(tokens);
-		return true;
+		exit(0);
 	}
 	return false;
 }
 
 static const exception_checker EXCEPTIONS[] = {
-		check_minus_c,
+		//check_minus_c,
 		NULL
 };
 
