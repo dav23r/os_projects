@@ -17,8 +17,9 @@
 #include "arguments.h"
 #include <signal.h>
 #include <sys/wait.h>
+#include "context.h"
 
-bool fsh_nice_helper(char flag, int increment, char * program_name, char * const argv[]);
+bool fsh_nice_helper(char flag, int increment, char * program_name, char * const argv[], context *c);
 
 bool fsh_nice(pos_arguments *args);
 

@@ -22,9 +22,11 @@ bool fsh_nice(pos_arguments *args) {
         return false;
     }
 
+	context *c = (context *)args->arguments[args->num_args - 1];
+	args->num_args--;
 
     if (args->num_args < 2 && !strcmp(args->arguments[0], "nice"))
-        return fsh_nice_helper('0', 10, NULL, NULL);
+        return fsh_nice_helper('0', 10, NULL, NULL, c);
 
     char flag = 'n';
     char *program_name;
@@ -56,12 +58,12 @@ bool fsh_nice(pos_arguments *args) {
     program_name = args->arguments[0];
     argv = get_changed_copy_array(args->num_args - 1, args, &program_name, 1);
 
-    bool res = fsh_nice_helper(flag, increment, program_name, argv);
+    bool res = fsh_nice_helper(flag, increment, program_name, argv, c);
     free(argv);
     return res;
 }
 
-bool fsh_nice_helper(char flag, int increment, char * program_name, char * const argv[]){
+bool fsh_nice_helper(char flag, int increment, char * program_name, char * const argv[], context *c){
     errno = 0;
     if (flag!='n'){
         int prior = getpriority(PRIO_PROCESS,getpid());
@@ -75,7 +77,9 @@ bool fsh_nice_helper(char flag, int increment, char * program_name, char * const
     }
     //TLPI
     pid_t childPid;
-    switch (childPid = fork()) {
+	if(c->no_fork) childPid = 0;
+	else childPid = fork();
+    switch (childPid) {
         case -1:
             printf("error while trying to fork");
             return false;

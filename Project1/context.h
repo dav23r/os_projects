@@ -10,6 +10,7 @@ typedef struct{
 	hashset *aliases;
 	hashset *variables;
 	hashset *map;
+	bool no_fork;
 } context;
 
 void context_init(context *this);

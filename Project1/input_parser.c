@@ -93,6 +93,7 @@ static bool execute_pipeline_process(const token_t **pipeline, context *c, bool 
 #ifdef PIPELINE_TESTING_MODE
 			pipeline_test_scan_print();
 #else
+			c->no_fork = true;
 			rv = execute_command(*pipeline, c, error);
 			if(*error) rv = false;
 #endif
@@ -100,6 +101,7 @@ static bool execute_pipeline_process(const token_t **pipeline, context *c, bool 
 				(*error) = true;
 				rv = false;
 			}
+			close(STDOUT_FILENO);
 			return rv;
 		}
 		else{
