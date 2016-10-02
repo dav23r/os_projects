@@ -4,7 +4,6 @@
 #include "fsh_nice.h"
 
 char ** get_changed_copy_array(int len, pos_arguments *args, char **funcname, int diff) {
-
     char ** argv = malloc((len + 2) * sizeof(char *));
     argv[0] = *funcname;
     int i = 0;
@@ -47,15 +46,15 @@ bool fsh_nice(pos_arguments *args) {
             argv = get_changed_copy_array(args->num_args - 2, args, &program_name, 2);
         }
         
+    } else {
+        program_name = args->arguments[0];
+        argv = get_changed_copy_array(args->num_args - 1, args, &program_name, 1);
     }
 
     if (args->num_args < 1 || !args->arguments) {
         printf("syntax error in passing arguments in 'nice'\n");
         return false;
     }
-
-    program_name = args->arguments[0];
-    argv = get_changed_copy_array(args->num_args - 1, args, &program_name, 1);
 
     bool res = fsh_nice_helper(flag, increment, program_name, argv, c);
     free(argv);
