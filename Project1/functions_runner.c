@@ -214,11 +214,12 @@ bool execute_command(const token_t *command, context *c, bool *error) {
 		func_pointer fn = searchFn(c->map, funcname);
         pos_arguments *args = malloc(sizeof(pos_arguments));
         int len = get_tokens_len(command) + 1;
-        char **arguments = malloc(len * sizeof(char *));
+        char **arguments = malloc((len+1) * sizeof(char *));
         int k = (fn == NULL || !strcmp(funcname, "nice") ? 0 : 1), n = 0;
         for (; !token_null(&command[k]); k++) {
             arguments[n++] = command[k].string;
         }
+        arguments[len-1] = context;
         args->arguments = arguments;
         args->num_args = len - 1;
 
