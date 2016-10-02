@@ -250,12 +250,12 @@ bool find_a_flag_for_type(const token_t *command, bool *error) {
 		if (strlen(curr.string) == 0) continue;
 
 		if (curr.string[0] == '-') {
-			if (strlen(curr.string) == 1 || curr.string[1] != 'p') {
+			if (strlen(curr.string) == 1 || curr.string[1] != 'a') {
 				*error = true;
 				return false;
-			} else if (i == 0) {
+			} else if (curr.string[1] == 'a') {
 				return true;
-			} else return false;
+			}
 		}
 	}
 	return false;
