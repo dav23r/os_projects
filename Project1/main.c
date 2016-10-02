@@ -27,17 +27,23 @@ char * def_prompt(){
 	}
 	else return strdup(p);
 }
-int main() {
+int main(int argc, char** argv) {
     printf("Free Shell started\n");
     if (signal(SIGINT, SIG_IGN) != SIG_IGN)
         signal(SIGINT, ignore);
     if (signal(SIGTSTP, SIG_IGN) != SIG_IGN)
         signal(SIGINT, ignore);
-	printf("Shell started\n");
+
 	context con;
 	context_init(&con);
 	load_functions(con.map);
-	
+	if (argc==1){
+        if (strcmp(argv[0], "exit") == 0) exit(0);
+    }
+	if (argc==2){
+        if (strcmp(argv[1],"?")==0) fsh_info(NULL);
+    }
+
 	while (true){
 		char * prompt = def_prompt();
 		if(prompt == NULL) break;
@@ -47,6 +53,8 @@ int main() {
 		if (strlen(line) > 0) {
 			add_history(line);
 			if (strcmp(line, "exit") == 0) break;
+			if (strcmp(line, "?")==0) fsh_info(NULL);
+			else
 			parse_input_line(line, &con);
 		}
 		free(line);
