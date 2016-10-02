@@ -12,13 +12,18 @@
 #include "arguments.h"
 #include "context.h"
 
-//void fsh_kill(pid_t pid, int signal);
-
-
-//bool fsh_kill(pid_t pid, int signal);
-
+/*
+ * calls the kill syscall with passed
+ * signal and pid. Raises error if
+ * not possible to perform.
+ * */
 bool fsh_kill_helper(pid_t pid, int signal);
-
+/*
+ * Processes the passed args
+ * and calls fsh_kill_helper
+ * if no syntax error was made.
+ *
+ * */
 bool fsh_kill(pos_arguments *args);
 
 

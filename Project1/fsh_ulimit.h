@@ -17,7 +17,13 @@
  * sets or gets limits, depending on flag
  * */
 bool fsh_ulimit(args_and_flags *rest);
-
+/*
+ * returns th limit. if print_info is true,
+ * prints it with additional information,
+ * otherwise prints rlimit according to
+ * 'S' or 'H' flag, limit, resource
+ * and flag of ulimit.
+ * */
 bool get_limit(char s_h_flag, int limit, int resource, char flag, bool print_info);
 
 typedef bool (*r_limit)(char, int, int, char,bool);
