@@ -51,20 +51,18 @@ bool fsh_nice(pos_arguments *args) {
             program_name = args->arguments[1];
             argv = get_changed_copy_array(args->num_args - 2, args, &program_name, 2);
         }
-        //char *argv[] = {args->arguments[1], NULL};
-        return fsh_nice_helper(flag, increment, program_name, argv);
+        
     }
 
-    if (!strcmp(args->arguments[0], "nice") && (args->num_args < 4 || strcmp(args->arguments[1], "-n") != 0 || !is_valid_integer(args->arguments[3]))) {
+    if (args->num_args < 1 || !args->arguments) {
         printf("syntax error in passing arguments in 'nice'\n");
         return false;
     }
 
-    //char **argv = get_changed_copy_array(args->num_args - 3, args, &args->arguments[2]);
-    /*printf("%s\n", argv[0]);
-    printf("%s\n", argv[1]);*/
+    program_name = args->arguments[0];
+    argv = get_changed_copy_array(args->num_args - 1, args, &program_name, 1);
 
-    bool res = fsh_nice_helper('n', atoi(args->arguments[3]), args->arguments[0], argv);
+    bool res = fsh_nice_helper(flag, increment, program_name, argv);
     free(argv);
     return res;
 }
