@@ -6,6 +6,7 @@
 #include "bool.h"
 #include "input_parser.h"
 #include "load_functions.h"
+#include "parser_util.h"
 
 void ignore (int sig){
     // do nothing
@@ -27,23 +28,30 @@ char * def_prompt(){
 	}
 	else return strdup(p);
 }
-int main(int argc, char** argv) {
-    printf("Free Shell started\n");
+
+void analise_argv(int argc, char **argv, context *c){
+	if(argc > 2){
+		if(strcmp(*(argv + 1), "-c") == 0){
+			token_t *tokens = tokenize_command(*(argv + 2));
+			if(tokens == NULL) exit(-1);
+			bool fail = false;
+			bool result = execute_command(tokens, c, &fail);
+			free_command_tokens(tokens);
+			exit((result && (!fail)) ? 0 : -1);
+		}
+	}
+}
+
+int main(int argc, char **argv) {
     if (signal(SIGINT, SIG_IGN) != SIG_IGN)
         signal(SIGINT, ignore);
     if (signal(SIGTSTP, SIG_IGN) != SIG_IGN)
         signal(SIGINT, ignore);
-
 	context con;
 	context_init(&con);
 	load_functions(con.map);
-	if (argc==1){
-        if (strcmp(argv[0], "exit") == 0) exit(0);
-    }
-	if (argc==2){
-        if (strcmp(argv[1],"?")==0) fsh_info(NULL);
-    }
-
+	analise_argv(argc, argv, &con);
+	printf("Free Shell started\n");
 	while (true){
 		char * prompt = def_prompt();
 		if(prompt == NULL) break;

@@ -45,6 +45,45 @@ char * get_alias_value(char *token, int i) {
 	return strdup(buffer);
 }
 
+bool contains_io_redir(const token_t *command, bool *operand_result, context *c) {
+
+	const char *operand, *filename;
+	const token_t *left;
+	int i, k;
+	token_t *pointer;
+	for (i = 0; !token_null(&command[i]); i++) {
+		pointer = (token_t *) &command[i];
+	}
+
+	bool operand_found = false;
+	for (; pointer != &command[0]; pointer--) {
+		for (k = 0; IO_REDIRECT_OPERATORS[k]; i++) {
+			if (strcmp(pointer->string, IO_REDIRECT_OPERATORS[k]) == 0) {
+				operand = IO_REDIRECT_OPERATORS[k];
+				operand_found = true;
+				break;
+			}
+		}
+		if (operand_found) break;
+	}
+	if (!operand_found) return false;
+
+	pointer->string = NULL;
+	left = command;
+	filename = (pointer + 1)->string;
+
+	if (!filename) {
+		printf("syntax error in using operand\n");
+		pointer->string = (char *) operand;
+		return false;
+	}
+
+	*operand_result = io_redirect(left, operand, filename, c);
+	pointer->string = (char *) operand;
+
+	return true;
+}
+
 bool execute_command(const token_t *command, context *c, bool *error) {
 	/*printf("%s\n", command[0].string);
 	printf("%s\n", command[1].string);
@@ -56,7 +95,11 @@ bool execute_command(const token_t *command, context *c, bool *error) {
 	if (!strcmp("false", lower_case)) return false;
 	free(lower_case);
 	printf("Hello bros\n");
-	if (!strcmp(funcname, "ulimit")) {
+	
+	bool operand_result;
+	if (contains_io_redir(command, &operand_result, c)) {
+		return operand_result;
+	} else if (!strcmp(funcname, "ulimit")) {
 		printf("1\n");
 		if (token_null(&command[1])); // prosta 'ulimit'-ze ras vshvrebit? return;
 		if (command[1].string[0] != '-') {
