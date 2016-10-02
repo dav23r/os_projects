@@ -13,7 +13,8 @@ void load_functions(hashset *map) {
 	storeFuncIntoMap(map, "echo",			fsh_echo);
 	storeFuncIntoMap(map, "export",			fsh_echo_export);
 	storeFuncIntoMap(map, "?",		        fsh_info);
-	storeFuncIntoMap(map, "unalias",                fsh_unalias);
+	/*storeFuncIntoMap(map, "unalias",                fsh_unalias);*/
+
 }
 
 void storeFuncIntoMap(hashset *map, char *fname, func_pointer fn) {
