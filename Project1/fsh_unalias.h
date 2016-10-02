@@ -9,8 +9,11 @@
 #include "arguments.h"
 #include "context.h"
 
+/* Not part of the interface */
+bool fsh_unalias_helper(pos_arguments *args, context *context);
+
 /* Implements shell built-in 'unalias' */
-bool fsh_unalias(pos_arguments *args, context *context);
+bool fsh_unalias(pos_arguments *args);
 
 #endif
 

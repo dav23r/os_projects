@@ -1,5 +1,7 @@
 #include "functions_runner.h"
 #include "vector.h"
+#include "fsh_alias.h"
+#include "fsh_ulimit.h"
 #include <stdlib.h>
 #include <string.h>
 #include "functions.h"
