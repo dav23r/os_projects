@@ -15,6 +15,7 @@
 #include "functions.h"
 #include "iterator.h"
 #include "util.h"
+#include "fsh_unalias.h"
 
 
 // loads fshell built-in functions into functions map
