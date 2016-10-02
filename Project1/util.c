@@ -76,21 +76,23 @@ bool print_locations_of_program(char *program_name, bool first_only){
 
     while(tokenizer_move_to_next(&tok)){
         char * cur_path = tokenizer_get_current_token(&tok);
-        char * path_with_filename = malloc(strlen(cur_path) + strlen(program_name) + 1);
+        char * path_with_filename = malloc(strlen(cur_path) + strlen(program_name) + 2);
 
 	// Construct full path of file
         path_with_filename[0] = '\0';
         strcat(path_with_filename, cur_path);
+	strcat(path_with_filename, "/\0");
         strcat(path_with_filename, program_name);
 
         struct stat sb;
         // If current path is a file, print it
-        if (stat(path_with_filename, &sb) == 0 && S_ISDIR(sb.st_mode)){
+        if (stat(path_with_filename, &sb) == 0 && S_ISREG(sb.st_mode)){
             printf("%s is a program located at %s\n", program_name, path_with_filename);
+            is_found = true;
+
             if (first_only){
 		break;
             }
-            is_found = true;
         } 
     }
 
@@ -99,10 +101,8 @@ bool print_locations_of_program(char *program_name, bool first_only){
 }
 
 bool is_valid_integer(char *arg) {
-	if (strlen(arg) == 0) return false;
-	
-	int i = (arg[0] == '-' ? 1 : 0);
-	for (; i < strlen(arg); i++) {
+	int i;
+	for (i = 0; i < strlen(arg); i++) {
 		if (arg[i] < '0' || arg[i] > '9' || i > 9)  // also if larger than integer can store
 			return false;
 	}
