@@ -13,6 +13,7 @@
 #include <stdio.h>
 #include "fsh_ulimit.h"
 #include "fsh_nice.h"
+#include "io_redir.h"
 
 typedef bool (*func_pointer)(pos_arguments *);
 

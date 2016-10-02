@@ -10,7 +10,7 @@ static const char IO_REDIRECT_STDOUT_STATIC[] = ">";
 const char *IO_REDIRECT_STDOUT = IO_REDIRECT_STDOUT_STATIC;
 static const char IO_REDIRECT_STDOUT_APPEND_STATIC[] = ">>";
 const char *IO_REDIRECT_STDOUT_APPEND = IO_REDIRECT_STDOUT_APPEND_STATIC;
-static const char *IO_REDIRECT_OPERATORS_STATIC[] = { IO_REDIRECT_STDIN_STATIC, IO_REDIRECT_STDOUT_STATIC, IO_REDIRECT_STDOUT_APPEND_STATIC, NULL };
+static const char *IO_REDIRECT_OPERATORS_STATIC[] = { IO_REDIRECT_STDIN, IO_REDIRECT_STDOUT, IO_REDIRECT_STDOUT_APPEND, NULL };
 const char **IO_REDIRECT_OPERATORS = IO_REDIRECT_OPERATORS_STATIC;
 
 
@@ -18,6 +18,7 @@ bool io_redirect(const token_t *command, const char *operand, const char *filena
 	pid_t child_pid = fork();
 	if(child_pid == -1){
 		printf("Error occurred while trying to fork\n");
+		(*error) = true;
 		return false;
 	}
 	else if(child_pid == 0) {
