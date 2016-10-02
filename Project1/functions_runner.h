@@ -9,6 +9,7 @@
 #include "parser_util.h"
 #include <string.h>
 #include <ctype.h>
+#include "fsh_type.h"
 #include <stdio.h>
 #include "fsh_ulimit.h"
 #include "fsh_nice.h"

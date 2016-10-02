@@ -82,7 +82,7 @@ bool execute_command(const token_t *command, context *c, bool *error) {
 		args->arguments = arguments;
 		args->num_args = len - 1;
 
-		return true;// fsh_type(has_a_flag, args);
+		return fsh_type(has_a_flag, args, c);
 	} else {
         printf("else-shi var\n");
 		func_pointer fn = searchFn(c->map, funcname);

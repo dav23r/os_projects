@@ -118,7 +118,7 @@ token_t *tokenize_command(const char *command){
 			}
 			if(!token_add(&command_tokens, &command_cursor, buffer, STRING, last_cursor)) break;
 		}
-		else last_cursor = ((delimiter != NULL) ? delimiter[strlen(delimiter) - 1] : '\0');
+		last_cursor = ((delimiter != NULL) ? delimiter[strlen(delimiter) - 1] : '\0');
 	}
 
 	if(command_tokens != NULL) token_init_null(command_cursor);
