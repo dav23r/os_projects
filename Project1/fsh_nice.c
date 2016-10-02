@@ -22,8 +22,7 @@ bool fsh_nice(pos_arguments *args) {
         return false;
     }
 
-	context *c = (context *)args->arguments[args->num_args - 1];
-	args->num_args--;
+	context *c = (context *)args->arguments[args->num_args];
 
     if (args->num_args < 2 && !strcmp(args->arguments[0], "nice"))
         return fsh_nice_helper('0', 10, NULL, NULL, c);

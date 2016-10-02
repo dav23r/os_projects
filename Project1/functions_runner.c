@@ -219,7 +219,7 @@ bool execute_command(const token_t *command, context *c, bool *error) {
         for (; !token_null(&command[k]); k++) {
             arguments[n++] = command[k].string;
         }
-        arguments[len-1] = context;
+        arguments[len-1] = (char*)c;
         args->arguments = arguments;
         args->num_args = len - 1;
 
