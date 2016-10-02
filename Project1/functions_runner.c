@@ -66,7 +66,6 @@ bool contains_io_redir(const token_t *command, bool *operand_result, context *c)
 
 	bool operand_found = false;
 	for (; pointer != &command[0]; pointer--) {
-		printf("%s\n", pointer->string);
 		for (k = 0; IO_REDIRECT_OPERATORS[k]; k++) {
 			if (strcmp(pointer->string, IO_REDIRECT_OPERATORS[k]) == 0) {
 				operand = pointer->string;
