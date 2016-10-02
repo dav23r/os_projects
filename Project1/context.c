@@ -6,16 +6,24 @@
 
 void context_init(context *this){
 	int num_buckets = 50;
+
 	// Initilize map of functions
 	hashset *map = malloc(sizeof(hashset));
 	// format: pointer to null terminated function name -> function pointer
 	HashSetNew(map, sizeof(char *) + sizeof(func_pointer), num_buckets, StringHash, StringCmp, StringFree);
 	this->map = map;
+
 	// Initialize map of aliases
 	hashset *aliases = malloc(sizeof(hashset));
 	// format: pointer to null terminated alias -> pointer to null terminated program name
-	HashSetNew(aliases, sizeof(char *) + sizeof(char *), num_buckets, StringHash, StringCmp, AliasFree);
+	HashSetNew(aliases, sizeof(char *) + sizeof(char *), num_buckets, StringHash, StringCmp, StringPairFree);
 	this->aliases = aliases;
+
+	// Initialize map of 
+	hashset *variables = malloc(sizeof(hashset));
+	HashSetNew(variables, sizeof(char *) + sizeof(char *), num_buckets, StringHash, StringCmp, StringPairFree);
+	// format: pointer to null terminates variables name -> pointer to null terminated string 
+	this->variables = variables;
 }
 
 
@@ -36,7 +44,7 @@ int StringHash(const void *elem, int numBuckets)
 }
 
 // Dealocates memory of alias -> program name pair
-void AliasFree(void *str){
+void StringPairFree(void *str){
 	StringFree(str);     // dealloc alias
 	StringFree(str + 1); // dealloc program name
 }

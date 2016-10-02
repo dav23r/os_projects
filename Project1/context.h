@@ -8,6 +8,7 @@
 
 typedef struct{
 	hashset *aliases;
+	hashset *variables;
 	hashset *map;
 } context;
 
@@ -25,6 +26,6 @@ void StringFree(void *str);
 
 int StringHash(const void *elem, int numBuckets);
 
-void AliasFree(void *str);
+void StringPairFree(void *str);
 
 #endif
