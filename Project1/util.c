@@ -63,29 +63,39 @@ const string_pair *ESCAPE_SEQUENCES = ESCAPE_SEQUENCES_STATIC;
 /* Prints paths where given program with given name resides
    If first_only flag is present, search is terminated on the
    very first occurence of the program */
-void print_locations_of_program(char *program_name, bool first_only){
+bool print_locations_of_program(char *program_name, bool first_only){
     const char* s = getenv("PATH");
+    // Initialize tokenizer to parse the 'path' env variable
     tokenizer tok;
     const char * delims[] = {":",DELIMITER_END};
     const string_pair empty[] = { STRING_PAIR_END };
-    tokenizer_init(&tok,s,delims,empty, empty);
+    tokenizer_init(&tok, s, delims, empty, empty);
+
+    // Does the file exist at least somewhere?
+    bool is_found = false;
+
     while(tokenizer_move_to_next(&tok)){
-        char * t = tokenizer_get_current_token(&tok);
-        char * p = malloc(strlen(t)+strlen(program_name)+1);
-        p[0]='\0';
-        strcat(p,t);
-        strcat(p,program_name);
+        char * cur_path = tokenizer_get_current_token(&tok);
+        char * path_with_filename = malloc(strlen(cur_path) + strlen(program_name) + 1);
+
+	// Construct full path of file
+        path_with_filename[0] = '\0';
+        strcat(path_with_filename, cur_path);
+        strcat(path_with_filename, program_name);
+
         struct stat sb;
         // If current path is a file, print it
-        if (stat(p, &sb) == 0 && S_ISDIR(sb.st_mode)){
-            printf("%s is a program located at %s\n", t, p);
+        if (stat(path_with_filename, &sb) == 0 && S_ISDIR(sb.st_mode)){
+            printf("%s is a program located at %s\n", program_name, path_with_filename);
             if (first_only){
-                tokenizer_dispose(&tok);
-                return;
+		break;
             }
+            is_found = true;
         } 
     }
+
     tokenizer_dispose(&tok);
+    return is_found;
 }
 
 bool is_valid_integer(char *arg) {
