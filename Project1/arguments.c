@@ -14,4 +14,16 @@ args_and_flags* get_opts(char *input, int num_args, char *flags) {
 	// Not implemented yet
 };
 
+void args_and_flags_free(args_and_flags *arg) {
+	/*free(arg->command_arguments->arguments);
+	free(arg->command_arguments);
+	free(arg->flags->flag_arguments);
+	free(arg->flags);
+	free(arg);*/
+}
+
+void pos_arguments_free(pos_arguments *arg) {
+	/*free(arg->arguments);
+	free(arg);*/
+}
 

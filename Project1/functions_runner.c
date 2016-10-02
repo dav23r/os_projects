@@ -138,7 +138,7 @@ bool execute_command(const token_t *command, context *c, bool *error) {
 		args_and_flags *args = malloc(sizeof(args_and_flags));
 		args->num_flags = 0;
 		args->command_arguments = NULL;
-        int len = get_tokens_len(command) + 1;
+        int len = get_tokens_len(command);
         flag *flags = malloc(len * sizeof(flag));
 		flag *current = malloc(sizeof(flag)); current->flag = '0'; current->flag_arguments = NULL; // spec values for empty flag
 
@@ -168,7 +168,9 @@ bool execute_command(const token_t *command, context *c, bool *error) {
 		}
 		args->flags = flags;
 
-		return fsh_ulimit(args);
+		bool res = fsh_ulimit(args);
+		args_and_flags_free(args);
+		return res;
 	} else if (!strcmp(funcname, "type")) {
 		bool has_a_flag = find_a_flag_for_type(command, error);
 		if (*error) return false;
@@ -185,7 +187,9 @@ bool execute_command(const token_t *command, context *c, bool *error) {
 		args->arguments = arguments;
 		args->num_args = len - 1;
 
-		return fsh_type(has_a_flag, args, c);
+		bool res = fsh_type(has_a_flag, args, c);
+		pos_arguments_free(args);
+		return res;
 	} else if (!strcmp(funcname, "alias")) {
 		if (token_null(&command[1])) {
 			printf("syntax error in calling 'alias'\n");
@@ -209,7 +213,9 @@ bool execute_command(const token_t *command, context *c, bool *error) {
 		args->arguments[0] = alias;
 		args->arguments[1] = prog_name;
 		args->num_args = 2;
-		fsh_alias(args, c);
+		bool res = fsh_alias(args, c);
+		pos_arguments_free(args);
+		return res;
 	} else {
 		func_pointer fn = searchFn(c->map, funcname);
         pos_arguments *args = malloc(sizeof(pos_arguments));
@@ -224,10 +230,14 @@ bool execute_command(const token_t *command, context *c, bool *error) {
         args->arguments = arguments;
         args->num_args = len - 1;
 
+        bool res;
         if (fn)
-            return fn(args);
+            res = fn(args);
         else
-            return fsh_nice(args);
+            res = fsh_nice(args);
+	
+        pos_arguments_free(args);
+        return res;
 	}
 
 }

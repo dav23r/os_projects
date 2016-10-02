@@ -24,6 +24,10 @@ typedef struct{
 
 /********* functions *********/
 
+void args_and_flags_free(args_and_flags *arg);
+
+void pos_arguments_free(pos_arguments *arg);
+
 // pos_arguments* getCommandArguments(args_and_flags *this);
 
 #endif 
