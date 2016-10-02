@@ -127,7 +127,6 @@ bool execute_command(const token_t *command, context *c, bool *error) {
 		HashSetEnter(c->variables, buffer);
 		
 	} else if (!strcmp(funcname, "ulimit")) {
-		printf("1\n");
 		if (token_null(&command[1])) { // prosta 'ulimit'
 			return fsh_ulimit_helper(get_limit, 'f', 0, 'S');
 		}
@@ -171,7 +170,7 @@ bool execute_command(const token_t *command, context *c, bool *error) {
 
 		return fsh_ulimit(args);
 	} else if (!strcmp(funcname, "type")) {
-		bool has_a_flag = find_a_flag_for_type(&command[1], error);
+		bool has_a_flag = find_a_flag_for_type(command, error);
 		if (*error) return false;
 
 		pos_arguments *args = malloc(sizeof(pos_arguments));
@@ -234,7 +233,7 @@ bool execute_command(const token_t *command, context *c, bool *error) {
 bool find_a_flag_for_type(const token_t *command, bool *error) {
 	if (command == NULL) return false;
 	int i;
-	for (i = 0; !token_null(command + 1); i++) {
+	for (i = 0; !token_null(&command[i]); i++) {
 		token_t curr = command[i];
 		if (strlen(curr.string) == 0) continue;
 
