@@ -136,7 +136,7 @@ bool replace_variables(token_t *tokens, context *c){
 			if ((*(iterator->string)) == '$'){
 				key = (iterator->string + 1);
 				map = c->variables;
-			} else{
+			} else if(iterator == tokens){
 				key = (iterator->string);
 				map = c->aliases;
 			}
