@@ -3,8 +3,6 @@
 
 bool fsh_type(bool has_a_flag, pos_arguments *args, context *cont){
 
-	if (has_a_flag) printf("basd\n");
-
 	// Acquire pointers to hashset of built-in functions and aliases
 	hashset *builtins = cont->map;
 	hashset *aliases = cont->aliases;
