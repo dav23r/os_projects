@@ -17,7 +17,7 @@ char ** get_changed_copy_array(int len, pos_arguments *args, char **funcname, in
 }
 
 bool fsh_nice(pos_arguments *args) {
-
+    printf("zero = %s\n", args->arguments[0]);
     if (!args || !args->arguments) {
         printf("syntax error in calling 'nice'\n");
         return false;
@@ -62,6 +62,10 @@ bool fsh_nice(pos_arguments *args) {
     program_name = args->arguments[0];
     argv = get_changed_copy_array(args->num_args - 1, args, &program_name, 1);
 
+    printf("flag = %c\n", flag);
+    printf("inc = %d\n", increment);
+    printf("name = %s\n", program_name);
+    printf("%d\n", argv == NULL);
     bool res = fsh_nice_helper(flag, increment, program_name, argv);
     free(argv);
     return res;
