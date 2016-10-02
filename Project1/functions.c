@@ -126,7 +126,7 @@ bool fsh_echo(pos_arguments *args) {
     char buffer[1024]; buffer[0] = '\0';
     int i;
     for (i = 0; i < args->num_args - 1; i++) {
-        if (i < args->num_args-1) strcat(buffer, strcat(args->arguments[i], " "));
+        if (i < args->num_args-2) strcat(buffer, strcat(args->arguments[i], " "));
         else strcat(buffer, args->arguments[i]);
     }
 
