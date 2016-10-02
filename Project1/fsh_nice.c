@@ -3,13 +3,13 @@
 //
 #include "fsh_nice.h"
 
-char ** get_changed_copy_array(int len, pos_arguments *args, char **funcname) {
+char ** get_changed_copy_array(int len, pos_arguments *args, char **funcname, int diff) {
 
     char ** argv = malloc((len + 2) * sizeof(char *));
     argv[0] = *funcname;
     int i = 0;
     for (; i < len; i++) {
-        argv[i+1] = args->arguments[i+3];
+        argv[i+1] = args->arguments[i+diff];
     }
     argv[len+1] = NULL;
 
@@ -17,11 +17,6 @@ char ** get_changed_copy_array(int len, pos_arguments *args, char **funcname) {
 }
 
 bool fsh_nice(pos_arguments *args) {
-
-    printf("%s\n", args->arguments[0]);
-    printf("%s\n", args->arguments[1]);
-    printf("%s\n", args->arguments[2]);
-    printf("%d\n", args->num_args);
 
     if (!args || !args->arguments) {
         printf("syntax error in calling 'nice'\n");
@@ -32,10 +27,32 @@ bool fsh_nice(pos_arguments *args) {
     if (args->num_args < 2 && !strcmp(args->arguments[0], "nice"))
         return fsh_nice_helper('0', 10, NULL, NULL);
 
+    char flag = 'n';
+    char *program_name;
+    int increment = 10;
+    char **argv;
 
-    if (args->num_args == 2 && !strcmp(args->arguments[0], "nice")) {
-        char *argv[] = {args->arguments[1], NULL};
-        return fsh_nice_helper('n', 10, args->arguments[1], argv);
+    if (!strcmp(args->arguments[0], "nice")) {
+        printf("%s\n", "aa");
+        if (!strcmp(args->arguments[1], "-n")) {
+            printf("%s\n", "bb");
+            if (args->num_args < 3 || !is_valid_integer(args->arguments[2]) || args->num_args < 4) {
+                printf("%s\n", "ccc");
+                printf("syntax error in passing arguments in 'nice'\n");
+                return false;
+            } else {
+                printf("%s\n", "ddd");
+                program_name = args->arguments[3];
+                increment = atoi(args->arguments[2]);
+                argv = get_changed_copy_array(args->num_args - 4, args, &program_name, 4);
+            }
+        } else {
+            printf("%s\n", "vvv");
+            program_name = args->arguments[1];
+            argv = get_changed_copy_array(args->num_args - 2, args, &program_name, 2);
+        }
+        //char *argv[] = {args->arguments[1], NULL};
+        return fsh_nice_helper(flag, increment, program_name, argv);
     }
 
     if (!strcmp(args->arguments[0], "nice") && (args->num_args < 4 || strcmp(args->arguments[1], "-n") != 0 || !is_valid_integer(args->arguments[3]))) {
@@ -43,7 +60,7 @@ bool fsh_nice(pos_arguments *args) {
         return false;
     }
 
-    char **argv = get_changed_copy_array(args->num_args - 3, args, &args->arguments[2]);
+    //char **argv = get_changed_copy_array(args->num_args - 3, args, &args->arguments[2]);
     /*printf("%s\n", argv[0]);
     printf("%s\n", argv[1]);*/
 
@@ -53,12 +70,12 @@ bool fsh_nice(pos_arguments *args) {
 }
 
 bool fsh_nice_helper(char flag, int increment, char * program_name, char * const argv[]){
-     printf("%c\n", flag);
+   /* printf("%c\n", flag);
       printf("%d\n", increment);
-    printf("%s\n", program_name);
-    printf("%s\n", argv[0]);
-     printf("%s\n", argv[1]);
-      printf("%d\n", argv[2] == NULL);
+    printf("%s\n", program_name);*/
+    //printf("%s\n", argv[0]);
+     //printf("%s\n", argv[1]);
+      printf("%d\n", argv == NULL);
     //getpriority can return negative values
     errno = 0;
     if (flag!='n'){
