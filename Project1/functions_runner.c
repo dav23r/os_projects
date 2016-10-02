@@ -188,7 +188,7 @@ bool execute_command(const token_t *command, context *c, bool *error) {
 		}
 
 		args->arguments = arguments;
-		args->num_args = len - 1;
+		args->num_args = n;
 
 		bool res = fsh_type(has_a_flag, args, c);
 		pos_arguments_free(args);
@@ -227,6 +227,7 @@ bool execute_command(const token_t *command, context *c, bool *error) {
         int k = (fn == NULL || !strcmp(funcname, "nice") ? 0 : 1), n = 0;
         for (; !token_null(&command[k]); k++) {
             arguments[n++] = command[k].string;
+            printf("arg = %s\n", command[k].string);
         }
 
         arguments[len-1] = (char *) c;
