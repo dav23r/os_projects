@@ -91,10 +91,15 @@ bool fsh_nice_helper(char flag, int increment, char * program_name, char * const
             exit(-1);
             break;
         default:
-            if (wait(NULL)!=0){
-                //error_handler(errno, "waiting for child to terminate");
-                return false;
-            }
+			if(true) {
+				int status;
+				int res = wait(&status);
+				if (res < 0) {
+					error_handler(errno, "waiting for child to terminate");
+					return false;
+				}
+				else return (status == 0);
+			}
             break;
     }
     return true;
