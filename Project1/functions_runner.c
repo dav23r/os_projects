@@ -150,6 +150,8 @@ bool execute_command(const token_t *command, context *c, bool *error) {
 				if (strlen(next) == 1)  {
 					*error = true;
 					args_and_flags_free(args);
+					free(flags);
+					free(current);
 					return false;
 				}
 
