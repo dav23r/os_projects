@@ -149,6 +149,7 @@ bool execute_command(const token_t *command, context *c, bool *error) {
 			if (next[0] == '-') {
 				if (strlen(next) == 1)  {
 					*error = true;
+					args_and_flags_free(args);
 					return false;
 				}
 

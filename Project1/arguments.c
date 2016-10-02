@@ -1,4 +1,5 @@
 #include "arguments.h"
+#include <stdlib.h>
 
 /* The function parses line of arguments following some command 
    and return convenient data structure representation of it.
@@ -15,15 +16,21 @@ args_and_flags* get_opts(char *input, int num_args, char *flags) {
 };
 
 void args_and_flags_free(args_and_flags *arg) {
-	/*free(arg->command_arguments->arguments);
-	free(arg->command_arguments);
-	free(arg->flags->flag_arguments);
-	free(arg->flags);
-	free(arg);*/
+	if (!arg) return;
+	pos_arguments_free(arg->command_arguments);
+	flag_free(arg->flags);
+	free(arg);
 }
 
 void pos_arguments_free(pos_arguments *arg) {
-	/*free(arg->arguments);
-	free(arg);*/
+	if (!arg || !arg->arguments) return;
+	free(arg->arguments);
+	free(arg);
+}
+
+void flag_free(flag *arg) {
+	if (!arg || !arg->flag_arguments) return;
+	pos_arguments_free(arg->flag_arguments);
+	free(arg);
 }
 
