@@ -31,10 +31,27 @@ bool token_null(const token_t *t);
 
 void free_command_tokens(token_t *tokens);
 
+/**
+ * Tokenizes the given command string
+ * @param command - command string(segment of the user input)
+ * @return tokenized command
+ */
 token_t *tokenize_command(const char *command);
 
+/**
+ * Replaces all the variables and aliases with their definitions
+ * @param tokens - tokenized command
+ * @param c - context
+ * @return True, if success
+ */
 bool replace_variables(token_t *tokens, context *c);
 
+/**
+ * Searches for a string in the list that equal to the first parameter
+ * @param string - target string
+ * @param list - list of the strings (NULL terminated)
+ * @return True, if found
+ */
 bool string_in_list(const char *string, const char **list);
 
 const char **STRING_START_ENDS;
