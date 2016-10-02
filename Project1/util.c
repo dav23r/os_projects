@@ -88,7 +88,7 @@ bool print_locations_of_program(char *program_name, bool first_only){
         struct stat sb;
         // If current path is a file, print it
         if (stat(path_with_filename, &sb) == 0 && S_ISREG(sb.st_mode)){
-            printf("'%s' is a program located at %s\n", program_name, path_with_filename);
+            printf("%s is %s\n", program_name, path_with_filename);
             is_found = true;
 
             if (first_only){

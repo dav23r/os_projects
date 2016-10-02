@@ -7,7 +7,7 @@ bool fsh_type(bool has_a_flag, pos_arguments *args, context *cont){
 	hashset *builtins = cont->map;
 	hashset *aliases = cont->aliases;
 
-	const char *builtins_name = "shell built-in";
+	const char *builtins_name = "shell builtin";
 	const char *aliases_name = "alias";
 
 	char **arguments = args->arguments;
@@ -45,7 +45,7 @@ bool look_up_hashset(hashset *set, char *cur_token, const char *set_name){
 	void *rv_pointer = HashSetLookup(set, &cur_token);
 	bool found = (rv_pointer != NULL);
 	if (found) 
-		printf("'%s' is a %s\n", cur_token, set_name);
+		printf("%s is a %s\n", cur_token, set_name);
 	return found;
 }
 
