@@ -19,32 +19,46 @@ char ** get_changed_copy_array(int len, pos_arguments *args, char **funcname) {
 bool fsh_nice(pos_arguments *args) {
 
     printf("%s\n", args->arguments[0]);
+    printf("%s\n", args->arguments[1]);
+    printf("%s\n", args->arguments[2]);
+    printf("%d\n", args->num_args);
 
-    if (!args || !args->arguments || (args->num_args != 1 && ((args->num_args > 0 && args->num_args < 3)
-            ||(args->num_args > 1 && strcmp(args->arguments[1], "-n") != 0)
-            || (args->num_args > 2 && is_valid_integer(args->arguments[2]))))) {
+    if (!args || !args->arguments) {
         printf("syntax error in calling 'nice'\n");
         return false;
     }
 
 
-    if (args->num_args < 1)
+    if (args->num_args < 2 && !strcmp(args->arguments[0], "nice"))
         return fsh_nice_helper('0', 10, NULL, NULL);
 
 
-    if (args->num_args == 1) {
-        char *argv[] = {args->arguments[0], NULL};
-        return fsh_nice_helper('n', 10, args->arguments[0], argv);
+    if (args->num_args == 2 && !strcmp(args->arguments[0], "nice")) {
+        char *argv[] = {args->arguments[1], NULL};
+        return fsh_nice_helper('n', 10, args->arguments[1], argv);
     }
 
-    char **argv = get_changed_copy_array(args->num_args - 3, args, &args->arguments[0]);
+    if (!strcmp(args->arguments[0], "nice") && (args->num_args < 4 || strcmp(args->arguments[1], "-n") != 0 || !is_valid_integer(args->arguments[3]))) {
+        printf("syntax error in passing arguments in 'nice'\n");
+        return false;
+    }
 
-    bool res = fsh_nice_helper('n', atoi(args->arguments[1]), args->arguments[0], argv);
+    char **argv = get_changed_copy_array(args->num_args - 3, args, &args->arguments[2]);
+    /*printf("%s\n", argv[0]);
+    printf("%s\n", argv[1]);*/
+
+    bool res = fsh_nice_helper('n', atoi(args->arguments[3]), args->arguments[0], argv);
     free(argv);
     return res;
 }
 
 bool fsh_nice_helper(char flag, int increment, char * program_name, char * const argv[]){
+     printf("%c\n", flag);
+      printf("%d\n", increment);
+    printf("%s\n", program_name);
+    printf("%s\n", argv[0]);
+     printf("%s\n", argv[1]);
+      printf("%d\n", argv[2] == NULL);
     //getpriority can return negative values
     errno = 0;
     if (flag!='n'){
