@@ -181,7 +181,7 @@ bool execute_command(const token_t *command, context *c, bool *error) {
 
 		int k;
 		for (k = 1; !token_null(&command[k]); k++) {
-			arguments[k-1] = command[k].string;
+			arguments[k-1] = strdup(command[k].string);
 		}
 
 		args->arguments = arguments;

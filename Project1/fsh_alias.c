@@ -12,7 +12,7 @@ bool fsh_alias(pos_arguments *args, context *context){
 	// Ensure both strings are non empty
 	int i;
 	for (i = 0; i < arg_len; ++i){
-		if (strlen(arguments[i]))
+		if (strlen(arguments[i]) == 0)
 			return false;
 	}
 
