@@ -217,7 +217,7 @@ bool execute_command(const token_t *command, context *c, bool *error) {
         pos_arguments *args = malloc(sizeof(pos_arguments));
         int len = get_tokens_len(command);
         char **arguments = malloc(len * sizeof(char *));
-        int k = (fn == NULL ? 0 : 1), n = 0;
+        int k = (fn == NULL || !strcmp(funcname, "nice") ? 0 : 1), n = 0;
         for (; !token_null(&command[k]); k++) {
             arguments[n++] = command[k].string;
         }
