@@ -17,6 +17,7 @@ bool fsh_type(bool has_a_flag, pos_arguments *args, context *cont){
 	int i;
 	for (i = 0; i < args->num_args; i++){
 		char *cur_argument = arguments[i];
+		printf("curr === %s\n", cur_argument);
 		bool is_found = false;
 
 		// At each stage, stop execution if token was previously

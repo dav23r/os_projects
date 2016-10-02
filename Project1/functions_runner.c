@@ -179,9 +179,12 @@ bool execute_command(const token_t *command, context *c, bool *error) {
 		int len = get_tokens_len(command);
 		char **arguments = malloc(len * sizeof(char *));
 
-		int k;
+		int k, n = 0;
 		for (k = 1; !token_null(&command[k]); k++) {
-			arguments[k-1] = command[k].string;
+			if (strlen(command[k].string) == 0 || (strlen(command[k].string) > 1 && command[k].string[0] == '-' && command[k].string[1] == 'a'))
+				continue;
+			
+			arguments[n++] = command[k].string;
 		}
 
 		args->arguments = arguments;
