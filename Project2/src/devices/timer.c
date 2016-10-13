@@ -7,6 +7,9 @@
 #include "threads/interrupt.h"
 #include "threads/synch.h"
 #include "threads/thread.h"
+#include "threads/interrupt.h"
+#include "lib/kernel/list.h"
+
   
 /* See [8254] for hardware details of the 8254 timer chip. */
 
@@ -89,11 +92,13 @@ timer_elapsed (int64_t then)
 void
 timer_sleep (int64_t ticks) 
 {
-  int64_t start = timer_ticks ();
+  int64_t start = timer_ticks();
 
-  ASSERT (intr_get_level () == INTR_ON);
-  while (timer_elapsed (start) < ticks) 
-    thread_yield ();
+  ASSERT (intr_get_level() == INTR_ON);
+  /*while (timer_elapsed (start) < ticks) 
+    thread_yield ();*/
+
+  sleep_the_thread(ticks);
 }
 
 /* Sleeps for approximately MS milliseconds.  Interrupts must be
@@ -170,8 +175,12 @@ timer_print_stats (void)
 static void
 timer_interrupt (struct intr_frame *args UNUSED)
 {
-  ticks++;
+	ticks++;
   thread_tick ();
+
+  //struct thread *cur = thread_current ();
+
+  handle_tick_for_sleep_queue();
 }
 
 /* Returns true if LOOPS iterations waits for more than one timer

@@ -28,6 +28,8 @@ static struct list ready_list;
    when they are first scheduled and removed when they exit. */
 static struct list all_list;
 
+static struct list sleepers; //////////////////////////
+
 /* Idle thread. */
 static struct thread *idle_thread;
 
@@ -91,6 +93,7 @@ thread_init (void)
 
   lock_init (&tid_lock);
   list_init (&ready_list);
+  list_init(&sleepers);
   list_init (&all_list);
 
   /* Set up a thread structure for the running thread. */
@@ -582,3 +585,61 @@ allocate_tid (void)
 /* Offset of `stack' member within `struct thread'.
    Used by switch.S, which can't figure it out on its own. */
 uint32_t thread_stack_ofs = offsetof (struct thread, stack);
+
+
+//////////////////////\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\////////////////////
+//////////////////////\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\////////////////////
+
+static bool sleepers_is_less_cmp(const struct list_elem *first, const struct list_elem *second, void *aux UNUSED) {
+  ASSERT(first);
+  ASSERT(second);
+
+  return list_entry (first, struct thread, elem)->ticks_left_to_sleep <
+        list_entry (second, struct thread, elem)->ticks_left_to_sleep;
+}
+
+static void reset_sleepers_ticks(struct thread *t) {
+  ASSERT(t);
+
+  t->ticks_left_to_sleep = timer_ticks();
+}
+
+void sleep_the_thread(int64_t ticks) {
+
+  thread_current()->ticks_left_to_sleep = ticks + timer_ticks();
+  enum intr_level before = intr_disable();
+
+  list_insert_ordered(&sleepers, &thread_current()->elem,
+                            sleepers_is_less_cmp, NULL);
+
+  thread_block();
+
+  intr_set_level(before);
+}
+
+void handle_tick_for_sleep_queue(void) {
+
+  if (list_empty (&sleepers))
+    return;
+
+  struct list_elem *e;
+  for (e = list_begin (&sleepers); e != list_end (&sleepers);
+           e = list_next (e)) {
+    struct thread *curr = list_entry (e, struct thread, elem);
+    
+    if (curr->ticks_left_to_sleep <= timer_ticks()) {
+      reset_sleepers_ticks(curr);
+
+      enum intr_level before = intr_disable();
+
+      list_remove(e);
+
+      thread_unblock(curr);
+
+      intr_set_level(before);
+    } else break;
+  }
+}
+
+
+
