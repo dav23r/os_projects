@@ -220,6 +220,7 @@ thread_block (void)
   ASSERT (intr_get_level () == INTR_OFF);
 
   thread_current ()->status = THREAD_BLOCKED;
+
   schedule ();
 }
 
@@ -642,4 +643,22 @@ void handle_tick_for_sleep_queue(void) {
 }
 
 
+static bool donation_cmp(const struct list_elem *a, const struct list_elem *b, void *aux){
+  const struct list *list_a = ;
+  const struct list *list_b = ;
+  const struct list_item *li_a = ;
+  const struct list_item *li_b = ;
+  const struct thread *thread_a = ;
+  const struct thread *thread_b = ;
+  return (thread_a->prior_don < thread_b->prior_don);
+}
+
+
+void thread_donate(struct thread *t, int priority){
+  if(t->prior_don < priority) t->prior_don = priority;
+}
+void thread_update_donations(struct thread *t){
+  t->prior_don = t->priority;
+  list_elem *elem = list_max(&t->lock_list, donation_cmp, NULL);
+}
 

@@ -98,10 +98,13 @@ struct thread
     uint32_t *pagedir;                  /* Page directory. */
 #endif
 
+    int64_t ticks_left_to_sleep;
+
+    int prior_don;                      /* Donated priority */
+    list lock_list;                     /* List of acquired locks */
+
     /* Owned by thread.c. */
     unsigned magic;                     /* Detects stack overflow. */
-
-    int64_t ticks_left_to_sleep;
   };
 
 
@@ -144,5 +147,8 @@ int thread_get_load_avg (void);
 void sleep_the_thread(int64_t ticks);
 
 void handle_tick_for_sleep_queue(void);
+
+void thread_donate(struct thread *t, int priority);
+void thread_update_donations(struct thread *t);
 
 #endif /* threads/thread.h */
