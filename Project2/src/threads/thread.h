@@ -101,7 +101,7 @@ struct thread
     int64_t ticks_left_to_sleep;
 
     int prior_don;                      /* Donated priority */
-    list lock_list;                     /* List of acquired locks */
+    struct list lock_list;              /* List of acquired locks */
 
     /* Owned by thread.c. */
     unsigned magic;                     /* Detects stack overflow. */

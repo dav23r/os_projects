@@ -643,13 +643,21 @@ void handle_tick_for_sleep_queue(void) {
 }
 
 
+static bool thread_cmp(const struct list_elem *a, const struct list_elem *b, void *aux){
+	const struct thread *thread_a = list_entry(a, struct thread, elem);
+	const struct thread *thread_b = list_entry(b, struct thread, elem);
+	int prior = ((thread_a->prior_don > thread_b->prior_don) ? thread_a->prior_don : thread_b->prior_don);
+	if ((*(int*)aux) < prior) (*(int*)aux) = prior;
+	return prior;
+}
+
 static bool donation_cmp(const struct list_elem *a, const struct list_elem *b, void *aux){
-  const struct list *list_a = ;
-  const struct list *list_b = ;
-  const struct list_item *li_a = ;
-  const struct list_item *li_b = ;
-  const struct thread *thread_a = ;
-  const struct thread *thread_b = ;
+  const struct list *list_a = (&((list_entry(a, struct lock, elem))->semaphore.waiters));
+  const struct list *list_b = (&((list_entry(b, struct lock, elem))->semaphore.waiters));
+  const struct list_elem *li_a = list_max((struct list *)list_a, thread_cmp, aux);
+  const struct list_elem *li_b = list_max((struct list *)list_b, thread_cmp, aux);
+  const struct thread *thread_a = list_entry(li_a, struct thread, elem);
+  const struct thread *thread_b = list_entry(li_b, struct thread, elem);
   return (thread_a->prior_don < thread_b->prior_don);
 }
 
@@ -659,6 +667,6 @@ void thread_donate(struct thread *t, int priority){
 }
 void thread_update_donations(struct thread *t){
   t->prior_don = t->priority;
-  list_elem *elem = list_max(&t->lock_list, donation_cmp, NULL);
+  list_max(&t->lock_list, donation_cmp, &t->prior_don);
 }
 
