@@ -469,9 +469,11 @@ init_thread (struct thread *t, const char *name, int priority)
   t->prior_don = priority;
   t->magic = THREAD_MAGIC;
 
+  list_init(&t->lock_list);
+  t->locked_on = NULL;
+
   old_level = intr_disable ();
   list_push_back (&all_list, &t->allelem);
-  list_init(&initial_thread->lock_list);
   intr_set_level (old_level);
 }
 
@@ -594,6 +596,7 @@ uint32_t thread_stack_ofs = offsetof (struct thread, stack);
 //////////////////////\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\////////////////////
 
 static bool sleepers_is_less_cmp(const struct list_elem *first, const struct list_elem *second, void *aux UNUSED) {
+  ASSERT(0);
   ASSERT(first);
   ASSERT(second);
 
@@ -602,13 +605,14 @@ static bool sleepers_is_less_cmp(const struct list_elem *first, const struct lis
 }
 
 static void reset_sleepers_ticks(struct thread *t) {
+  ASSERT(0);
   ASSERT(t);
 
   t->ticks_left_to_sleep = timer_ticks();
 }
 
 void sleep_the_thread(int64_t ticks) {
-
+  /*
   thread_current()->ticks_left_to_sleep = ticks + timer_ticks();
   enum intr_level before = intr_disable();
 
@@ -618,10 +622,13 @@ void sleep_the_thread(int64_t ticks) {
   thread_block();
 
   intr_set_level(before);
+  /*/
+  ASSERT(0);
+  //*/
 }
 
 void handle_tick_for_sleep_queue(void) {
-
+  /*
   if (list_empty (&sleepers))
     return;
 
@@ -642,6 +649,9 @@ void handle_tick_for_sleep_queue(void) {
       intr_set_level(before);
     } else break;
   }
+  /*/
+  ASSERT(0);
+  //*/
 }
 
 
@@ -666,14 +676,17 @@ static bool donation_cmp(const struct list_elem *a, const struct list_elem *b, v
 
 
 void thread_donate(struct thread *t, int priority){
-  if(t->prior_don < priority) t->prior_don = priority;
+  if(t->prior_don < priority){
+    t->prior_don = priority;
+    if(t->locked_on != NULL) thread_donate(t->locked_on->holder, priority);
+  }
 }
 void thread_update_donations(struct thread *t){
+  int start_priority = t->prior_don;
   t->prior_don = t->priority;
-  if(!list_empty(&t->lock_list)) {
-    //ASSERT(0);
+  if(!list_empty(&t->lock_list))
     list_max(&t->lock_list, donation_cmp, &t->prior_don);
-    //ASSERT(0);
-  }// else ASSERT(0);
+  if(t->locked_on != NULL && t->prior_don != start_priority)
+    thread_update_donations(t->locked_on->holder);
 }
 

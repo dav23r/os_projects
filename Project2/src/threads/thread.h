@@ -102,6 +102,7 @@ struct thread
 
     int prior_don;                      /* Donated priority */
     struct list lock_list;              /* List of acquired locks */
+    struct lock *locked_on;             /* The lock, the thread is locked on */
 
     /* Owned by thread.c. */
     unsigned magic;                     /* Detects stack overflow. */
