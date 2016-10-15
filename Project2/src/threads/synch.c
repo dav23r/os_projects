@@ -32,6 +32,13 @@
 #include "threads/interrupt.h"
 #include "threads/thread.h"
 
+static bool thread_less(const struct list_elem *a, const struct list_elem *b, void *aux UNUSED){
+  ASSERT(a != NULL && b != NULL);
+  const struct thread *thread_a = list_entry(a, struct thread, elem);
+  const struct thread *thread_b = list_entry(b, struct thread, elem);
+  return (thread_a->prior_don < thread_b->prior_don);
+}
+
 /* Initializes semaphore SEMA to VALUE.  A semaphore is a
    nonnegative integer along with two atomic operators for
    manipulating it:
@@ -60,7 +67,7 @@ static void sema_down_donate(struct semaphore *sema, struct lock *owner_lock){
   struct thread *cur = thread_current();
   while (sema->value == 0)
   {
-    list_push_back (&sema->waiters, &cur->elem);
+    list_push_back(&sema->waiters, &cur->elem);
     //*
     if (owner_lock != NULL){
       cur->locked_on = owner_lock;
@@ -128,15 +135,19 @@ sema_up (struct semaphore *sema)
 
   old_level = intr_disable ();
 	struct thread *max_thread = NULL;
-  //struct thread *curr = thread_current();
+  struct thread *curr = thread_current();
   if (!list_empty (&sema->waiters)) {
-    max_thread = list_entry(list_pop_front(&sema->waiters), struct thread, elem);
-    if(max_thread != NULL){
+    struct list_elem *max_elem = list_max(&sema->waiters, thread_less, NULL);
+    //struct list_elem *max_elem = list_front(&sema->waiters);
+    if(max_elem != NULL){
+      max_thread = list_entry(max_elem, struct thread, elem);
+      list_remove(max_elem);
+      //thread_update_donations(max_thread);
       thread_unblock(max_thread);
-      //if (curr != NULL && max_thread->prior_don >= curr->prior_don) {
+      if (curr != NULL && max_thread->prior_don >= curr->prior_don) {
         //thread_update_donations(curr);
         //if(max_thread->prior_don > curr->prior_don) thread_yield();
-      //}
+      }
     }
   }
   sema->value++;
@@ -268,11 +279,10 @@ lock_release (struct lock *lock)
 
 
   enum intr_level old_level = intr_disable();
-  sema_up (&lock->semaphore);
   if(!thread_mlfqs) list_remove(&lock->elem);
   thread_update_donations(lock->holder);
-  //ASSERT(0);
   lock->holder = NULL;
+  sema_up (&lock->semaphore);
   intr_set_level (old_level);
 }
 

@@ -339,7 +339,10 @@ thread_foreach (thread_action_func *func, void *aux)
 void
 thread_set_priority (int new_priority)
 {
-  thread_current ()->priority = new_priority;
+  struct thread *t = thread_current ();
+  t->base_priority = new_priority;
+  //thread_update_donations(t);
+  //thread_donate(t, t->base_priority);
 }
 
 /* Returns the current thread's priority. */
@@ -465,12 +468,13 @@ init_thread (struct thread *t, const char *name, int priority)
   t->status = THREAD_BLOCKED;
   strlcpy (t->name, name, sizeof t->name);
   t->stack = (uint8_t *) t + PGSIZE;
-  t->priority = priority;
+  t->base_priority = priority;
   t->prior_don = priority;
   t->magic = THREAD_MAGIC;
 
   list_init(&t->lock_list);
   t->locked_on = NULL;
+  lock_init(&t->prior_lock);
 
   old_level = intr_disable ();
   list_push_back (&all_list, &t->allelem);
@@ -676,17 +680,24 @@ static bool donation_cmp(const struct list_elem *a, const struct list_elem *b, v
 
 
 void thread_donate(struct thread *t, int priority){
+  enum intr_level old_level = intr_disable();
   if(t->prior_don < priority){
     t->prior_don = priority;
     if(t->locked_on != NULL) thread_donate(t->locked_on->holder, priority);
   }
+  intr_set_level (old_level);
+  //lock_release(&t->prior_lock);
 }
 void thread_update_donations(struct thread *t){
+  //lock_acquire(&t->prior_lock);
+  enum intr_level old_level = intr_disable();
   int start_priority = t->prior_don;
-  t->prior_don = t->priority;
+  t->prior_don = t->base_priority;
   if(!list_empty(&t->lock_list))
     list_max(&t->lock_list, donation_cmp, &t->prior_don);
   if(t->locked_on != NULL && t->prior_don != start_priority)
     thread_update_donations(t->locked_on->holder);
+  intr_set_level (old_level);
+  //lock_release(&t->prior_lock);
 }
 
