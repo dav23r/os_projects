@@ -14,7 +14,7 @@
 #ifdef USERPROG
 #include "userprog/process.h"
 #endif
-
+//static  char  bla[] = "abcdeffuck";
 /* Random value for struct thread's `magic' member.
    Used to detect stack overflow.  See the big comment at the top
    of thread.h for details. */
@@ -339,10 +339,12 @@ thread_foreach (thread_action_func *func, void *aux)
 void
 thread_set_priority (int new_priority)
 {
+  enum intr_level old_level = intr_disable();
   struct thread *t = thread_current ();
   t->base_priority = new_priority;
-  //thread_update_donations(t);
+  thread_update_donations(t);
   //thread_donate(t, t->base_priority);
+  intr_set_level (old_level);
 }
 
 /* Returns the current thread's priority. */
@@ -477,6 +479,7 @@ init_thread (struct thread *t, const char *name, int priority)
   lock_init(&t->prior_lock);
 
   old_level = intr_disable ();
+  //t->bla = bla;
   list_push_back (&all_list, &t->allelem);
   intr_set_level (old_level);
 }
@@ -669,10 +672,15 @@ static bool thread_cmp(const struct list_elem *a, const struct list_elem *b, voi
 }
 
 static bool donation_cmp(const struct list_elem *a, const struct list_elem *b, void *aux){
-  const struct list *list_a = (&(list_entry(a, struct lock, elem)->semaphore.waiters));
-  const struct list *list_b = (&(list_entry(b, struct lock, elem)->semaphore.waiters));
-  const struct list_elem *li_a = list_max((struct list *)list_a, thread_cmp, aux);
-  const struct list_elem *li_b = list_max((struct list *)list_b, thread_cmp, aux);
+  struct list *list_a = (&(list_entry(a, struct lock, elem)->semaphore.waiters));
+  struct list *list_b = (&(list_entry(b, struct lock, elem)->semaphore.waiters));
+  if (list_empty(list_a))
+    return !list_empty(list_b);
+  if (list_empty(list_b))
+    return false;
+
+  const struct list_elem *li_a = list_max(list_a, thread_cmp, aux);
+  const struct list_elem *li_b = list_max(list_b, thread_cmp, aux);
   const struct thread *thread_a = list_entry(li_a, struct thread, elem);
   const struct thread *thread_b = list_entry(li_b, struct thread, elem);
   return (thread_a->prior_don < thread_b->prior_don);
@@ -681,9 +689,11 @@ static bool donation_cmp(const struct list_elem *a, const struct list_elem *b, v
 
 void thread_donate(struct thread *t, int priority){
   enum intr_level old_level = intr_disable();
-  if(t->prior_don < priority){
-    t->prior_don = priority;
-    if(t->locked_on != NULL) thread_donate(t->locked_on->holder, priority);
+  if (is_thread (t)) {
+    if (t->prior_don < priority) {
+      t->prior_don = priority;
+      if (t->locked_on != NULL) thread_donate(t->locked_on->holder, priority);
+    }
   }
   intr_set_level (old_level);
   //lock_release(&t->prior_lock);
@@ -691,12 +701,14 @@ void thread_donate(struct thread *t, int priority){
 void thread_update_donations(struct thread *t){
   //lock_acquire(&t->prior_lock);
   enum intr_level old_level = intr_disable();
-  int start_priority = t->prior_don;
-  t->prior_don = t->base_priority;
-  if(!list_empty(&t->lock_list))
-    list_max(&t->lock_list, donation_cmp, &t->prior_don);
-  if(t->locked_on != NULL && t->prior_don != start_priority)
-    thread_update_donations(t->locked_on->holder);
+  if (is_thread (t)) {
+    int start_priority = t->prior_don;
+    t->prior_don = t->base_priority;
+    if (!list_empty(&t->lock_list))
+      list_max(&t->lock_list, donation_cmp, &t->prior_don);
+    if (t->locked_on != NULL && t->prior_don != start_priority)
+      thread_update_donations(t->locked_on->holder);
+  }
   intr_set_level (old_level);
   //lock_release(&t->prior_lock);
 }

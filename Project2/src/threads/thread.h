@@ -105,7 +105,7 @@ struct thread
     struct list lock_list;              /* List of acquired locks */
     struct lock *locked_on;             /* The lock, the thread is locked on */
     struct lock prior_lock;             /* Lock for altering priority */
-
+   // char * bla;
     /* Owned by thread.c. */
     unsigned magic;                     /* Detects stack overflow. */
   };

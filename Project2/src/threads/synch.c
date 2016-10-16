@@ -64,7 +64,9 @@ static void sema_down_donate(struct semaphore *sema, struct lock *owner_lock){
   ASSERT (!intr_context ());
 
   old_level = intr_disable ();
+
   struct thread *cur = thread_current();
+ // ASSERT(strcmp(cur->bla,"abcdeffuck")==0);
   while (sema->value == 0)
   {
     list_push_back(&sema->waiters, &cur->elem);
@@ -92,6 +94,7 @@ static void sema_down_donate(struct semaphore *sema, struct lock *owner_lock){
 void
 sema_down (struct semaphore *sema)
 {
+
   sema_down_donate(sema, NULL);
 }
 
@@ -231,7 +234,7 @@ lock_acquire (struct lock *lock)
   ASSERT (!lock_held_by_current_thread (lock));
 
   enum intr_level old_level = intr_disable();
-  sema_down_donate (&lock->semaphore, lock);
+  sema_down_donate (&lock->semaphore, (!thread_mlfqs) ? lock : NULL);
   lock->holder = thread_current ();
   if(!thread_mlfqs){
     //list_init(&lock->holder->lock_list);
