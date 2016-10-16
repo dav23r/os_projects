@@ -11,10 +11,10 @@
 #include "threads/switch.h"
 #include "threads/synch.h"
 #include "threads/vaddr.h"
+#include "fixed_point.h"
 #ifdef USERPROG
 #include "userprog/process.h"
 #endif
-//static  char  bla[] = "abcdeffuck";
 /* Random value for struct thread's `magic' member.
    Used to detect stack overflow.  See the big comment at the top
    of thread.h for details. */
@@ -29,6 +29,9 @@ static struct list ready_list;
 static struct list all_list;
 
 static struct list sleepers; //////////////////////////
+
+static int load_avg;
+
 
 /* Idle thread. */
 static struct thread *idle_thread;
@@ -349,7 +352,7 @@ thread_set_priority (int new_priority)
   enum intr_level old_level = intr_disable();
   struct thread *t = thread_current ();
   t->base_priority = new_priority;
-  thread_update_donations(t);
+  if(!thread_mlfqs) thread_update_donations(t);
   //thread_donate(t, t->base_priority);
   intr_set_level (old_level);
 }
@@ -363,17 +366,21 @@ thread_get_priority (void)
 
 /* Sets the current thread's nice value to NICE. */
 void
-thread_set_nice (int nice UNUSED)
+thread_set_nice (int nice)
 {
-  /* Not yet implemented. */
+  ASSERT(thread_current()!=NULL);
+  enum intr_level old_level = intr_disable();
+  thread_current()->nice = nice;
+  intr_set_level(old_level);
+
 }
 
 /* Returns the current thread's nice value. */
 int
 thread_get_nice (void)
 {
-  /* Not yet implemented. */
-  return 0;
+
+  return thread_current()->nice;
 }
 
 /* Returns 100 times the system load average. */
@@ -724,4 +731,38 @@ void thread_update_donations(struct thread *t){
   intr_set_level (old_level);
   //lock_release(&t->prior_lock);
 }
+/*
+ * counts load average, every
+ * multiple of a second
+ * */
+void count_load_avg(void){
+  int cnt;
+  cnt = list_size (&ready_list);
+  if (thread_current() != idle_thread)
+    cnt++;
+  load_avg = fixed_sum(fixed_mul (fixed_int_div (int_to_fixed (59), 60), load_avg),
+             fixed_int_mul (fixed_int_div (int_to_fixed (1), 60), cnt) );
 
+}
+/*
+ * updates thread priority
+ * by going trough the heavy
+ * process of counting everything
+ * necessary described in pintOS
+ *
+ * */
+
+void thread_priority_update(struct thread *t){
+
+  int load = fixed_int_mul (load_avg, 2);
+  int coefficient = fixed_div (load, fixed_int_sum (load, 1));
+  t->recent_cpu = fixed_int_sum (fixed_mul (coefficient, t->recent_cpu), t->nice);
+
+  t->base_priority = PRI_MAX - fixed_round_to_closest_int (fixed_int_div (int_to_fixed(t->recent_cpu), 4)) - t->nice * 2;
+  if (t->base_priority>PRI_MAX)
+    t->base_priority=PRI_MAX;
+  if (t->base_priority<PRI_MIN)
+    t->base_priority=PRI_MIN;
+
+
+}

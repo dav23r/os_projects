@@ -100,12 +100,12 @@ struct thread
 #endif
 
     int64_t ticks_left_to_sleep;
-
+    int nice;                           /* Niceness of thread */
+    int recent_cpu;                     /* Recently used cpu*/
     int prior_don;                      /* Donated priority */
     struct list lock_list;              /* List of acquired locks */
     struct lock *locked_on;             /* The lock, the thread is locked on */
     struct lock prior_lock;             /* Lock for altering priority */
-   // char * bla;
     /* Owned by thread.c. */
     unsigned magic;                     /* Detects stack overflow. */
   };

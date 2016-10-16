@@ -52,7 +52,7 @@ typedef int fixed_point;
 #define fixed_int_sub(f, i) ((f) - int_to_fixed(i))
 
 // integer subtracted by a fixed_point
-#define int_fixed_sum(i, f) (int_to_fixed(i) - (f))
+#define int_fixed_sub(i, f) (int_to_fixed(i) - (f))
 
 
 /* Multiplication: */
