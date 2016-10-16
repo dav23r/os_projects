@@ -72,6 +72,13 @@ static void *alloc_frame (struct thread *, size_t size);
 static void schedule (void);
 void thread_schedule_tail (struct thread *prev);
 static tid_t allocate_tid (void);
+/*
+ * compares threads according to their priority.
+ * It returns true if a is less than b
+ *
+ * */
+static bool thread_cmp(const struct list_elem *a, const struct list_elem *b, void *aux);
+
 
 /* Initializes the threading system by transforming the code
    that's currently running into a thread.  This can't work in
@@ -507,8 +514,11 @@ next_thread_to_run (void)
 {
   if (list_empty (&ready_list))
     return idle_thread;
-  else
-    return list_entry (list_pop_front (&ready_list), struct thread, elem);
+  else {
+    struct list_elem * elem = list_max (&ready_list, thread_cmp, NULL);
+    list_remove(elem);
+    return list_entry(elem,struct thread, elem);
+  }
 }
 
 /* Completes a thread switch by activating the new thread's page
@@ -667,7 +677,8 @@ static bool thread_cmp(const struct list_elem *a, const struct list_elem *b, voi
 	const struct thread *thread_b = list_entry(b, struct thread, elem);
 	bool rv = (thread_a->prior_don < thread_b->prior_don);
   int prior = (rv ? thread_b->prior_don : thread_a->prior_don);
-	if ((*(int*)aux) < prior) (*(int*)aux) = prior;
+	if (aux!=NULL)
+    if ((*(int*)aux) < prior) (*(int*)aux) = prior;
 	return rv;
 }
 
@@ -679,8 +690,8 @@ static bool donation_cmp(const struct list_elem *a, const struct list_elem *b, v
   if (list_empty(list_b))
     return false;
 
-  const struct list_elem *li_a = list_max(list_a, thread_cmp, aux);
-  const struct list_elem *li_b = list_max(list_b, thread_cmp, aux);
+  const struct list_elem *li_a = list_max((struct list *)list_a, thread_cmp, aux);
+  const struct list_elem *li_b = list_max((struct list *)list_b, thread_cmp, aux);
   const struct thread *thread_a = list_entry(li_a, struct thread, elem);
   const struct thread *thread_b = list_entry(li_b, struct thread, elem);
   return (thread_a->prior_don < thread_b->prior_don);
