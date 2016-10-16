@@ -142,14 +142,19 @@ sema_up (struct semaphore *sema)
   if (!list_empty (&sema->waiters)) {
     struct list_elem *max_elem = list_max(&sema->waiters, thread_less, NULL);
     //struct list_elem *max_elem = list_front(&sema->waiters);
+    /*
+    while(!list_empty(&sema->waiters)){
+      struct thread *elem = list_entry (list_pop_front (&sema->waiters), struct thread, elem);
+      thread_unblock (elem);
+    }
+    //*/
     if(max_elem != NULL){
       max_thread = list_entry(max_elem, struct thread, elem);
       list_remove(max_elem);
       //thread_update_donations(max_thread);
       thread_unblock(max_thread);
-      if (curr != NULL && max_thread->prior_don >= curr->prior_don) {
-        //thread_update_donations(curr);
-        //if(max_thread->prior_don > curr->prior_don) thread_yield();
+      if (curr != NULL && max_thread->prior_don > curr->prior_don) {
+        //thread_yield();
       }
     }
   }

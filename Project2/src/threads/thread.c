@@ -613,7 +613,7 @@ uint32_t thread_stack_ofs = offsetof (struct thread, stack);
 //////////////////////\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\////////////////////
 
 static bool sleepers_is_less_cmp(const struct list_elem *first, const struct list_elem *second, void *aux UNUSED) {
-  ASSERT(0);
+  //ASSERT(0);
   ASSERT(first);
   ASSERT(second);
 
@@ -622,16 +622,16 @@ static bool sleepers_is_less_cmp(const struct list_elem *first, const struct lis
 }
 
 static void reset_sleepers_ticks(struct thread *t) {
-  ASSERT(0);
+  //ASSERT(0);
   ASSERT(t);
 
   t->ticks_left_to_sleep = timer_ticks();
 }
 
 void sleep_the_thread(int64_t ticks) {
-  /*
-  thread_current()->ticks_left_to_sleep = ticks + timer_ticks();
+  //*
   enum intr_level before = intr_disable();
+  thread_current()->ticks_left_to_sleep = ticks + timer_ticks();
 
   list_insert_ordered(&sleepers, &thread_current()->elem,
                             sleepers_is_less_cmp, NULL);
@@ -645,15 +645,14 @@ void sleep_the_thread(int64_t ticks) {
 }
 
 void handle_tick_for_sleep_queue(void) {
-  /*
+  //*
   if (list_empty (&sleepers))
     return;
 
-  struct list_elem *e;
-  for (e = list_begin (&sleepers); e != list_end (&sleepers);
-           e = list_next (e)) {
+  struct list_elem *e = list_begin (&sleepers);
+  while (e != list_end (&sleepers)) {
     struct thread *curr = list_entry (e, struct thread, elem);
-
+    struct list_elem* r = list_next (e);
     if (curr->ticks_left_to_sleep <= timer_ticks()) {
       reset_sleepers_ticks(curr);
 
@@ -664,6 +663,8 @@ void handle_tick_for_sleep_queue(void) {
       thread_unblock(curr);
 
       intr_set_level(before);
+
+      e = r;
     } else break;
   }
   /*/
