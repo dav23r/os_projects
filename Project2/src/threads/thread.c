@@ -32,6 +32,23 @@ static struct list sleepers; //////////////////////////
 
 static int load_avg;
 
+// List of threads with given priority
+static struct equiprior_list {
+    struct list_elem elem;
+    thread *thread;
+};
+
+// Array storing lists of threads with priorities from MIN to MAX
+static equiprior_list lists_of_threads[PRI_MAX - PRI_MIN + 1];
+
+void init_priority_lists(void){
+  int priority;
+  for (priority = PRI_MIN, priority <= PRI_MAX, ++priority){
+    int index = priority - PRI_MIN;
+    list_init(list_of_threads + index);
+  }
+}
+init_priority_lists();
 
 /* Idle thread. */
 static struct thread *idle_thread;
