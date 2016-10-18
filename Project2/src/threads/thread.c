@@ -32,23 +32,18 @@ static struct list sleepers; //////////////////////////
 
 static int load_avg;
 
-// List of threads with given priority
-static struct equiprior_list {
-    struct list_elem elem;
-    thread *thread;
-};
+// Array storing lists of 'ready' threads with priorities from MIN to MAX
+static struct list lists_of_equiprior_threads[PRI_MAX - PRI_MIN + 1];
 
-// Array storing lists of threads with priorities from MIN to MAX
-static equiprior_list lists_of_threads[PRI_MAX - PRI_MIN + 1];
-
-void init_priority_lists(void){
+/* Initializes data structure storing lists of threads
+   differentiaded by thethread_mlfqsir priorities */
+static void init_priority_lists(void){
   int priority;
-  for (priority = PRI_MIN, priority <= PRI_MAX, ++priority){
-    int index = priority - PRI_MIN;
-    list_init(list_of_threads + index);
+  for (priority = PRI_MIN; priority <= PRI_MAX; ++priority){
+    int index_of_list = priority - PRI_MIN;
+    list_init(lists_of_equiprior_threads + index_of_list);
   }
-}
-init_priority_lists();
+};
 
 /* Idle thread. */
 static struct thread *idle_thread;
@@ -119,9 +114,18 @@ thread_init (void)
   ASSERT (intr_get_level () == INTR_OFF);
 
   lock_init (&tid_lock);
-  list_init (&ready_list);
   list_init(&sleepers);
   list_init (&all_list);
+
+  /* Initialize contatiner of ready threads, in case 'mlfqs'
+     flag is on we operate in advanced scheduler mode with
+     efficiently storing data as array of lists of threads 
+     having equal priority. Otherwise opt for single list
+     strategy with O(n) time complexity. */
+  if (thread_mlfqs)
+    init_priority_lists();
+  else
+    list_init (&ready_list);
 
   /* Set up a thread structure for the running thread. */
   initial_thread = running_thread ();
@@ -167,8 +171,7 @@ thread_tick (void)
   /* Enforce preemption. */
   if (++thread_ticks >= TIME_SLICE)
     intr_yield_on_return ();
-}
-
+} 
 /* Prints thread statistics. */
 void
 thread_print_stats (void)
@@ -268,7 +271,15 @@ thread_unblock (struct thread *t)
 
   old_level = intr_disable ();
   ASSERT (t->status == THREAD_BLOCKED);
-  list_push_back (&ready_list, &t->elem);
+  // Decide on the container for 'ready threads'
+  if (thread_mlfqs){
+    int thread_priority = t->base_priority; //BSD
+    struct list *list_with_given_priority = 
+      lists_of_equiprior_threads + (thread_priority - PRI_MIN);
+    list_push_back (list_with_given_priority, &t->elem);
+  }else{
+    list_push_back (&ready_list, &t->elem); //basic
+  }
   t->status = THREAD_READY;
   intr_set_level (old_level);
 }
@@ -338,8 +349,16 @@ thread_yield (void)
   ASSERT (!intr_context ());
 
   old_level = intr_disable ();
-  if (cur != idle_thread)
-    list_push_back (&ready_list, &cur->elem);
+  if (cur != idle_thread){
+    if (thread_mlfqs){
+      int thread_priority = cur->base_priority;
+      struct list *list_with_given_priority = 
+        lists_of_equiprior_threads + (thread_priority - PRI_MIN);
+      list_push_back (list_with_given_priority, &cur->elem);
+    }else{
+      list_push_back (&ready_list, &cur->elem);
+    }
+  }
   cur->status = THREAD_READY;
   schedule ();
   intr_set_level (old_level);
@@ -536,13 +555,29 @@ alloc_frame (struct thread *t, size_t size)
 static struct thread *
 next_thread_to_run (void)
 {
-  if (list_empty (&ready_list))
+  if (!thread_mlfqs && list_empty(&ready_list))
     return idle_thread;
-  else {
-    struct list_elem * elem = list_max (&ready_list, thread_cmp, NULL);
-    list_remove(elem);
-    return list_entry(elem,struct thread, elem);
+  
+  struct list_elem *elem = NULL;
+  if (!thread_mlfqs){
+    elem = list_max (&ready_list, thread_cmp, NULL);
+  }else{
+    int priority;
+    for (priority = PRI_MAX; priority >= PRI_MAX; --priority){
+      struct list *list_with_cur_priority = lists_of_equiprior_threads + (priority - PRI_MIN);
+      if (list_size(list_with_cur_priority) > 0){
+        elem = list_front(list_with_cur_priority);
+        break;
+      }
+    }
+    if (elem == NULL) 
+      return idle_thread;
   }
+  list_remove(elem);
+  ASSERT (elem != NULL);
+  struct thread *ret_thread = list_entry(elem, struct thread, elem);
+  ASSERT (ret_thread != NULL);
+  return ret_thread;
 }
 
 /* Completes a thread switch by activating the new thread's page
@@ -753,8 +788,16 @@ void thread_update_donations(struct thread *t){
  * multiple of a second
  * */
 void count_load_avg(void){
-  int cnt;
-  cnt = list_size (&ready_list);
+  int cnt = 0;
+  if (thread_mlfqs){
+    int priority;
+    for (priority = PRI_MIN; priority <= PRI_MAX; ++priority){
+      struct list *list_with_cur_priority = lists_of_equiprior_threads + (priority - PRI_MIN);
+      cnt += list_size(list_with_cur_priority); 
+    }
+  }else{
+    cnt += list_size (&ready_list);
+  }
   if (thread_current() != idle_thread)
     cnt++;
   load_avg = fixed_sum(fixed_mul (fixed_int_div (int_to_fixed (59), 60), load_avg),
