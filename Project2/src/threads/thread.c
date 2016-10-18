@@ -81,6 +81,8 @@ bool thread_mlfqs;
 
 static void kernel_thread (thread_func *, void *aux);
 
+static void update_recent_cpu_of_thread(struct thread *t, void *aux);
+void thread_priority_update(struct thread *t);
 static void idle (void *aux UNUSED);
 static struct thread *running_thread (void);
 static struct thread *next_thread_to_run (void);
@@ -236,6 +238,16 @@ thread_create (const char *name, int priority,
 
   /* Add to run queue. */
   thread_unblock (t);
+
+  if(thread_mlfqs){
+    update_recent_cpu_of_thread(t, NULL);
+    thread_priority_update(t);
+    update_recent_cpu_of_thread(thread_current(), NULL);
+    thread_priority_update(thread_current());
+  }
+
+  if (t->prior_don > thread_current()->prior_don)
+    thread_yield();
 
   return tid;
 }
@@ -411,7 +423,9 @@ thread_set_nice (int nice)
 {
   ASSERT(thread_current()!=NULL);
   enum intr_level old_level = intr_disable();
-  thread_current()->nice = nice;
+  struct thread *t = thread_current();
+  t->nice = nice;
+  thread_priority_update(t);
   intr_set_level(old_level);
 
 }
@@ -834,18 +848,28 @@ void count_load_avg(void){
  * */
 
 void thread_priority_update(struct thread *t){
+  ASSERT(is_thread(t));
+  if(t == idle_thread) return;
 
   int load = fixed_int_mul (load_avg, 2);
   int coefficient = fixed_div (load, fixed_int_sum (load, 1));
   t->recent_cpu = fixed_int_sum (fixed_mul (coefficient, t->recent_cpu), t->nice);
 
-  t->base_priority = PRI_MAX - fixed_round_to_closest_int (fixed_int_div (int_to_fixed(t->recent_cpu), 4)) - t->nice * 2;
+  t->base_priority = PRI_MAX - fixed_round_to_closest_int (fixed_int_div (t->recent_cpu, 4)) - t->nice * 2;
   if (t->base_priority>PRI_MAX)
     t->base_priority=PRI_MAX;
   if (t->base_priority<PRI_MIN)
     t->base_priority=PRI_MIN;
 
 
+}
+
+static void thread_priority_update_wrap(struct thread *t, void *aux UNUSED){
+  thread_priority_update(t);
+}
+
+void thread_priority_update_all(){
+  thread_foreach(thread_priority_update_wrap, NULL);
 }
 
 

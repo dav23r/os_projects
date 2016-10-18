@@ -157,6 +157,7 @@ void thread_update_donations(struct thread *t);
 void update_recent_cpu();
 void count_load_avg(void);
 void thread_priority_update(struct thread *t);
+void thread_priority_update_all();
 
 void rebase_threads_in_mlfsq(void);
 

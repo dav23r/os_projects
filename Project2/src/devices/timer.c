@@ -10,7 +10,7 @@
 #include "threads/interrupt.h"
 #include "lib/kernel/list.h"
 #include "../threads/thread.h"
-
+#include "threads/fixed_point.h"
 
 /* See [8254] for hardware details of the 8254 timer chip. */
 
@@ -186,13 +186,14 @@ timer_interrupt (struct intr_frame *args UNUSED)
 
   if(thread_mlfqs){
     struct thread *cur = thread_current();
-    cur->recent_cpu++;
+    if(cur->status == THREAD_RUNNING)
+      cur->recent_cpu = fixed_int_sum(cur->recent_cpu,1);
     if(ticks % TIMER_FREQ == 0){
       count_load_avg();
       update_recent_cpu();
     }
     if(ticks % 4 == 0){
-      int recent_priority = cur->base_priority;
+      thread_priority_update_all();
       rebase_threads_in_mlfsq();
     }
   }
