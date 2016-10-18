@@ -135,7 +135,7 @@ sema_up (struct semaphore *sema)
   enum intr_level old_level;
 
   ASSERT (sema != NULL);
-
+  bool shouldYield = false;
   old_level = intr_disable ();
 	struct thread *max_thread = NULL;
   struct thread *curr = thread_current();
@@ -154,12 +154,14 @@ sema_up (struct semaphore *sema)
       //thread_update_donations(max_thread);
       thread_unblock(max_thread);
       if (curr != NULL && max_thread->prior_don > curr->prior_don) {
+        shouldYield = true;
         //thread_yield();
       }
     }
   }
   sema->value++;
   intr_set_level (old_level);
+  if(shouldYield) thread_yield();
 }
 
 static void sema_test_helper (void *sema_);
@@ -290,8 +292,8 @@ lock_release (struct lock *lock)
   if(!thread_mlfqs) list_remove(&lock->elem);
   thread_update_donations(lock->holder);
   lock->holder = NULL;
-  sema_up (&lock->semaphore);
   intr_set_level (old_level);
+  sema_up (&lock->semaphore);
 }
 
 /* Returns true if the current thread holds LOCK, false

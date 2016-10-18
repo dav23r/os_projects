@@ -12,6 +12,9 @@
 #include "threads/synch.h"
 #include "threads/vaddr.h"
 #include "fixed_point.h"
+#include "thread.h"
+#include "../../tests/p1/src/threads/thread.h"
+
 #ifdef USERPROG
 #include "userprog/process.h"
 #endif
@@ -122,10 +125,10 @@ thread_init (void)
      efficiently storing data as array of lists of threads 
      having equal priority. Otherwise opt for single list
      strategy with O(n) time complexity. */
-  if (thread_mlfqs)
-    init_priority_lists();
-  else
-    list_init (&ready_list);
+  //if (thread_mlfqs)
+  init_priority_lists();
+  //else
+  list_init (&ready_list);
 
   /* Set up a thread structure for the running thread. */
   initial_thread = running_thread ();
@@ -350,6 +353,7 @@ thread_yield (void)
 
   old_level = intr_disable ();
   if (cur != idle_thread){
+    if (!is_thread(cur)) return;
     if (thread_mlfqs){
       int thread_priority = cur->base_priority;
       struct list *list_with_given_priority = 
@@ -389,6 +393,7 @@ thread_set_priority (int new_priority)
   struct thread *t = thread_current ();
   t->base_priority = new_priority;
   if(!thread_mlfqs) thread_update_donations(t);
+  else t->prior_don = new_priority;
   //thread_donate(t, t->base_priority);
   intr_set_level (old_level);
 }
@@ -424,7 +429,8 @@ int
 thread_get_load_avg (void)
 {
   /* Not yet implemented. */
-  return 0;
+  return fixed_round_to_closest_int(fixed_int_mul(load_avg, 100));
+  //return 0;
 }
 
 /* Returns 100 times the current thread's recent_cpu value. */
@@ -432,7 +438,8 @@ int
 thread_get_recent_cpu (void)
 {
   /* Not yet implemented. */
-  return 0;
+  return fixed_round_to_closest_int(fixed_int_mul(thread_current()->recent_cpu, 100));
+  //return 0;
 }
 
 /* Idle thread.  Executes when no other thread is ready to run.
@@ -527,6 +534,10 @@ init_thread (struct thread *t, const char *name, int priority)
   list_init(&t->lock_list);
   t->locked_on = NULL;
   lock_init(&t->prior_lock);
+  if(thread_mlfqs){
+    t->nice = ((t == initial_thread) ? 0 : thread_get_nice());
+    t->recent_cpu = ((t == initial_thread) ? 0 : thread_get_recent_cpu());
+  }
 
   old_level = intr_disable ();
   //t->bla = bla;
@@ -563,9 +574,9 @@ next_thread_to_run (void)
     elem = list_max (&ready_list, thread_cmp, NULL);
   }else{
     int priority;
-    for (priority = PRI_MAX; priority >= PRI_MAX; --priority){
+    for (priority = PRI_MAX; priority >= PRI_MIN; --priority){
       struct list *list_with_cur_priority = lists_of_equiprior_threads + (priority - PRI_MIN);
-      if (list_size(list_with_cur_priority) > 0){
+      if (!list_empty(list_with_cur_priority)){
         elem = list_front(list_with_cur_priority);
         break;
       }
@@ -771,7 +782,7 @@ void thread_donate(struct thread *t, int priority){
 }
 void thread_update_donations(struct thread *t){
   //lock_acquire(&t->prior_lock);
-  enum intr_level old_level = intr_disable();
+  // enum intr_level old_level = intr_disable();
   if (is_thread (t)) {
     int start_priority = t->prior_don;
     t->prior_don = t->base_priority;
@@ -780,9 +791,19 @@ void thread_update_donations(struct thread *t){
     if (t->locked_on != NULL && t->prior_don != start_priority)
       thread_update_donations(t->locked_on->holder);
   }
-  intr_set_level (old_level);
+  // intr_set_level (old_level);
   //lock_release(&t->prior_lock);
 }
+
+
+
+static void update_recent_cpu_of_thread(struct thread *t, void *aux UNUSED){
+  t->recent_cpu = fixed_int_sum(fixed_int_mul(t->recent_cpu, fixed_div(fixed_int_mul(load_avg, 2), fixed_int_mul(load_avg, 2) + 1)), t->nice);
+}
+void update_recent_cpu(){
+  thread_foreach(update_recent_cpu_of_thread, NULL);
+}
+
 /*
  * counts load average, every
  * multiple of a second
@@ -825,4 +846,23 @@ void thread_priority_update(struct thread *t){
     t->base_priority=PRI_MIN;
 
 
+}
+
+
+
+void rebase_threads_in_mlfsq(void){
+  int ind;
+  struct list lst;
+  list_init(&lst);
+
+  for(ind = PRI_MIN; ind <= PRI_MAX; ind++){
+    struct list *list = lists_of_equiprior_threads + (ind - PRI_MIN);
+    while(!list_empty(list))
+      list_push_back(&lst, list_pop_back(list));
+  }
+  while(!list_empty(&lst)){
+    struct list_elem *elem = list_pop_back(&lst);
+    struct thread *t = list_entry(elem, struct thread, elem);
+    list_push_back(lists_of_equiprior_threads + (t->base_priority - PRI_MIN), &t->elem);
+  }
 }

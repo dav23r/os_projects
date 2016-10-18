@@ -154,4 +154,10 @@ void handle_tick_for_sleep_queue(void);
 void thread_donate(struct thread *t, int priority);
 void thread_update_donations(struct thread *t);
 
+void update_recent_cpu();
+void count_load_avg(void);
+void thread_priority_update(struct thread *t);
+
+void rebase_threads_in_mlfsq(void);
+
 #endif /* threads/thread.h */

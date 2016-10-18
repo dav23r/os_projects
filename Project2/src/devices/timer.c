@@ -9,8 +9,9 @@
 #include "threads/thread.h"
 #include "threads/interrupt.h"
 #include "lib/kernel/list.h"
+#include "../threads/thread.h"
 
-  
+
 /* See [8254] for hardware details of the 8254 timer chip. */
 
 #if TIMER_FREQ < 19
@@ -180,9 +181,21 @@ timer_interrupt (struct intr_frame *args UNUSED)
 	ticks++;
   thread_tick ();
 
-  //struct thread *cur = thread_current ();
 
   handle_tick_for_sleep_queue();
+
+  if(thread_mlfqs){
+    struct thread *cur = thread_current();
+    cur->recent_cpu++;
+    if(ticks % TIMER_FREQ == 0){
+      count_load_avg();
+      update_recent_cpu();
+    }
+    if(ticks % 4 == 0){
+      int recent_priority = cur->base_priority;
+      rebase_threads_in_mlfsq();
+    }
+  }
 }
 
 /* Returns true if LOOPS iterations waits for more than one timer
