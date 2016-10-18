@@ -33,7 +33,7 @@ static struct list all_list;
 
 static struct list sleepers; //////////////////////////
 
-static int load_avg;
+static int load_avg = 0;
 
 // Array storing lists of 'ready' threads with priorities from MIN to MAX
 static struct list lists_of_equiprior_threads[PRI_MAX - PRI_MIN + 1];
@@ -812,7 +812,7 @@ void thread_update_donations(struct thread *t){
 
 
 static void update_recent_cpu_of_thread(struct thread *t, void *aux UNUSED){
-  t->recent_cpu = fixed_int_sum(fixed_int_mul(t->recent_cpu, fixed_div(fixed_int_mul(load_avg, 2), fixed_int_mul(load_avg, 2) + 1)), t->nice);
+  t->recent_cpu = fixed_int_sum(fixed_mul(t->recent_cpu, fixed_div(fixed_int_mul(load_avg, 2), fixed_int_mul(load_avg, 2) + 1)), t->nice);
 }
 void update_recent_cpu(){
   thread_foreach(update_recent_cpu_of_thread, NULL);
@@ -833,7 +833,8 @@ void count_load_avg(void){
   }else{
     cnt += list_size (&ready_list);
   }
-  if (thread_current() != idle_thread)
+  struct thread *cur = thread_current();
+  if (cur != idle_thread && cur->status == THREAD_RUNNING)
     cnt++;
   load_avg = fixed_sum(fixed_mul (fixed_int_div (int_to_fixed (59), 60), load_avg),
              fixed_int_mul (fixed_int_div (int_to_fixed (1), 60), cnt) );
@@ -855,12 +856,12 @@ void thread_priority_update(struct thread *t){
   int coefficient = fixed_div (load, fixed_int_sum (load, 1));
   t->recent_cpu = fixed_int_sum (fixed_mul (coefficient, t->recent_cpu), t->nice);
 
-  t->base_priority = PRI_MAX - fixed_round_to_closest_int (fixed_int_div (t->recent_cpu, 4)) - t->nice * 2;
+  t->base_priority = PRI_MAX - fixed_round_to_closest_int(fixed_int_div (t->recent_cpu, 4)) - t->nice * 2;
   if (t->base_priority>PRI_MAX)
     t->base_priority=PRI_MAX;
   if (t->base_priority<PRI_MIN)
     t->base_priority=PRI_MIN;
-
+  t->prior_don = t->base_priority;
 
 }
 
@@ -870,6 +871,7 @@ static void thread_priority_update_wrap(struct thread *t, void *aux UNUSED){
 
 void thread_priority_update_all(){
   thread_foreach(thread_priority_update_wrap, NULL);
+  rebase_threads_in_mlfsq();
 }
 
 

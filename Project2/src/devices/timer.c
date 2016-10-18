@@ -192,10 +192,8 @@ timer_interrupt (struct intr_frame *args UNUSED)
       count_load_avg();
       update_recent_cpu();
     }
-    if(ticks % 4 == 0){
+    if(ticks % 4 == 0)
       thread_priority_update_all();
-      rebase_threads_in_mlfsq();
-    }
   }
 }
 
