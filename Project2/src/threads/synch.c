@@ -158,7 +158,6 @@ sema_up (struct semaphore *sema)
   ASSERT (sema != NULL);
   bool shouldYield = false;
   old_level = intr_disable ();
-	struct thread *max_thread = NULL;
   struct thread *curr = thread_current();
   if (!list_empty (&sema->waiters)) {
     //struct list_elem *max_elem = list_front(&sema->waiters);
@@ -166,11 +165,12 @@ sema_up (struct semaphore *sema)
     while(!list_empty(&sema->waiters)){
       struct thread *elem = list_entry (list_pop_front (&sema->waiters), struct thread, elem);
       thread_unblock (elem);
+      shouldYield |= (curr->prior_don > curr->base_priority && curr->prior_don <= elem->prior_don);
     }
     /*/
     struct list_elem *max_elem = list_max(&sema->waiters, thread_less, NULL);
     if(max_elem != NULL){
-      max_thread = list_entry(max_elem, struct thread, elem);
+      struct thread *max_thread = list_entry(max_elem, struct thread, elem);
       list_remove(max_elem);
       //thread_update_donations(max_thread);
       thread_unblock(max_thread);
@@ -181,8 +181,9 @@ sema_up (struct semaphore *sema)
     //*/
   }
   sema->value++;
-  //if(shouldYield)
+  if(shouldYield)
     thread_yield();
+  else thread_yield_if_needed();
   intr_set_level (old_level);
 }
 
