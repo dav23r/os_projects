@@ -240,9 +240,9 @@ thread_create (const char *name, int priority,
 
   if(thread_mlfqs){
     update_recent_cpu_of_thread(t, NULL);
-    thread_priority_update(t, true);
+    thread_priority_update(t);
     update_recent_cpu_of_thread(thread_current(), NULL);
-    thread_priority_update(thread_current(), true);
+    thread_priority_update(thread_current());
   }
 
   if (t->prior_don > thread_current()->prior_don)
@@ -402,16 +402,17 @@ thread_foreach (thread_action_func *func, void *aux)
 void
 thread_set_priority (int new_priority)
 {
+  if(thread_mlfqs) return;
   enum intr_level old_level = intr_disable();
   struct thread *t = thread_current ();
   int old_prior = t->prior_don;
   t->base_priority = new_priority;
-  if(!thread_mlfqs) thread_update_donations(t);
-  else t->prior_don = new_priority;
-  //thread_donate(t, t->base_priority);
-  intr_set_level (old_level);
-  if(t->prior_don < old_prior)
+  if(t->prior_don < new_priority)
+    t->prior_don = new_priority;
+  else thread_update_donations(t);
+  if((!list_empty(&ready_list)) && list_entry(list_max(&ready_list, thread_cmp, NULL), struct thread, elem)->prior_don > t->prior_don)
     thread_yield();
+  intr_set_level (old_level);
 }
 
 /* Returns the current thread's priority. */
@@ -429,7 +430,7 @@ thread_set_nice (int nice)
   enum intr_level old_level = intr_disable();
   struct thread *t = thread_current();
   t->nice = nice;
-  thread_priority_update(t, true);
+  thread_priority_update(t);
   intr_set_level(old_level);
 
 }
@@ -552,13 +553,13 @@ init_thread (struct thread *t, const char *name, int priority)
   list_init(&t->lock_list);
   t->locked_on = NULL;
   lock_init(&t->prior_lock);
+
+  old_level = intr_disable ();
   if(thread_mlfqs){
     t->nice = ((t == initial_thread) ? 0 : thread_get_nice());
     t->recent_cpu = ((t == initial_thread) ? 0 : thread_get_recent_cpu());
-    thread_priority_update(t, false);
+    thread_priority_update(t);
   }
-
-  old_level = intr_disable ();
 
   list_push_back (&all_list, &t->allelem);
   intr_set_level (old_level);
@@ -791,24 +792,18 @@ static bool donation_cmp(const struct list_elem *a, const struct list_elem *b, v
 void thread_donate(struct thread *t, int priority){
   ASSERT(intr_get_level () == INTR_OFF);
   ASSERT(t != NULL);
-  //lock_acquire(&t->prior_lock);
-  //enum intr_level old_level = intr_disable();
+  if(!is_thread (t)) return;
   if (is_thread (t)) {
     if (t->prior_don < priority) {
       t->prior_don = priority;
       if (t->locked_on != NULL) thread_donate(t->locked_on->holder, priority);
     }
   }
-  //intr_set_level (old_level);
-  //lock_release(&t->prior_lock);
 }
 void thread_update_donations(struct thread *t){
   ASSERT(intr_get_level () == INTR_OFF);
   ASSERT(t != NULL);
-  //ASSERT(0);
-  //lock_acquire(&t->prior_lock);
-  //enum intr_level old_level = intr_disable();
-  //if (is_thread (t)) {
+  if(!is_thread (t)) return;
   int start_priority = t->prior_don;
   t->prior_don = t->base_priority;
   if (!list_empty(&t->lock_list))
@@ -816,11 +811,6 @@ void thread_update_donations(struct thread *t){
   if (t->locked_on != NULL && t->prior_don != start_priority)
     thread_update_donations(t->locked_on->holder);
   struct thread *cur = thread_current();
-  if (t->prior_don > cur->prior_don || (t == cur && t->prior_don < start_priority))
-    thread_yield();
-  //}
-  //intr_set_level (old_level);
-  //lock_release(&t->prior_lock);
 }
 
 
@@ -870,8 +860,9 @@ void count_load_avg(void){
  *
  * */
 
-void thread_priority_update(struct thread *t, bool reinsert){
+void thread_priority_update(struct thread *t){
   ASSERT(is_thread(t));
+  //enum intr_level before = intr_disable();
   if(t == idle_thread) return;
 
   int load = fixed_int_mul (load_avg, 2);
@@ -885,21 +876,23 @@ void thread_priority_update(struct thread *t, bool reinsert){
     t->base_priority=PRI_MIN;
   t->prior_don = t->base_priority;
 
-  if(reinsert && t->status == THREAD_READY){
+  if(t->status == THREAD_READY){
+    //ASSERT(intr_get_level () == INTR_OFF);
     list_remove(&t->elem);
     list_push_back(lists_of_equiprior_threads + (t->base_priority - PRI_MIN), &t->elem);
   }
+  //intr_set_level(before);
 
   //if(t->prior_don > thread_current()->prior_don) thread_yield();
 }
 
 static void thread_priority_update_wrap(struct thread *t, void *aux){
-  thread_priority_update(t, aux == NULL);
+  thread_priority_update(t);
 }
 
 void thread_priority_update_all(){
   thread_foreach(thread_priority_update_wrap, NULL);
-  //rebase_threads_in_mlfsq();
+  rebase_threads_in_mlfsq();
 }
 
 
