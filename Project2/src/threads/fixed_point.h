@@ -16,13 +16,13 @@ typedef int fixed_point;
 /** Conversions: **/
 
 // Conversion from int to fixed_point
-#define int_to_fixed(value) ((value) << FRACTION_BITS)
+#define int_to_fixed(value) ((value) * (1 << FRACTION_BITS))
 
 // Conversion from fixed_point to int
-#define fixed_to_int(value) ((value) >> FRACTION_BITS)
+#define fixed_to_int(value) ((value) * (1 >> FRACTION_BITS))
 
 // Conversion from fixed_point to int (rounded to closest integer)
-#define fixed_round_to_closest_int(value) (((value) + (((value > 0) ? 1 : (-1)) << (FRACTION_BITS - 1))) >> FRACTION_BITS)
+#define fixed_round_to_closest_int(value) (((value) + (((value > 0) ? 1 : (-1)) * (1 << (FRACTION_BITS - 1)))) / (1 << FRACTION_BITS))
 
 
 
@@ -58,7 +58,7 @@ typedef int fixed_point;
 /* Multiplication: */
 
 // Product of two fixed_point variables
-#define fixed_mul(a, b) ((fixed_point)((((int64_t)(a)) * ((int64_t)(b))) >> FRACTION_BITS))
+#define fixed_mul(a, b) ((fixed_point)((((int64_t)(a)) * ((int64_t)(b))) / ( 1 << FRACTION_BITS)))
 
 // Product of a fixed_point and an integer
 #define fixed_int_mul(f, i) ((f) * (i))
@@ -70,7 +70,7 @@ typedef int fixed_point;
 /* Division: */
 
 // Division of one fixed_point by another
-#define fixed_div(a, b) ((fixed_point)((((int64_t)(a)) << FRACTION_BITS) / ((int64_t)(b))))
+#define fixed_div(a, b) ((fixed_point)((((int64_t)(a)) * (1 << FRACTION_BITS)) / ((int64_t)(b))))
 
 // Division of a fixed_point by an integer
 #define fixed_int_div(f, i) ((f) / (i))
