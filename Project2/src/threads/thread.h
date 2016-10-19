@@ -160,5 +160,6 @@ void thread_priority_update(struct thread *t);
 void thread_priority_update_all();
 
 void rebase_threads_in_mlfsq(void);
+void thread_yield_if_needed();
 
 #endif /* threads/thread.h */
