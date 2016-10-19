@@ -81,7 +81,7 @@ bool thread_mlfqs;
 
 static void kernel_thread (thread_func *, void *aux);
 
-static void update_recent_cpu_of_thread(struct thread *t, void *aux);
+static void update_recent_cpu_of_thread(struct thread *t, void *aux UNUSED);
 static void idle (void *aux UNUSED);
 static struct thread *running_thread (void);
 static struct thread *next_thread_to_run (void);
@@ -241,8 +241,9 @@ thread_create (const char *name, int priority,
   if(thread_mlfqs){
     update_recent_cpu_of_thread(t, NULL);
     thread_priority_update(t);
-    update_recent_cpu_of_thread(thread_current(), NULL);
-    thread_priority_update(thread_current());
+    struct thread *cur = thread_current();
+    update_recent_cpu_of_thread(cur, NULL);
+    thread_priority_update(cur);
   }
 
   if (t->prior_don > thread_current()->prior_don)
@@ -431,8 +432,13 @@ thread_set_nice (int nice)
   struct thread *t = thread_current();
   t->nice = nice;
   thread_priority_update(t);
+  int i;
   intr_set_level(old_level);
-
+  for(i = PRI_MAX - PRI_MIN; i > t->prior_don; i--)
+    if(!list_empty(lists_of_equiprior_threads + i)){
+      thread_yield();
+      break;
+    }
 }
 
 /* Returns the current thread's nice value. */
@@ -816,7 +822,7 @@ void thread_update_donations(struct thread *t){
 
 
 static void update_recent_cpu_of_thread(struct thread *t, void *aux UNUSED){
-  t->recent_cpu = fixed_int_sum(fixed_mul(t->recent_cpu, fixed_div(fixed_int_mul(load_avg, 2), fixed_int_mul(load_avg, 2) + 1)), t->nice);
+  t->recent_cpu = fixed_int_sum(fixed_mul(fixed_div(fixed_int_mul(load_avg, 2), fixed_int_sum(fixed_int_mul(load_avg, 2), 1)), t->recent_cpu), t->nice);
 }
 void update_recent_cpu(){
   thread_foreach(update_recent_cpu_of_thread, NULL);
@@ -865,9 +871,9 @@ void thread_priority_update(struct thread *t){
   //enum intr_level before = intr_disable();
   if(t == idle_thread) return;
 
-  int load = fixed_int_mul (load_avg, 2);
-  int coefficient = fixed_div (load, fixed_int_sum (load, 1));
-  t->recent_cpu = fixed_int_sum (fixed_mul (coefficient, t->recent_cpu), t->nice);
+  //int load = fixed_int_mul (load_avg, 2);
+  //int coefficient = fixed_div (load, fixed_int_sum (load, 1));
+  //t->recent_cpu = fixed_int_sum (fixed_mul (coefficient, t->recent_cpu), t->nice);
 
   t->base_priority = PRI_MAX - fixed_to_int(fixed_int_div (t->recent_cpu, 4)) - t->nice * 2;
   if (t->base_priority>PRI_MAX)
