@@ -150,6 +150,7 @@ a thread that is blocked gets an donation it does the same and so on.
 >> B5: Describe the sequence of events when lock_release() is called
 >> on a lock that a higher-priority thread is waiting for.
 Every waiter gets released, the priority of the releaser is recalculated
+inside the lock_acquire() routine of the previously blocked threads
 and scheduler does its job, as it should.
 
 
@@ -248,9 +249,7 @@ for it.
 >> refine or improve your design?
 Implementing 64 lists, each for each priority is a very quick
 solution, since no sorting is necessary, inserting is O(1), removal
-is O(1). The only slow part of it is doing all of the replacing
-of threads after every calculation, but it's unavoidable anyway.
-Our design is the recommended and very viable one.
+is O(1).
 
 
 
