@@ -438,7 +438,6 @@ thread_set_nice (int nice)
 int
 thread_get_nice (void)
 {
-
   return thread_current()->nice;
 }
 
@@ -446,18 +445,14 @@ thread_get_nice (void)
 int
 thread_get_load_avg (void)
 {
-  /* Not yet implemented. */
   return fixed_round_to_closest_int(fixed_int_mul(load_avg, 100));
-  //return 0;
 }
 
 /* Returns 100 times the current thread's recent_cpu value. */
 int
 thread_get_recent_cpu (void)
 {
-  /* Not yet implemented. */
   return fixed_round_to_closest_int(fixed_int_mul(thread_current()->recent_cpu, 100));
-  //return 0;
 }
 
 /* Idle thread.  Executes when no other thread is ready to run.
@@ -583,6 +578,7 @@ alloc_frame (struct thread *t, size_t size)
   return t->stack;
 }
 
+// Determine which thread should be run next, and return pointer to it
 static struct thread *get_next_thread_to_run(void){
   ASSERT(intr_get_level() == INTR_OFF);
   if (!thread_mlfqs && list_empty(&ready_list))
@@ -726,15 +722,15 @@ static bool sleepers_is_less_cmp(const struct list_elem *first, const struct lis
         list_entry (second, struct thread, elem)->ticks_left_to_sleep;
 }
 
+// Resets tick of provided thread
 static void reset_sleepers_ticks(struct thread *t) {
-  //ASSERT(0);
   ASSERT(t);
 
   t->ticks_left_to_sleep = timer_ticks();
 }
 
+// Sleep the current thread for provided number of ticks
 void sleep_the_thread(int64_t ticks) {
-  //*
   enum intr_level before = intr_disable();
   thread_current()->ticks_left_to_sleep = ticks + timer_ticks();
 
@@ -744,13 +740,10 @@ void sleep_the_thread(int64_t ticks) {
   thread_block();
 
   intr_set_level(before);
-  /*/
-  ASSERT(0);
-  //*/
 }
 
+// Tick handler. Wakes up all the sleeper threads which should be awaken.
 void handle_tick_for_sleep_queue(void) {
-  //*
   if (list_empty (&sleepers))
     return;
 
@@ -774,12 +767,9 @@ void handle_tick_for_sleep_queue(void) {
     } else break;
   }
   intr_yield_on_return();
-  /*/
-  ASSERT(0);
-  //*/
 }
 
-
+// Compares two given threads. (less function)
 static bool thread_cmp(const struct list_elem *a, const struct list_elem *b, void *aux){
 	const struct thread *thread_a = list_entry(a, struct thread, elem);
 	const struct thread *thread_b = list_entry(b, struct thread, elem);
@@ -790,7 +780,8 @@ static bool thread_cmp(const struct list_elem *a, const struct list_elem *b, voi
 	return rv;
 }
 
-
+// Donates the priority to the given thread (and the other one, that's
+// the reason of this thread being blocked, recursively)
 void thread_donate(struct thread *t, int priority){
   ASSERT(intr_get_level () == INTR_OFF);
   ASSERT(t != NULL);
@@ -802,6 +793,8 @@ void thread_donate(struct thread *t, int priority){
     }
   }
 }
+
+// Recalculates donated priority of the given thread
 void thread_update_donations(struct thread *t){
   ASSERT(intr_get_level () == INTR_OFF);
   ASSERT(t != NULL);
@@ -822,11 +815,12 @@ void thread_update_donations(struct thread *t){
     thread_update_donations(t->locked_on->holder);
 }
 
-
-
+// Updates recent_cpu for given thread
 static void update_recent_cpu_of_thread(struct thread *t, void *aux UNUSED){
   t->recent_cpu = fixed_int_sum(fixed_mul(fixed_div(fixed_int_mul(load_avg, 2), fixed_int_sum(fixed_int_mul(load_avg, 2), 1)), t->recent_cpu), t->nice);
 }
+
+// Updates recent cpu for every thread
 void update_recent_cpu(void){
   thread_foreach(update_recent_cpu_of_thread, NULL);
 }
@@ -871,14 +865,21 @@ void thread_priority_update(struct thread *t){
   //intr_set_level(before);
 }
 
+// Wrapper for tread_priority_update()
 static void thread_priority_update_wrap(struct thread *t, void *aux UNUSED){
   thread_priority_update(t);
 }
 
+/* Updates priorities of all threads in the system.
+ */
 void thread_priority_update_all(void){
   thread_foreach(thread_priority_update_wrap, NULL);
 }
 
+/*
+ * If next chosen thread has higher priority than current,
+ * calls thread_yield()
+ */
 void thread_yield_if_needed(void){
   struct thread *cur = thread_current();
   struct thread *next = get_next_thread_to_run();
