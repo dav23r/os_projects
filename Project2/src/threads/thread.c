@@ -302,7 +302,7 @@ thread_unblock (struct thread *t)
   // Decide on the container for 'ready threads'
   if(t != idle_thread) {
     if (thread_mlfqs) {
-      int thread_priority = t->base_priority; //BSD
+      int thread_priority = t->prior_don; //BSD
       struct list *list_with_given_priority =
               lists_of_equiprior_threads + (thread_priority - PRI_MIN);
       list_push_back(list_with_given_priority, &t->elem);
@@ -383,7 +383,7 @@ thread_yield (void)
   if (cur != idle_thread){
     //if (!is_thread(cur)) return;
     if (thread_mlfqs){
-      int thread_priority = cur->base_priority;
+      int thread_priority = cur->prior_don;
       struct list *list_with_given_priority = 
         lists_of_equiprior_threads + (thread_priority - PRI_MIN);
       list_push_back (list_with_given_priority, &cur->elem);
@@ -430,7 +430,7 @@ thread_set_priority (int new_priority)
   }else{
     t->prior_don = t->base_priority;
     // This kinda is impossible, but anyway:
-    //relocate_thread_in_mlfqs_ques(t);
+    relocate_thread_in_mlfqs_ques(t);
   }
   thread_yield_if_needed();
   intr_set_level (old_level);
@@ -453,7 +453,7 @@ thread_set_nice (int nice)
   t->nice = nice;
   thread_priority_update(t);
   // This kinda is impossible, but anyway:
-  //relocate_thread_in_mlfqs_ques(t);
+  relocate_thread_in_mlfqs_ques(t);
   thread_yield_if_needed();
   intr_set_level(old_level);
 }
@@ -589,7 +589,6 @@ init_thread (struct thread *t, const char *name, int priority)
     }
     thread_priority_update(t);
     //relocate_thread_in_mlfqs_ques(t);
-    //thread_yield_if_needed();
   }
 
   list_push_back (&all_list, &t->allelem);
@@ -791,6 +790,7 @@ void handle_tick_for_sleep_queue(void) {
 
       list_remove(e);
 
+
       thread_unblock(curr);
 
       intr_set_level(before);
@@ -858,7 +858,7 @@ void update_recent_cpu(){
 }
 
 static void count_threads(struct thread *t UNUSED, void *cnt){
-  if(t != idle_thread && t->status == THREAD_RUNNING || t->status == THREAD_READY)
+  if((t != idle_thread) && ((t->status == THREAD_RUNNING) || (t->status == THREAD_READY)))
     (*((int*)cnt))++;
 }
 
@@ -867,36 +867,33 @@ static void count_threads(struct thread *t UNUSED, void *cnt){
  * multiple of a second
  * */
 void count_load_avg(void){
+  if(!thread_mlfqs) return;
   int cnt = 0;
-  if (thread_mlfqs){
-    //*
-    thread_foreach(count_threads, &cnt);
-    /*/
-    int priority;
-    for (priority = PRI_MIN; priority <= PRI_MAX; ++priority){
-      struct list *list_with_cur_priority = lists_of_equiprior_threads + (priority - PRI_MIN);
-      cnt += list_size(list_with_cur_priority);
-    }
-    struct thread *cur = thread_current();
-    if (cur != idle_thread && cur->status == THREAD_RUNNING)
-      cnt++;
-    //*/
-  }else{
-    cnt += list_size (&ready_list);
+  /*
+  thread_foreach(count_threads, &cnt);
+  /*/
+  int priority;
+  for (priority = PRI_MIN; priority <= PRI_MAX; ++priority){
+    struct list *list_with_cur_priority = lists_of_equiprior_threads + (priority - PRI_MIN);
+    cnt += list_size(list_with_cur_priority);
   }
+  struct thread *cur = thread_current();
+  if ((cur != idle_thread) && (cur->status == THREAD_RUNNING)) cnt++;
+  //*/
   load_avg = fixed_sum(fixed_mul (fixed_int_div (int_to_fixed (59), 60), load_avg),
-             fixed_int_mul (fixed_int_div (int_to_fixed (1), 60), cnt) );
-
+                       fixed_int_mul (fixed_int_div (int_to_fixed (1), 60), cnt) );
 }
 
 
 static void relocate_thread_in_mlfqs_ques(struct thread *t){
+  /*
   enum intr_level before = intr_disable();
-  if(t->status == THREAD_READY){
+  if(t != idle_thread && t->status == THREAD_READY){
     list_remove(&t->elem);
-    list_push_back(lists_of_equiprior_threads + (t->base_priority - PRI_MIN), &t->elem);
+    list_push_back(lists_of_equiprior_threads + (t->prior_don - PRI_MIN), &t->elem);
   }
   intr_set_level(before);
+  */
 }
 
 static void relocate_thread_in_mlfqs_ques_wrap(struct thread *t, void *aux UNUSED){
@@ -913,11 +910,8 @@ static void relocate_thread_in_mlfqs_ques_wrap(struct thread *t, void *aux UNUSE
 
 void thread_priority_update(struct thread *t){
   ASSERT(is_thread(t));
+  //enum intr_level before = intr_disable();
   if(t == idle_thread) return;
-
-  //int load = fixed_int_mul (load_avg, 2);
-  //int coefficient = fixed_div (load, fixed_int_sum (load, 1));
-  //t->recent_cpu = fixed_int_sum (fixed_mul (coefficient, t->recent_cpu), t->nice);
 
   t->base_priority = PRI_MAX - fixed_round_to_closest_int(fixed_int_div (t->recent_cpu, 4)) - t->nice * 2;
   if (t->base_priority>PRI_MAX)
@@ -927,6 +921,7 @@ void thread_priority_update(struct thread *t){
   t->prior_don = t->base_priority;
 
   //relocate_thread_in_mlfqs_ques(t);
+  //intr_set_level(before);
 }
 
 static void thread_priority_update_wrap(struct thread *t, void *aux){
@@ -935,7 +930,7 @@ static void thread_priority_update_wrap(struct thread *t, void *aux){
 
 void thread_priority_update_all(){
   thread_foreach(thread_priority_update_wrap, NULL);
-  thread_foreach(relocate_thread_in_mlfqs_ques_wrap, NULL);
+  //thread_foreach(relocate_thread_in_mlfqs_ques_wrap, NULL);
   //rebase_threads_in_mlfsq();
 }
 
@@ -943,28 +938,46 @@ void thread_priority_update_all(){
 
 void rebase_threads_in_mlfsq(void){
   int ind;
-  struct list lst;
-  list_init(&lst);
+  //struct list lst;
+  //list_init(&lst);
+  struct list lists[PRI_MAX - PRI_MIN + 1];
+  for(ind = 0; ind <= (PRI_MAX - PRI_MIN); ind++)
+    list_init(lists + ind);
+
+  //enum intr_level before = intr_disable();
 
   for(ind = PRI_MIN; ind <= PRI_MAX; ind++){
     struct list *list = lists_of_equiprior_threads + (ind - PRI_MIN);
-    while(!list_empty(list))
-      list_push_back(&lst, list_pop_back(list));
+    while(!list_empty(list)) {
+      struct thread *t = list_entry(list_pop_back(list), struct thread, elem);
+      list_push_back(lists + (t->prior_don - PRI_MIN), &t->elem);
+      //list_push_back(&lst, list_pop_front(list));
+    }
   }
+  for(ind = PRI_MIN; ind <= PRI_MAX; ind++){
+    struct list *a = lists_of_equiprior_threads + (ind - PRI_MIN);
+    struct list *b = lists + (ind - PRI_MIN);
+    while(!list_empty(b))
+      list_push_back(a, list_pop_back(b));
+  }
+  /*
   while(!list_empty(&lst)){
-    struct list_elem *elem = list_pop_back(&lst);
+    struct list_elem *elem = list_pop_front(&lst);
     struct thread *t = list_entry(elem, struct thread, elem);
-    list_push_back(lists_of_equiprior_threads + (t->base_priority - PRI_MIN), &t->elem);
+    list_push_back(lists_of_equiprior_threads + (t->prior_don - PRI_MIN), &t->elem);
   }
+  //*/
+
+  //intr_set_level(before);
 }
 
 void thread_yield_if_needed(){
   struct thread *cur = thread_current();
   struct thread *next = get_next_thread_to_run();
-  if(cur == idle_thread) thread_yield();
+  if(cur == idle_thread && cur->status == THREAD_RUNNING) thread_yield();
   if(next == idle_thread) return;
   ASSERT(cur != NULL);
   ASSERT(next != NULL);
-  if((cur->status != THREAD_RUNNING) || (next->status != THREAD_READY)) return;
-  if((cur != next) && (cur ->prior_don < next->prior_don)) thread_yield();
+  if((cur->status != THREAD_RUNNING)) return;
+  if((cur != next) && ((cur ->prior_don < next->prior_don) || (next->status != THREAD_READY))) thread_yield();
 }
