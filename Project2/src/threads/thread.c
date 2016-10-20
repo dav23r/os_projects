@@ -82,7 +82,6 @@ bool thread_mlfqs;
 
 static void kernel_thread (thread_func *, void *aux);
 
-static void relocate_thread_in_mlfqs_ques(struct thread *t);
 static void update_recent_cpu_of_thread(struct thread *t, void *aux UNUSED);
 static void idle (void *aux UNUSED);
 static struct thread *running_thread (void);
@@ -241,26 +240,7 @@ thread_create (const char *name, int priority,
   /* Add to run queue. */
   thread_unblock (t);
 
-  /*
-  if(thread_mlfqs){
-    //update_recent_cpu_of_thread(t, NULL);
-    //thread_priority_update(t);
-    struct thread *cur = thread_current();
-    update_recent_cpu_of_thread(cur, NULL);
-    thread_priority_update(cur);
-    //relocate_thread_in_mlfqs_ques(t);
-    //thread_yield();
-    //thread_yield_if_needed();
-  }
-  //*/
-
-  //*
-  //struct thread *cur = thread_current();
-  //if ((t != cur) && (t->prior_don >= cur->prior_don)) thread_yield();
   thread_yield();
-  /*/
-  thread_yield_if_needed();
-  //*/
 
   return tid;
 }
@@ -429,8 +409,6 @@ thread_set_priority (int new_priority)
     else thread_update_donations(t);
   }else{
     t->prior_don = t->base_priority;
-    // This kinda is impossible, but anyway:
-    relocate_thread_in_mlfqs_ques(t);
   }
   thread_yield_if_needed();
   intr_set_level (old_level);
@@ -452,8 +430,6 @@ thread_set_nice (int nice)
   ASSERT(t != NULL);
   t->nice = nice;
   thread_priority_update(t);
-  // This kinda is impossible, but anyway:
-  relocate_thread_in_mlfqs_ques(t);
   thread_yield_if_needed();
   intr_set_level(old_level);
 }
@@ -588,7 +564,6 @@ init_thread (struct thread *t, const char *name, int priority)
       t->recent_cpu = 0;
     }
     thread_priority_update(t);
-    //relocate_thread_in_mlfqs_ques(t);
   }
 
   list_push_back (&all_list, &t->allelem);
@@ -884,22 +859,6 @@ void count_load_avg(void){
                        fixed_int_mul (fixed_int_div (int_to_fixed (1), 60), cnt) );
 }
 
-
-static void relocate_thread_in_mlfqs_ques(struct thread *t){
-  /*
-  enum intr_level before = intr_disable();
-  if(t != idle_thread && t->status == THREAD_READY){
-    list_remove(&t->elem);
-    list_push_back(lists_of_equiprior_threads + (t->prior_don - PRI_MIN), &t->elem);
-  }
-  intr_set_level(before);
-  */
-}
-
-static void relocate_thread_in_mlfqs_ques_wrap(struct thread *t, void *aux UNUSED){
-  relocate_thread_in_mlfqs_ques(t);
-}
-
 /*
  * updates thread priority
  * by going trough the heavy
@@ -919,8 +878,6 @@ void thread_priority_update(struct thread *t){
   if (t->base_priority<PRI_MIN)
     t->base_priority=PRI_MIN;
   t->prior_don = t->base_priority;
-
-  //relocate_thread_in_mlfqs_ques(t);
   //intr_set_level(before);
 }
 
@@ -930,45 +887,6 @@ static void thread_priority_update_wrap(struct thread *t, void *aux){
 
 void thread_priority_update_all(){
   thread_foreach(thread_priority_update_wrap, NULL);
-  //thread_foreach(relocate_thread_in_mlfqs_ques_wrap, NULL);
-  //rebase_threads_in_mlfsq();
-}
-
-
-
-void rebase_threads_in_mlfsq(void){
-  int ind;
-  //struct list lst;
-  //list_init(&lst);
-  struct list lists[PRI_MAX - PRI_MIN + 1];
-  for(ind = 0; ind <= (PRI_MAX - PRI_MIN); ind++)
-    list_init(lists + ind);
-
-  //enum intr_level before = intr_disable();
-
-  for(ind = PRI_MIN; ind <= PRI_MAX; ind++){
-    struct list *list = lists_of_equiprior_threads + (ind - PRI_MIN);
-    while(!list_empty(list)) {
-      struct thread *t = list_entry(list_pop_back(list), struct thread, elem);
-      list_push_back(lists + (t->prior_don - PRI_MIN), &t->elem);
-      //list_push_back(&lst, list_pop_front(list));
-    }
-  }
-  for(ind = PRI_MIN; ind <= PRI_MAX; ind++){
-    struct list *a = lists_of_equiprior_threads + (ind - PRI_MIN);
-    struct list *b = lists + (ind - PRI_MIN);
-    while(!list_empty(b))
-      list_push_back(a, list_pop_back(b));
-  }
-  /*
-  while(!list_empty(&lst)){
-    struct list_elem *elem = list_pop_front(&lst);
-    struct thread *t = list_entry(elem, struct thread, elem);
-    list_push_back(lists_of_equiprior_threads + (t->prior_don - PRI_MIN), &t->elem);
-  }
-  //*/
-
-  //intr_set_level(before);
 }
 
 void thread_yield_if_needed(){
