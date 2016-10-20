@@ -154,11 +154,11 @@ void handle_tick_for_sleep_queue(void);
 void thread_donate(struct thread *t, int priority);
 void thread_update_donations(struct thread *t);
 
-void update_recent_cpu();
+void update_recent_cpu(void);
 void count_load_avg(void);
 void thread_priority_update(struct thread *t);
-void thread_priority_update_all();
+void thread_priority_update_all(void);
 
-void thread_yield_if_needed();
+void thread_yield_if_needed(void);
 
 #endif /* threads/thread.h */

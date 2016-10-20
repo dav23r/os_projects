@@ -356,7 +356,7 @@ cond_wait (struct condition *cond, struct lock *lock)
   lock_acquire (lock);
 }
 
-static bool semaphore_elem_less(struct list_elem *a, struct list_elem *b, void *aux UNUSED){
+static bool semaphore_elem_less(const struct list_elem *a, const struct list_elem *b, void *aux UNUSED){
   struct list *li_a = &(list_entry(a, struct semaphore_elem, elem)->semaphore.waiters);
   struct list *li_b = &(list_entry(b, struct semaphore_elem, elem)->semaphore.waiters);
   if(list_empty(li_a)) return (!list_empty(li_b));
@@ -382,7 +382,8 @@ cond_signal (struct condition *cond, struct lock *lock UNUSED)
   ASSERT (lock_held_by_current_thread (lock));
 
   if (!list_empty (&cond->waiters)) {
-    struct semaphore_elem *sem = list_entry(list_max(&cond->waiters, semaphore_elem_less, NULL), struct semaphore_elem, elem);
+    struct list_elem *li = list_max(&cond->waiters, semaphore_elem_less, NULL);
+    struct semaphore_elem *sem = list_entry(li, struct semaphore_elem, elem);
     list_remove(&sem->elem);
     sema_up(&sem->semaphore);
   }

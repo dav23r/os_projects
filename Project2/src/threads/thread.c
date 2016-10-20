@@ -11,9 +11,9 @@
 #include "threads/switch.h"
 #include "threads/synch.h"
 #include "threads/vaddr.h"
+#include "devices/timer.h"
 #include "fixed_point.h"
 #include "thread.h"
-#include "../../tests/p1/src/threads/thread.h"
 #include "interrupt.h"
 
 #ifdef USERPROG
@@ -85,7 +85,7 @@ static void kernel_thread (thread_func *, void *aux);
 static void update_recent_cpu_of_thread(struct thread *t, void *aux UNUSED);
 static void idle (void *aux UNUSED);
 static struct thread *running_thread (void);
-static struct thread *get_next_thread_to_run();
+static struct thread *get_next_thread_to_run(void);
 static struct thread *next_thread_to_run (void);
 static void init_thread (struct thread *, const char *name, int priority);
 static bool is_thread (struct thread *) UNUSED;
@@ -583,7 +583,7 @@ alloc_frame (struct thread *t, size_t size)
   return t->stack;
 }
 
-static struct thread *get_next_thread_to_run(){
+static struct thread *get_next_thread_to_run(void){
   ASSERT(intr_get_level() == INTR_OFF);
   if (!thread_mlfqs && list_empty(&ready_list))
     return idle_thread;
@@ -820,7 +820,6 @@ void thread_update_donations(struct thread *t){
   }
   if (t->locked_on != NULL && t->prior_don != start_priority)
     thread_update_donations(t->locked_on->holder);
-  struct thread *cur = thread_current();
 }
 
 
@@ -828,7 +827,7 @@ void thread_update_donations(struct thread *t){
 static void update_recent_cpu_of_thread(struct thread *t, void *aux UNUSED){
   t->recent_cpu = fixed_int_sum(fixed_mul(fixed_div(fixed_int_mul(load_avg, 2), fixed_int_sum(fixed_int_mul(load_avg, 2), 1)), t->recent_cpu), t->nice);
 }
-void update_recent_cpu(){
+void update_recent_cpu(void){
   thread_foreach(update_recent_cpu_of_thread, NULL);
 }
 
@@ -881,15 +880,15 @@ void thread_priority_update(struct thread *t){
   //intr_set_level(before);
 }
 
-static void thread_priority_update_wrap(struct thread *t, void *aux){
+static void thread_priority_update_wrap(struct thread *t, void *aux UNUSED){
   thread_priority_update(t);
 }
 
-void thread_priority_update_all(){
+void thread_priority_update_all(void){
   thread_foreach(thread_priority_update_wrap, NULL);
 }
 
-void thread_yield_if_needed(){
+void thread_yield_if_needed(void){
   struct thread *cur = thread_current();
   struct thread *next = get_next_thread_to_run();
   if(cur == idle_thread && cur->status == THREAD_RUNNING) thread_yield();
