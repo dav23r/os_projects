@@ -92,6 +92,7 @@ static void sema_down_donate(struct semaphore *sema, struct lock *owner_lock){
     if((!thread_mlfqs) && owner != NULL && owner->prior_don <= thread_get_priority()){
       thread_update_donations(owner);
       /*
+      //thread_yield();
       if(!list_empty(&sema->waiters)){
         int max = highest_priority_locked_on(sema);
         if(max > owner->prior_don) owner->prior_don = max;
@@ -102,6 +103,14 @@ static void sema_down_donate(struct semaphore *sema, struct lock *owner_lock){
   }
   cur->locked_on = NULL;
   sema->value--;
+  //if((owner_lock != NULL) && list_empty(&owner_lock->semaphore.waiters) && (owner_lock->holder != NULL)) list_remove(&owner_lock->elem);
+  /*
+  thread_yield();
+  if(((!thread_mlfqs) && owner != NULL) && (!list_empty(&sema->waiters))){
+    int max = highest_priority_locked_on(sema);
+    if(max > owner->prior_don) owner->prior_don = max;
+  }
+  //*/
   //thread_yield_if_needed();
   intr_set_level (old_level);
 }
@@ -313,11 +322,11 @@ lock_release (struct lock *lock)
 
 
   enum intr_level old_level = intr_disable();
+  lock->holder = NULL;
   if(!thread_mlfqs) {
     list_remove(&lock->elem);
     //thread_update_donations(lock->holder);
   }
-  lock->holder = NULL;
   sema_up (&lock->semaphore);
   intr_set_level (old_level);
 }
