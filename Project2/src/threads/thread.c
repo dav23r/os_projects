@@ -831,11 +831,6 @@ void update_recent_cpu(void){
   thread_foreach(update_recent_cpu_of_thread, NULL);
 }
 
-static void count_threads(struct thread *t UNUSED, void *cnt){
-  if((t != idle_thread) && ((t->status == THREAD_RUNNING) || (t->status == THREAD_READY)))
-    (*((int*)cnt))++;
-}
-
 /*
  * counts load average, every
  * multiple of a second
@@ -843,9 +838,6 @@ static void count_threads(struct thread *t UNUSED, void *cnt){
 void count_load_avg(void){
   if(!thread_mlfqs) return;
   int cnt = 0;
-  /*
-  thread_foreach(count_threads, &cnt);
-  /*/
   int priority;
   for (priority = PRI_MIN; priority <= PRI_MAX; ++priority){
     struct list *list_with_cur_priority = lists_of_equiprior_threads + (priority - PRI_MIN);
@@ -853,7 +845,6 @@ void count_load_avg(void){
   }
   struct thread *cur = thread_current();
   if ((cur != idle_thread) && (cur->status == THREAD_RUNNING)) cnt++;
-  //*/
   load_avg = fixed_sum(fixed_mul (fixed_int_div (int_to_fixed (59), 60), load_avg),
                        fixed_int_mul (fixed_int_div (int_to_fixed (1), 60), cnt) );
 }
