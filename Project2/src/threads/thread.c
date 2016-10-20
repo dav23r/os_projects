@@ -843,7 +843,6 @@ void thread_update_donations(struct thread *t){
       cursor = list_next(cursor);
     }
   }
-    //list_max(&t->lock_list, donation_cmp, &t->prior_don);
   if (t->locked_on != NULL && t->prior_don != start_priority)
     thread_update_donations(t->locked_on->holder);
   struct thread *cur = thread_current();

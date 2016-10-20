@@ -74,12 +74,10 @@ static void sema_down_donate(struct semaphore *sema, struct lock *owner_lock){
   old_level = intr_disable ();
 
   struct thread *cur = thread_current();
- // ASSERT(strcmp(cur->bla,"abcdeffuck")==0);
   struct thread *owner = NULL;
   while (sema->value == 0)
   {
     list_push_back(&sema->waiters, &cur->elem);
-    //*
     if (owner_lock != NULL && (!thread_mlfqs)){
       cur->locked_on = owner_lock;
       if(owner_lock->holder != NULL) {
@@ -87,31 +85,13 @@ static void sema_down_donate(struct semaphore *sema, struct lock *owner_lock){
         thread_donate(owner, thread_get_priority());
       }
     }
-    //*/
     thread_block ();
-    if((!thread_mlfqs) && owner != NULL && owner->prior_don <= thread_get_priority()){
+    if((!thread_mlfqs) && owner != NULL && owner->prior_don <= thread_get_priority())
       thread_update_donations(owner);
-      /*
-      //thread_yield();
-      if(!list_empty(&sema->waiters)){
-        int max = highest_priority_locked_on(sema);
-        if(max > owner->prior_don) owner->prior_don = max;
-      }
-      //*/
-    }
     owner = NULL;
   }
   cur->locked_on = NULL;
   sema->value--;
-  //if((owner_lock != NULL) && list_empty(&owner_lock->semaphore.waiters) && (owner_lock->holder != NULL)) list_remove(&owner_lock->elem);
-  /*
-  thread_yield();
-  if(((!thread_mlfqs) && owner != NULL) && (!list_empty(&sema->waiters))){
-    int max = highest_priority_locked_on(sema);
-    if(max > owner->prior_don) owner->prior_don = max;
-  }
-  //*/
-  //thread_yield_if_needed();
   intr_set_level (old_level);
 }
 
@@ -163,32 +143,16 @@ sema_try_down (struct semaphore *sema)
 void
 sema_up (struct semaphore *sema)
 {
-  enum intr_level old_level;
-
   ASSERT (sema != NULL);
   bool shouldYield = false;
-  old_level = intr_disable ();
+  enum intr_level old_level = intr_disable();
   struct thread *curr = thread_current();
   if (!list_empty (&sema->waiters)) {
-    //struct list_elem *max_elem = list_front(&sema->waiters);
-    //*
     while(!list_empty(&sema->waiters)){
-      struct thread *elem = list_entry (list_pop_front (&sema->waiters), struct thread, elem);
+      struct thread *elem = list_entry(list_pop_front (&sema->waiters), struct thread, elem);
       thread_unblock (elem);
       shouldYield |= (curr->prior_don > curr->base_priority && curr->prior_don <= elem->prior_don);
     }
-    /*/
-    struct list_elem *max_elem = list_max(&sema->waiters, thread_less, NULL);
-    if(max_elem != NULL){
-      struct thread *max_thread = list_entry(max_elem, struct thread, elem);
-      list_remove(max_elem);
-      //thread_update_donations(max_thread);
-      thread_unblock(max_thread);
-      if (curr != NULL && max_thread->prior_don > curr->prior_don) {
-        shouldYield = true;
-      }
-    }
-    //*/
   }
   sema->value++;
   if(shouldYield)
@@ -276,10 +240,8 @@ lock_acquire (struct lock *lock)
   enum intr_level old_level = intr_disable();
   sema_down_donate (&lock->semaphore, (!thread_mlfqs) ? lock : NULL);
   lock->holder = thread_current ();
-  if(!thread_mlfqs){
+  if(!thread_mlfqs)
     list_push_front (&(lock->holder->lock_list), &lock->elem);
-    //thread_update_donations(lock->holder);
-  }
   intr_set_level (old_level);
   //ASSERT(0);
 }
@@ -303,7 +265,6 @@ lock_try_acquire (struct lock *lock)
   if (success) {
     lock->holder = thread_current();
     if(!thread_mlfqs) list_push_front (&lock->holder->lock_list, &lock->elem);
-    //thread_update_donations(lock->holder);
   }
   intr_set_level (old_level);
   return success;
@@ -323,10 +284,8 @@ lock_release (struct lock *lock)
 
   enum intr_level old_level = intr_disable();
   lock->holder = NULL;
-  if(!thread_mlfqs) {
+  if(!thread_mlfqs)
     list_remove(&lock->elem);
-    //thread_update_donations(lock->holder);
-  }
   sema_up (&lock->semaphore);
   intr_set_level (old_level);
 }
