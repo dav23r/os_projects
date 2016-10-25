@@ -481,6 +481,44 @@ setup_stack (void **esp, char *args)
           }
           --how_far_from_base;
         }
+
+        int aruments_cnt = 0;
+        char *pointer;
+        while (how_far_from_base > 0) {
+          pointer = (char *) (args_pointer_from_end + how_far_from_base);
+          char curr_symb = *pointer;
+          if (curr_symb == ' ' || curr_symb == '\0') {
+            char prev_symb = *(pointer + 1);
+            if (prev_symb == ' ' || prev_symb == '\0')
+              continue;
+
+            ++aruments_cnt;
+            *esp -= 4;
+            * (uint32_t *) *esp = (uint32_t) pointer + 1;
+          }
+
+          --how_far_from_base;
+
+          if (curr_symb == ' ')
+            *pointer = '\0';
+        }
+
+        // write command name as next arg
+        *esp -= 4;
+        * (uint32_t *) *esp = (uint32_t) args_pointer_from_end;
+        ++aruments_cnt;
+
+        // write argv
+        *esp -= 4;
+        * (uint32_t *) *esp = *(uint32_t *)(esp + 4);
+
+        // write argc
+        *esp -= 4;
+        *(int *) *esp = aruments_cnt;
+
+        // alloc for RV
+        *esp -= 4;
+        **esp = NULL;
       } else {
         palloc_free_page(kpage);
       }
