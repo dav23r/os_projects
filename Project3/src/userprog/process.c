@@ -38,6 +38,9 @@ process_execute (const char *file_name)
     return TID_ERROR;
   strlcpy (fn_copy, file_name, PGSIZE);
 
+  // TODO: tokenize file_name that includes command and args, first is thread/program name, rest are arguments
+  // TODO: pass only args array in thread_create() as last param
+
   /* Create a new thread to execute FILE_NAME. */
   tid = thread_create (file_name, PRI_DEFAULT, start_process, fn_copy);
   if (tid == TID_ERROR)
@@ -436,10 +439,12 @@ setup_stack (void **esp)
   if (kpage != NULL) 
     {
       success = install_page (((uint8_t *) PHYS_BASE) - PGSIZE, kpage, true);
-      if (success)
+      if (success) {
+        // TODO: setup stack
         *esp = PHYS_BASE;
-      else
-        palloc_free_page (kpage);
+      } else {
+        palloc_free_page(kpage);
+      }
     }
   return success;
 }
