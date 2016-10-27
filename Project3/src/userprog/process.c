@@ -201,7 +201,7 @@ struct Elf32_Phdr
 #define PF_W 2          /* Writable. */
 #define PF_R 4          /* Readable. */
 
-static bool setup_stack (void **esp);
+static bool setup_stack (void **esp, char *args);
 static bool validate_segment (const struct Elf32_Phdr *, struct file *);
 static bool load_segment (struct file *file, off_t ofs, uint8_t *upage,
                           uint32_t read_bytes, uint32_t zero_bytes,
@@ -452,15 +452,15 @@ setup_stack (void **esp, char *args)
         // write args str in stack
         len_tmp = strlen(args) + 1;
         how_far_from_base += len_tmp;
-        *sep -= len_tmp;
+        *esp -= len_tmp;
         memcpy(*esp, args, len_tmp);
 
         // write command name in stack after whole arguments string
         len_tmp = strlen(thread_current ()->name) + 1;
         how_far_from_base += len_tmp;
-        *sep -= len_tmp;
-        args_pointer_from_end = *sep;
-        memcpy(*sep, thread_current ()->name, len_tmp);
+        *esp -= len_tmp;
+        args_pointer_from_end = *esp;
+        memcpy(*esp, thread_current ()->name, len_tmp);
 
         // round to 4's multiple and add 4 bytes for
         int missing_bytes_to_round = 4 - how_far_from_base % 4;
@@ -494,7 +494,7 @@ setup_stack (void **esp, char *args)
 
             ++aruments_cnt;
             *esp -= 4;
-            * (uint32_t *) *esp = (uint32_t) pointer + 1;
+            * (uint32_t *) *esp = pointer + 1;
           }
 
           --how_far_from_base;
@@ -518,7 +518,7 @@ setup_stack (void **esp, char *args)
 
         // alloc for RV
         *esp -= 4;
-        **esp = NULL;
+        *esp = NULL;
       } else {
         palloc_free_page(kpage);
       }
