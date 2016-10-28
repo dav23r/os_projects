@@ -38,8 +38,14 @@ process_execute (const char *file_name)
     return TID_ERROR;
   strlcpy (fn_copy, file_name, PGSIZE);
 
+  // TODO: tokenize file_name that includes command and args, first is thread/program name, rest are arguments
+  // TODO: pass only args array in thread_create() as last param
+  char *prog_name;
+  char *args_str;
+  prog_name = strtok_r(fn_copy, " ", &args_str);
+
   /* Create a new thread to execute FILE_NAME. */
-  tid = thread_create (file_name, PRI_DEFAULT, start_process, fn_copy);
+  tid = thread_create (prog_name, PRI_DEFAULT, start_process, args_str);
   if (tid == TID_ERROR)
     palloc_free_page (fn_copy); 
   return tid;
@@ -195,7 +201,7 @@ struct Elf32_Phdr
 #define PF_W 2          /* Writable. */
 #define PF_R 4          /* Readable. */
 
-static bool setup_stack (void **esp);
+static bool setup_stack (void **esp, char *args);
 static bool validate_segment (const struct Elf32_Phdr *, struct file *);
 static bool load_segment (struct file *file, off_t ofs, uint8_t *upage,
                           uint32_t read_bytes, uint32_t zero_bytes,
@@ -206,9 +212,9 @@ static bool load_segment (struct file *file, off_t ofs, uint8_t *upage,
    and its initial stack pointer into *ESP.
    Returns true if successful, false otherwise. */
 bool
-load (const char *file_name, void (**eip) (void), void **esp) 
+load (const char *args, void (**eip) (void), void **esp)
 {
-  struct thread *t = thread_current ();
+  struct thread *curr_t = thread_current ();
   struct Elf32_Ehdr ehdr;
   struct file *file = NULL;
   off_t file_ofs;
@@ -216,16 +222,16 @@ load (const char *file_name, void (**eip) (void), void **esp)
   int i;
 
   /* Allocate and activate page directory. */
-  t->pagedir = pagedir_create ();
-  if (t->pagedir == NULL) 
+  curr_t->pagedir = pagedir_create ();
+  if (curr_t->pagedir == NULL)
     goto done;
   process_activate ();
 
   /* Open executable file. */
-  file = filesys_open (file_name);
+  file = filesys_open (curr_t->name);
   if (file == NULL) 
     {
-      printf ("load: %s: open failed\n", file_name);
+      printf ("load: %s: open failed\n", curr_t->name);
       goto done; 
     }
 
@@ -238,7 +244,7 @@ load (const char *file_name, void (**eip) (void), void **esp)
       || ehdr.e_phentsize != sizeof (struct Elf32_Phdr)
       || ehdr.e_phnum > 1024) 
     {
-      printf ("load: %s: error loading executable\n", file_name);
+      printf ("load: %s: error loading executable\n", curr_t);
       goto done; 
     }
 
@@ -302,7 +308,7 @@ load (const char *file_name, void (**eip) (void), void **esp)
     }
 
   /* Set up stack. */
-  if (!setup_stack (esp))
+  if (!setup_stack (esp, args))
     goto done;
 
   /* Start address. */
@@ -427,7 +433,7 @@ load_segment (struct file *file, off_t ofs, uint8_t *upage,
 /* Create a minimal stack by mapping a zeroed page at the top of
    user virtual memory. */
 static bool
-setup_stack (void **esp) 
+setup_stack (void **esp, char *args)
 {
   uint8_t *kpage;
   bool success = false;
@@ -436,10 +442,86 @@ setup_stack (void **esp)
   if (kpage != NULL) 
     {
       success = install_page (((uint8_t *) PHYS_BASE) - PGSIZE, kpage, true);
-      if (success)
-        *esp = PHYS_BASE;
-      else
-        palloc_free_page (kpage);
+      if (success) {
+        // TODO: setup stack
+
+        int how_far_from_base = 0;
+        int len_tmp = 0;
+        char *args_pointer_from_end;
+
+        // write args str in stack
+        len_tmp = strlen(args) + 1;
+        how_far_from_base += len_tmp;
+        *esp -= len_tmp;
+        memcpy(*esp, args, len_tmp);
+
+        // write command name in stack after whole arguments string
+        len_tmp = strlen(thread_current ()->name) + 1;
+        how_far_from_base += len_tmp;
+        *esp -= len_tmp;
+        args_pointer_from_end = *esp;
+        memcpy(*esp, thread_current ()->name, len_tmp);
+
+        // round to 4's multiple and add 4 bytes for
+        int missing_bytes_to_round = 4 - how_far_from_base % 4;
+        *esp -= (missing_bytes_to_round + 4);
+
+        // write NULL for that argv[argc] will be NULL as required
+        *esp = NULL;
+
+        --how_far_from_base;
+        while(true) {
+          if (*(args_pointer_from_end + how_far_from_base) != ' ' &&
+                  *(args_pointer_from_end + how_far_from_base) != '\0') {
+            break;
+          }
+
+          if (*(args_pointer_from_end + how_far_from_base) == ' ') {
+            *(args_pointer_from_end + how_far_from_base) = '\0';
+          }
+          --how_far_from_base;
+        }
+
+        int aruments_cnt = 0;
+        char *pointer;
+        while (how_far_from_base > 0) {
+          pointer = (char *) (args_pointer_from_end + how_far_from_base);
+          char curr_symb = *pointer;
+          if (curr_symb == ' ' || curr_symb == '\0') {
+            char prev_symb = *(pointer + 1);
+            if (prev_symb == ' ' || prev_symb == '\0')
+              continue;
+
+            ++aruments_cnt;
+            *esp -= 4;
+            * (uint32_t *) *esp = pointer + 1;
+          }
+
+          --how_far_from_base;
+
+          if (curr_symb == ' ')
+            *pointer = '\0';
+        }
+
+        // write command name as next arg
+        *esp -= 4;
+        * (uint32_t *) *esp = (uint32_t) args_pointer_from_end;
+        ++aruments_cnt;
+
+        // write argv
+        *esp -= 4;
+        * (uint32_t *) *esp = *(uint32_t *)(esp + 4);
+
+        // write argc
+        *esp -= 4;
+        *(int *) *esp = aruments_cnt;
+
+        // alloc for RV
+        *esp -= 4;
+        *esp = NULL;
+      } else {
+        palloc_free_page(kpage);
+      }
     }
   return success;
 }
