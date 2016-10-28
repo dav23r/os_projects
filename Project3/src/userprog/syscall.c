@@ -70,8 +70,7 @@ and then implement the wait system call in terms of process_wait().
 Implementing this system call requires considerably more work than any of the rest.
 */
 static int wait(pid_t pid) {
-	COMMENT_AND_EXIT("WAIT");
-	return -1;
+	return process_wait(pid);
 }
 
 /**
