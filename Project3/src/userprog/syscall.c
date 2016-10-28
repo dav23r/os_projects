@@ -232,25 +232,36 @@ static void close_handler(struct intr_frame *f) {
 
 #define max(a, b) (((a) > (b)) ? (a) : (b))
 
-#define MAX_SYS_CALL_ID max(SYS_HALT, \
-						max(SYS_EXIT, \
-						max(SYS_EXEC, \
-						max(SYS_WAIT, \
-						max(SYS_CREATE, \
-						max(SYS_REMOVE, \
-						max(SYS_OPEN, \
-						max(SYS_FILESIZE, \
-						max(SYS_READ, \
-						max(SYS_WRITE, \
-						max(SYS_SEEK, \
-						max(SYS_TELL, \
-						max(SYS_CLOSE, \
-						max(SYS_MMAP, \
-						max(SYS_MUNMAP, \
-						max(SYS_CHDIR, \
-						max(SYS_MKDIR, \
-						max(SYS_READDIR, \
-						max(SYS_ISDIR, SYS_INUMBER)))))))))))))))))))
+#define MAX_SYS_CALL_ID \
+				max( \
+					max( \
+						max( \
+							max(\
+								max(SYS_HALT, SYS_EXIT), \
+								max(SYS_EXEC, SYS_WAIT) \
+							), \
+							max( \
+								max(SYS_CREATE, SYS_REMOVE), \
+								max(SYS_OPEN, SYS_FILESIZE) \
+							) \
+						), \
+						max( \
+							max( \
+								max(SYS_READ, SYS_WRITE), \
+								max(SYS_SEEK, SYS_TELL) \
+							), \
+							max( \
+								max(SYS_CLOSE, SYS_MMAP), \
+								max(SYS_MUNMAP, SYS_CHDIR) \
+							) \
+						) \
+					), \
+					max( \
+						max(SYS_MKDIR, SYS_READDIR), \
+						max(SYS_ISDIR, SYS_INUMBER) \
+					) \
+				)
+
 #define SYS_COUNT (MAX_SYS_CALL_ID + 1)
 static const int sys_count = SYS_COUNT;
 typedef void(*sys_handler)(struct intr_frame*);
