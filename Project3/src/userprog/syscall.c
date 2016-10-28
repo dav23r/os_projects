@@ -230,61 +230,72 @@ static void close_handler(struct intr_frame *f) {
 
 #undef COMMENT_AND_EXIT
 
+#define max(a, b) (((a) > (b)) ? (a) : (b))
+
+#define MAX_SYS_CALL_ID max(SYS_HALT, \
+						max(SYS_EXIT, \
+						max(SYS_EXEC, \
+						max(SYS_WAIT, \
+						max(SYS_CREATE, \
+						max(SYS_REMOVE, \
+						max(SYS_OPEN, \
+						max(SYS_FILESIZE, \
+						max(SYS_READ, \
+						max(SYS_WRITE, \
+						max(SYS_SEEK, \
+						max(SYS_TELL, \
+						max(SYS_CLOSE, \
+						max(SYS_MMAP, \
+						max(SYS_MUNMAP, \
+						max(SYS_CHDIR, \
+						max(SYS_MKDIR, \
+						max(SYS_READDIR, \
+						max(SYS_ISDIR, SYS_INUMBER)))))))))))))))))))
+#define SYS_COUNT (MAX_SYS_CALL_ID + 1)
+static const int sys_count = SYS_COUNT;
+typedef void(*sys_handler)(struct intr_frame*);
+static sys_handler sys_handlers[SYS_COUNT];
+static bool sys_initialized = false;
+
+static void init_sys_handlers() {
+	if (sys_initialized) return;
+	int i;
+	for (i = 0; i < sys_count; i++)
+		sys_handlers[i] = NULL;
+	sys_handlers[SYS_HALT] = halt_handler;
+	sys_handlers[SYS_EXIT] = exit_handler;
+	sys_handlers[SYS_EXEC] = exec_handler;
+	sys_handlers[SYS_WAIT] = wait_handler;
+	sys_handlers[SYS_CREATE] = create_handler;
+	sys_handlers[SYS_REMOVE] = remove_handler;
+	sys_handlers[SYS_OPEN] = open_handler;
+	sys_handlers[SYS_FILESIZE] = filesize_handler;
+	sys_handlers[SYS_READ] = read_handler;
+	sys_handlers[SYS_WRITE] = write_handler;
+	sys_handlers[SYS_SEEK] = seek_handler;
+	sys_handlers[SYS_TELL] = tell_handler;
+	sys_handlers[SYS_CLOSE] = close_handler;
+	sys_initialized = true;
+}
+
 static void syscall_handler (struct intr_frame *);
 
 void
 syscall_init (void) 
 {
   intr_register_int (0x30, 3, INTR_ON, syscall_handler, "syscall");
+  init_sys_handlers();
 }
 
 static void
 syscall_handler (struct intr_frame *f) 
 {
+	init_sys_handlers();
 	int syscall_id = *ESP;
-	switch (syscall_id) {
-	case SYS_HALT:
-		halt_handler(f);
-		break;
-	case SYS_EXIT:
-		exit_handler(f);
-		break;
-	case SYS_EXEC:
-		exec_handler(f);
-		break;
-	case SYS_WAIT:
-		wait_handler(f);
-		break;
-	case SYS_CREATE:
-		create_handler(f);
-		break;
-	case SYS_REMOVE:
-		remove_handler(f);
-		break;
-	case SYS_OPEN:
-		open_handler(f);
-		break;
-	case SYS_FILESIZE:
-		filesize_handler(f);
-		break;
-	case SYS_READ:
-		read_handler(f);
-		break;
-	case SYS_WRITE:
-		write_handler(f);
-		break;
-	case SYS_SEEK:
-		seek_handler(f);
-		break;
-	case SYS_TELL:
-		tell_handler(f);
-		break;
-	case SYS_CLOSE:
-		close_handler(f);
-		break;
-	default:
-		printf("ERROR: UNDEFINED SYSTEM CALL!!!\n");
+	if (syscall_id >= 0 && syscall_id < sys_count && sys_handlers[syscall_id] != NULL)
+		sys_handlers[syscall_id](f);
+	else {
+		printf("ERROR: UNKNOWN SYSTEM CALL!!!\n");
 		thread_exit();
-		break;
 	}
 }
