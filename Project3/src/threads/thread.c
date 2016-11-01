@@ -464,6 +464,12 @@ init_thread (struct thread *t, const char *name, int priority)
   t->priority = priority;
   t->magic = THREAD_MAGIC;
 
+#ifdef USERPROG
+  int i;
+  for (i = 0; i < MAX_OPEN_FILES; i++)
+	  t->files[i] = NULL;
+#endif
+
   old_level = intr_disable ();
   list_push_back (&all_list, &t->allelem);
   intr_set_level (old_level);
@@ -582,3 +588,28 @@ allocate_tid (void)
 /* Offset of `stack' member within `struct thread'.
    Used by switch.S, which can't figure it out on its own. */
 uint32_t thread_stack_ofs = offsetof (struct thread, stack);
+
+
+
+
+#ifdef USERPROG
+/**
+Returns file linked to the given file descriptor
+*/
+struct file * thread_get_file(int fd) {
+	if (fd < 0 || fd >= MAX_OPEN_FILES) return NULL;
+	else return thread_current()->files[fd];
+}
+/**
+Links the file to the descriptor (if the descriptor is unused)
+*/
+bool thread_set_file(int fd, struct file *file) {
+	if (fd < 0 || fd >= MAX_OPEN_FILES) return false;
+	struct thread *t = thread_current();
+	if (t->files[fd] != NULL) return false;
+	else {
+		t->files[fd] = file;
+		return true;
+	}
+}
+#endif

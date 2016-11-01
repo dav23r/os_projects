@@ -7,6 +7,8 @@
 #include "threads/synch.h"
 #include "devices/shutdown.h"
 #include "userprog/pagedir.h"
+#include "filesys/filesys.h"
+#include "filesys/file.h"
 
 typedef int pid_t;
 struct lock file_system_lock;
@@ -33,9 +35,17 @@ static void* to_physical_addr(const uint8_t *uaddr){
 /**
 Checks, if the given user address is valid.
 */
-static bool address_valid(const uint8_t *uaddr) {
+static bool check_address_valid(const uint8_t *uaddr) {
 	return (to_physical_addr(uaddr) != NULL);
 }
+
+#define address_valid(uaddr) check_address_valid((const uint8_t*)uaddr)
+
+
+static struct file *get_file(int fd) {
+	return thread_get_file(fd);
+}
+
 
 /**
 Terminates Pintos by calling shutdown_power_off() (declared in ‘devices/shutdown.h’). 
@@ -142,16 +152,25 @@ file are closed independently in separate calls to close and they do not share a
 position.
 */
 static int open(const char *file) {
+	if (!address_valid(file)) exit(-1);
+	lock_acquire(&file_system_lock);
+	int rv = -1;
+	// DO THIS
+	lock_release(&file_system_lock);
 	COMMENT_AND_EXIT("OPEN");
-	return -1;
+	return rv;
 }
 
 /**
 Returns the size, in bytes, of the file open as fd.
 */
 static int filesize(int fd) {
+	lock_acquire(&file_system_lock);
+	struct file *file_ptr = get_file(fd);
+	int rv = ((file_ptr != NULL) ? file_length(file_ptr) : (-1));
+	lock_release(&file_system_lock);
 	COMMENT_AND_EXIT("FILESIZE");
-	return 0;
+	return rv;
 }
 
 /**
@@ -160,8 +179,12 @@ actually read (0 at end of file), or -1 if the file could not be read (due to a 
 other than end of file). Fd 0 reads from the keyboard using input_getc().
 */
 static int read(int fd, void *buffer, unsigned size) {
+	lock_acquire(&file_system_lock);
+	int rv = 0;
+	// DO THIS
+	lock_release(&file_system_lock);
 	COMMENT_AND_EXIT("READ");
-	return 0;
+	return rv;
 }
 
 /**
@@ -178,8 +201,12 @@ by different processes may end up interleaved on the console, confusing both hum
 readers and our grading scripts.
 */
 static int write(int fd, const void *buffer, unsigned size) {
+	lock_acquire(&file_system_lock);
+	int rv = 0;
+	// DO THIS
+	lock_release(&file_system_lock);
 	COMMENT_AND_EXIT("WRITE");
-	return 0;
+	return rv;
 }
 
 /**
@@ -192,6 +219,11 @@ writes past end of file will return an error.) These semantics are implemented i
 file system and do not require any special effort in system call implementation.
 */
 static void seek(int fd, unsigned position) {
+	lock_acquire(&file_system_lock);
+	struct file *file_ptr = get_file(fd);
+	if (file_ptr != NULL)
+		file_seek(file_ptr, position);
+	lock_release(&file_system_lock);
 	COMMENT_AND_EXIT("SEEK");
 }
 
@@ -200,8 +232,12 @@ Returns the position of the next byte to be read or written in open file fd, exp
 in bytes from the beginning of the file
 */
 static unsigned tell(int fd) {
+	lock_acquire(&file_system_lock);
+	struct file *file_ptr = get_file(fd);
+	int rv = ((file_ptr != NULL) ? file_tell(file_ptr) : 0);
+	lock_release(&file_system_lock);
 	COMMENT_AND_EXIT("TELL");
-	return 0;
+	return rv;
 }
 
 /**
@@ -209,6 +245,9 @@ Closes file descriptor fd. Exiting or terminating a process implicitly closes al
 file descriptors, as if by calling this function for each one.
 */
 static void close(int fd) {
+	lock_acquire(&file_system_lock);
+	// DO THIS
+	lock_release(&file_system_lock);
 	COMMENT_AND_EXIT("CLOSE");
 }
 
