@@ -3,10 +3,14 @@
 #include <syscall-nr.h>
 #include "threads/interrupt.h"
 #include "threads/thread.h"
+#include "threads/vaddr.h"
+#include "threads/synch.h"
 #include "devices/shutdown.h"
 #include "userprog/pagedir.h"
 
 typedef int pid_t;
+struct lock file_system_lock;
+
 
 #define COMMENT_AND_EXIT(comment) printf("Exiting on system call: %s\n", (comment)); thread_exit();
 
@@ -15,13 +19,22 @@ Translate provided virtual memory address to physicall memory
 address, using current proccess's page directory. NULL is used
 as a sentinel signifying failure.
 */
-static void to_physical_addr(const uint8_t *uaddr){
+static void* to_physical_addr(const uint8_t *uaddr){
+	// Assert that pointer points to user space
+	if (uaddr == NULL || (!is_user_vaddr(uaddr))) return NULL;
 	// Acquire pointer to current process's page directory
-	uint32_t cur_pd = active_pd();
+	uint32_t *cur_pd = thread_current()->pagedir;
 	// Try to translate it to one of physical memory
 	void *phys_addr = pagedir_get_page (cur_pd, uaddr);
 	// It may be a real address as well as NULL indicating no mapping
 	return phys_addr;
+}
+
+/**
+Checks, if the given user address is valid.
+*/
+static bool address_valid(const uint8_t *uaddr) {
+	return (to_physical_addr(uaddr) != NULL);
 }
 
 /**
@@ -94,8 +107,11 @@ false otherwise. Creating a new file does not open it: opening the new file is
 a separate operation which would require a open system call.
 */
 static bool create(const char *file, unsigned initial_size) {
-	COMMENT_AND_EXIT("CREATE");
-	return false;
+	if (!address_valid(file)) exit(-1);
+	lock_acquire(&file_system_lock);
+	bool rv = filesys_create(file, initial_size);
+	lock_release(&file_system_lock);
+	return rv;
 }
 
 /**
@@ -104,8 +120,11 @@ removed regardless of whether it is open or closed, and removing an open file do
 not close it. See [Removing an Open File], page 35, for details.
 */
 static bool remove(const char *file) {
-	COMMENT_AND_EXIT("REMOVE");
-	return false;
+	if (!address_valid(file)) exit(-1);
+	lock_acquire(&file_system_lock);
+	bool rv = filesys_remove(file);
+	lock_release(&file_system_lock);
+	return rv;
 }
 
 /**
@@ -310,12 +329,21 @@ syscall_init (void)
 {
   intr_register_int (0x30, 3, INTR_ON, syscall_handler, "syscall");
   init_sys_handlers();
+  lock_init(&file_system_lock);
 }
+
+#define MAX_SYSCALL_PARAMS 4
 
 static void
 syscall_handler (struct intr_frame *f) 
 {
 	init_sys_handlers();
+	int i;
+	for (i = 0; i < MAX_SYSCALL_PARAMS; i++)
+		if (!address_valid((void*)ESP)) {
+			printf("INVALID POINTERS!!!\n");
+			exit(-1);
+		}
 	int syscall_id = *ESP;
 	if (syscall_id >= 0 && syscall_id < sys_count && sys_handlers[syscall_id] != NULL)
 		sys_handlers[syscall_id](f);
