@@ -4,10 +4,25 @@
 #include "threads/interrupt.h"
 #include "threads/thread.h"
 #include "devices/shutdown.h"
+#include "userprog/pagedir.h"
 
 typedef int pid_t;
 
 #define COMMENT_AND_EXIT(comment) printf("Exiting on system call: %s\n", (comment)); thread_exit();
+
+/**
+Translate provided virtual memory address to physicall memory 
+address, using current proccess's page directory. NULL is used
+as a sentinel signifying failure.
+*/
+static void to_physical_addr(const uint8_t *uaddr){
+	// Acquire pointer to current process's page directory
+	uint32_t cur_pd = active_pd();
+	// Try to translate it to one of physical memory
+	void *phys_addr = pagedir_get_page (cur_pd, uaddr);
+	// It may be a real address as well as NULL indicating no mapping
+	return phys_addr;
+}
 
 /**
 Terminates Pintos by calling shutdown_power_off() (declared in ‘devices/shutdown.h’). 
