@@ -61,7 +61,27 @@ parent waits for it (see below), this is the status that will be returned. Conve
 a status of 0 indicates success and nonzero values indicate errors
 */
 static void exit(int status) {
-	COMMENT_AND_EXIT("EXIT");
+    struct child_thread *child;
+    struct thread *currT = thread_current();
+    struct thread *parent = currT->parent_thread;
+    if (!parent)
+    {
+        thread_exit();
+        return;
+    }
+
+    struct list_elem *e = list_begin (&parent->children);
+    while (e != list_end (&parent->children)) {
+        child = list_entry (e, struct child_thread, elem);
+        if (child->this_thread->tid == currT->tid) {
+            lock_acquire(&parent->child_lock);
+            child->exited = true;
+            child->exit_status = status;
+            lock_release(&parent->child_lock);
+        }
+        e = list_next (e);
+    }
+    thread_exit ();
 }
 
 /**
@@ -278,7 +298,7 @@ static void exec_handler(struct intr_frame *f) {
 	EAX = exec(S_PARAM(1));
 }
 static void wait_handler(struct intr_frame *f) {
-	EAX = (I_PARAM(1));
+	EAX = wait(I_PARAM(1));
 }
 static void create_handler(struct intr_frame *f) {
 	EAX = create(S_PARAM(1), I_PARAM(2));

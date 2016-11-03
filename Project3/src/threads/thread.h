@@ -116,6 +116,7 @@ typedef struct {
 	struct thread *this_thread;
 	struct list_elem elem;
 	bool is_waited;
+    bool exited;
 	int exit_status;
 } child_thread;
 
