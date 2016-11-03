@@ -104,6 +104,7 @@ struct thread
     uint32_t *pagedir;                  /* Page directory. */
 	struct file *files[MAX_OPEN_FILES];	/* File descriptors. */
 	struct list children;				/* Child threads. */
+	struct lock child_lock;				/* Lock for children. */
 #endif
 
     /* Owned by thread.c. */
