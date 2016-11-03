@@ -103,11 +103,22 @@ struct thread
     /* Owned by userprog/process.c. */
     uint32_t *pagedir;                  /* Page directory. */
 	struct file *files[MAX_OPEN_FILES];	/* File descriptors. */
+	struct list children;				/* Child threads. */
 #endif
 
     /* Owned by thread.c. */
     unsigned magic;                     /* Detects stack overflow. */
   };
+
+
+typedef struct {
+	struct thread *parent_thread;
+	struct thread *this_thread;
+	struct list_elem elem;
+	bool is_waited;
+	int exit_status;
+} child_thread;
+
 
 /* If false (default), use round-robin scheduler.
    If true, use multi-level feedback queue scheduler.
