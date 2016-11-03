@@ -43,7 +43,7 @@ static bool check_address_valid(const uint8_t *uaddr) {
 
 
 static struct file *get_file(int fd) {
-	return thread_get_file(fd);
+	return thread_this_get_file(fd);
 }
 
 
@@ -169,7 +169,6 @@ static int filesize(int fd) {
 	struct file *file_ptr = get_file(fd);
 	int rv = ((file_ptr != NULL) ? file_length(file_ptr) : (-1));
 	lock_release(&file_system_lock);
-	COMMENT_AND_EXIT("FILESIZE");
 	return rv;
 }
 
@@ -224,7 +223,6 @@ static void seek(int fd, unsigned position) {
 	if (file_ptr != NULL)
 		file_seek(file_ptr, position);
 	lock_release(&file_system_lock);
-	COMMENT_AND_EXIT("SEEK");
 }
 
 /**
@@ -236,7 +234,6 @@ static unsigned tell(int fd) {
 	struct file *file_ptr = get_file(fd);
 	int rv = ((file_ptr != NULL) ? file_tell(file_ptr) : 0);
 	lock_release(&file_system_lock);
-	COMMENT_AND_EXIT("TELL");
 	return rv;
 }
 
@@ -246,9 +243,13 @@ file descriptors, as if by calling this function for each one.
 */
 static void close(int fd) {
 	lock_acquire(&file_system_lock);
-	// DO THIS
+	struct thread *t = thread_current();
+	struct file *fl = thread_get_file(t, fd);
+	if (fl != NULL) {
+		file_close(fl);
+		thread_close_file(t, fl);
+	}
 	lock_release(&file_system_lock);
-	COMMENT_AND_EXIT("CLOSE");
 }
 
 
@@ -340,7 +341,7 @@ typedef void(*sys_handler)(struct intr_frame*);
 static sys_handler sys_handlers[SYS_COUNT];
 static bool sys_initialized = false;
 
-static void init_sys_handlers() {
+static void init_sys_handlers(void) {
 	if (sys_initialized) return;
 	int i;
 	for (i = 0; i < sys_count; i++)

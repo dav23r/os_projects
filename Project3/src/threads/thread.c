@@ -596,20 +596,32 @@ uint32_t thread_stack_ofs = offsetof (struct thread, stack);
 /**
 Returns file linked to the given file descriptor
 */
-struct file * thread_get_file(int fd) {
+struct file * thread_get_file(struct thread *t, int fd) {
 	if (fd < 0 || fd >= MAX_OPEN_FILES) return NULL;
-	else return thread_current()->files[fd];
+	else return t->files[fd];
 }
 /**
 Links the file to the descriptor (if the descriptor is unused)
 */
-bool thread_set_file(int fd, struct file *file) {
+bool thread_set_file(struct thread *t, int fd, struct file *file) {
 	if (fd < 0 || fd >= MAX_OPEN_FILES) return false;
-	struct thread *t = thread_current();
 	if (t->files[fd] != NULL) return false;
 	else {
 		t->files[fd] = file;
 		return true;
 	}
+}
+
+/**
+Returns file linked to the given file descriptor
+*/
+struct file * thread_this_get_file(int fd) {
+	return thread_get_file(thread_current(), fd);
+}
+/**
+Links the file to the descriptor (if the descriptor is unused)
+*/
+bool thread_this_set_file(int fd, struct file *file) {
+	return thread_set_file(thread_current(), fd, file);
 }
 #endif

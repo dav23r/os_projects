@@ -146,12 +146,19 @@ int thread_get_recent_cpu (void);
 int thread_get_load_avg (void);
 
 #ifdef USERPROG
-struct file * thread_get_file(int fd);
-bool thread_set_file(int fd, struct file *file);
+struct file * thread_get_file(struct thread *t, int fd);
+bool thread_set_file(struct thread *t, int fd, struct file *file);
 /**
 Closes thre given file descriptor.
 */
-#define thread_close_file(fd) thread_set_file(fd, NULL);
+#define thread_close_file(t, fd) thread_set_file(t, fd, NULL);
+
+struct file * thread_this_get_file(int fd);
+bool thread_this_set_file(int fd, struct file *file);
+/**
+Closes thre given file descriptor.
+*/
+#define thread_this_close_file(fd) thread_this_set_file(fd, NULL);
 #endif
 
 #endif /* threads/thread.h */
