@@ -103,7 +103,9 @@ struct thread
     /* Owned by userprog/process.c. */
     uint32_t *pagedir;                  /* Page directory. */
 	struct file *files[MAX_OPEN_FILES];	/* File descriptors. */
+	struct thread *parent_thread;		/* Parent thread. */
 	struct list children;				/* Child threads. */
+	struct lock child_lock;				/* Lock for children. */
 #endif
 
     /* Owned by thread.c. */

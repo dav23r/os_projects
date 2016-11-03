@@ -469,6 +469,7 @@ init_thread (struct thread *t, const char *name, int priority)
   for (i = 0; i < MAX_OPEN_FILES; i++)
 	  t->files[i] = NULL;
   list_init(&t->children);
+  lock_init(&t->child_lock);
 #endif
 
   old_level = intr_disable ();
