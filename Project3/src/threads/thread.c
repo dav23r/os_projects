@@ -612,6 +612,14 @@ bool thread_set_file(struct thread *t, int fd, struct file *file) {
 	}
 }
 
+int get_thread_first_free_id(struct thread *t) {
+    int i, pid = -1;
+    for (i = 2; i < MAX_OPEN_FILES; i++) {
+        if (!t->files[i]) return i;
+    }
+    return pid;
+}
+
 /**
 Returns file linked to the given file descriptor
 */

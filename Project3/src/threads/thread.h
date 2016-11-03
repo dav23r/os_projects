@@ -148,6 +148,7 @@ int thread_get_load_avg (void);
 #ifdef USERPROG
 struct file * thread_get_file(struct thread *t, int fd);
 bool thread_set_file(struct thread *t, int fd, struct file *file);
+int get_thread_first_free_id(struct thread *);
 /**
 Closes thre given file descriptor.
 */

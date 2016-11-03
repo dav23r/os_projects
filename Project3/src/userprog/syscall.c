@@ -48,7 +48,7 @@ static struct file *get_file(int fd) {
 
 
 /**
-Terminates Pintos by calling shutdown_power_off() (declared in ‘devices/shutdown.h’). 
+Terminates Pintos by calling shutdown_power_off() (declared in ï¿½devices/shutdown.hï¿½). 
 This should be seldom used, because you lose some information about possible deadlock situations, etc.
 */
 static void halt(void) {
@@ -56,7 +56,7 @@ static void halt(void) {
 }
 
 /**
-Terminates the current user program, returning status to the kernel. If the process’s
+Terminates the current user program, returning status to the kernel. If the processï¿½s
 parent waits for it (see below), this is the status that will be returned. Conventionally,
 a status of 0 indicates success and nonzero values indicate errors
 */
@@ -66,7 +66,7 @@ static void exit(int status) {
 
 /**
 Runs the executable whose name is given in cmd line, passing any given arguments,
-and returns the new process’s program id (pid). Must return pid -1, which otherwise
+and returns the new processï¿½s program id (pid). Must return pid -1, which otherwise
 should not be a valid pid, if the program cannot load or run for any reason. Thus,
 the parent process cannot return from the exec until it knows whether the child
 process successfully loaded its executable. You must use appropriate synchronization
@@ -78,31 +78,31 @@ static pid_t exec(const char *cmd_line) {
 }
 
 /**
-Waits for a child process pid and retrieves the child’s exit status.
+Waits for a child process pid and retrieves the childï¿½s exit status.
 If pid is still alive, waits until it terminates. Then, returns the status that pid passed
 to exit. If pid did not call exit(), but was terminated by the kernel (e.g. killed due
 to an exception), wait(pid) must return -1. It is perfectly legal for a parent process
 to wait for child processes that have already terminated by the time the parent calls
-wait, but the kernel must still allow the parent to retrieve its child’s exit status, or
+wait, but the kernel must still allow the parent to retrieve its childï¿½s exit status, or
 learn that the child was terminated by the kernel.
 wait must fail and return -1 immediately if any of the following conditions is true:
-	• pid does not refer to a direct child of the calling process. pid is a direct child
+	ï¿½ pid does not refer to a direct child of the calling process. pid is a direct child
 	of the calling process if and only if the calling process received pid as a return
 	value from a successful call to exec.
 	Note that children are not inherited: if A spawns child B and B spawns child
 	process C, then A cannot wait for C, even if B is dead. A call to wait(C) by
 	process A must fail. Similarly, orphaned processes are not assigned to a new
 	parent if their parent process exits before they do.
-	• The process that calls wait has already called wait on pid. That is, a process
+	ï¿½ The process that calls wait has already called wait on pid. That is, a process
 	may wait for any given child at most once.
 Processes may spawn any number of children, wait for them in any order, and may
 even exit without having waited for some or all of their children. Your design should
-consider all the ways in which waits can occur. All of a process’s resources, including
+consider all the ways in which waits can occur. All of a processï¿½s resources, including
 its struct thread, must be freed whether its parent ever waits for it or not, and
 regardless of whether the child exits before or after its parent.
 You must ensure that Pintos does not terminate until the initial process exits.
 The supplied Pintos code tries to do this by calling process_wait() (in
-‘userprog/process.c’) from main() (in ‘threads/init.c’). We suggest that you
+ï¿½userprog/process.cï¿½) from main() (in ï¿½threads/init.cï¿½). We suggest that you
 implement process_wait() according to the comment at the top of the function
 and then implement the wait system call in terms of process_wait().
 Implementing this system call requires considerably more work than any of the rest.
@@ -138,7 +138,7 @@ static bool remove(const char *file) {
 }
 
 /**
-Opens the file called file. Returns a nonnegative integer handle called a “file descriptor”
+Opens the file called file. Returns a nonnegative integer handle called a ï¿½file descriptorï¿½
 (fd), or -1 if the file could not be opened.
 File descriptors numbered 0 and 1 are reserved for the console: fd 0 (STDIN_FILENO) is
 standard input, fd 1 (STDOUT_FILENO) is standard output. The open system call will
@@ -155,9 +155,14 @@ static int open(const char *file) {
 	if (!address_valid(file)) exit(-1);
 	lock_acquire(&file_system_lock);
 	int rv = -1;
-	// DO THIS
+
+	thread *currT =
+	file *opened_file = filesys_open(file);
+	if (opened) {
+
+	}
+
 	lock_release(&file_system_lock);
-	COMMENT_AND_EXIT("OPEN");
 	return rv;
 }
 
@@ -210,7 +215,7 @@ static int write(int fd, const void *buffer, unsigned size) {
 
 /**
 Changes the next byte to be read or written in open file fd to position, expressed in
-bytes from the beginning of the file. (Thus, a position of 0 is the file’s start.)
+bytes from the beginning of the file. (Thus, a position of 0 is the fileï¿½s start.)
 A seek past the current end of a file is not an error. A later read obtains 0 bytes,
 indicating end of file. A later write extends the file, filling any unwritten gap with
 zeros. (However, in Pintos files have a fixed length until project 4 is complete, so

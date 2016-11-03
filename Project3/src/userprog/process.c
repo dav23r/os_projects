@@ -493,8 +493,9 @@ setup_stack (void **esp, char *args)
               continue;
 
             ++aruments_cnt;
-            *esp -= 4;
-            * (uint32_t *) *esp = pointer + 1;
+            *esp -= sizeof(char *);
+            * (uint32_t *) *esp = (uint32_t) pointer + 1;
+
           }
 
           --how_far_from_base;
@@ -504,21 +505,21 @@ setup_stack (void **esp, char *args)
         }
 
         // write command name as next arg
-        *esp -= 4;
+        *esp -= sizeof(char *);
         * (uint32_t *) *esp = (uint32_t) args_pointer_from_end;
         ++aruments_cnt;
 
         // write argv
-        *esp -= 4;
-        * (uint32_t *) *esp = *(uint32_t *)(esp + 4);
+        *esp -= sizeof(char *);
+        * (uint32_t *) *esp = *(uint32_t *)(esp + sizeof(char *));
 
         // write argc
-        *esp -= 4;
+        *esp -= sizeof(int);
         *(int *) *esp = aruments_cnt;
 
         // alloc for RV
-        *esp -= 4;
-        *esp = NULL;
+        *esp -= sizeof(void *);
+          *esp = NULL;
       } else {
         palloc_free_page(kpage);
       }
@@ -531,7 +532,7 @@ setup_stack (void **esp, char *args)
    If WRITABLE is true, the user process may modify the page;
    otherwise, it is read-only.
    UPAGE must not already be mapped.
-   KPAGE should probably be a page obtained from the user pool
+   KPAGE should probably be a pfage obtained from the user pool
    with palloc_get_page().
    Returns true on success, false if UPAGE is already mapped or
    if memory allocation fails. */
