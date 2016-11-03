@@ -489,8 +489,10 @@ setup_stack (void **esp, char *args)
           char curr_symb = *pointer;
           if (curr_symb == ' ' || curr_symb == '\0') {
             char prev_symb = *(pointer + 1);
-            if (prev_symb == ' ' || prev_symb == '\0')
+            if (prev_symb == ' ' || prev_symb == '\0') {
+              if (curr_symb == ' ') *pointer = '\0';
               continue;
+            }
 
             ++aruments_cnt;
             *esp -= sizeof(char *);
@@ -519,7 +521,7 @@ setup_stack (void **esp, char *args)
 
         // alloc for RV
         *esp -= sizeof(void *);
-          *esp = NULL;
+          * (uint32_t *) *esp = 0x0;
       } else {
         palloc_free_page(kpage);
       }
