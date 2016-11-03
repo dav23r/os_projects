@@ -4,6 +4,8 @@
 #include <debug.h>
 #include <list.h>
 #include <stdint.h>
+#include "threads/synch.h"
+
 #ifdef USERPROG
 #include "filesys/file.h"
 #endif
@@ -113,14 +115,14 @@ struct thread
   };
 
 
-typedef struct {
+struct child_thread {
 	struct thread *parent_thread;
 	struct thread *this_thread;
 	struct list_elem elem;
 	bool is_waited;
     bool exited;
 	int exit_status;
-} child_thread;
+};
 
 
 /* If false (default), use round-robin scheduler.
