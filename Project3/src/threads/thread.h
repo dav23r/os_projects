@@ -104,7 +104,7 @@ struct thread
 #ifdef USERPROG
     /* Owned by userprog/process.c. */
     uint32_t *pagedir;                  /* Page directory. */
-	struct lock wait_on_me;
+	struct semaphore wait_on_me;
 	struct file *files[MAX_OPEN_FILES];	/* File descriptors. */
 	struct thread *parent_thread;		/* Parent thread. */
 	struct list children;				/* Child threads. */

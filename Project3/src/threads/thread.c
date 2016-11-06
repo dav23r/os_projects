@@ -292,7 +292,7 @@ thread_exit (void)
   intr_disable ();
   struct thread *t = thread_current();
 #ifdef USERPROG
-  lock_release(&t->wait_on_me);
+  sema_up(&t->wait_on_me);
 #endif
   list_remove (&t->allelem);
   t->status = THREAD_DYING;
@@ -474,8 +474,7 @@ init_thread (struct thread *t, const char *name, int priority)
 	  t->files[i] = NULL;
   list_init(&t->children);
   lock_init(&t->child_lock);
-  lock_init(&t->wait_on_me);
-  lock_acquire(&t->wait_on_me);
+  sema_init(&t->wait_on_me, 0);
 #endif
 
   old_level = intr_disable ();
