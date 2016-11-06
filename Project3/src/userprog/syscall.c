@@ -471,6 +471,7 @@ syscall_init (void)
 static void
 syscall_handler (struct intr_frame *f) 
 {
+	//ASSERT(0);
 	init_sys_handlers();
 	int i;
 	for (i = 0; i < MAX_SYSCALL_PARAMS; i++)
