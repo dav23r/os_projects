@@ -476,11 +476,11 @@ setup_stack (void **esp, char *args)
         int len_tmp = 0;
         char *args_pointer_from_end;
 
-        /*write args str in stack
+        // write args str in stack
         len_tmp = strlen(args) + 1;
         how_far_from_base += len_tmp;
         *esp -= len_tmp;
-        memcpy(*esp, args, len_tmp);*/
+        memcpy(*esp, args, len_tmp);
 
         // write command name in stack after whole arguments string
         len_tmp = strlen(thread_current ()->name) + 1;
@@ -491,8 +491,9 @@ setup_stack (void **esp, char *args)
         memcpy(*esp, thread_current ()->name, len_tmp);
 
         // round to 4's multiple and add 4 bytes for
-        int missing_bytes_to_round = 4 - how_far_from_base % 4;
-        *esp -= (missing_bytes_to_round + 4);
+        int missing_bytes_to_round = sizeof(void *) - how_far_from_base % sizeof(void *);
+          for (; missing_bytes_to_round-- > 0; *(--(*(char **)esp)) = 0);
+        *esp -= sizeof(void *);
 
         // write NULL for that argv[argc] will be NULL as required
         *esp = NULL;
