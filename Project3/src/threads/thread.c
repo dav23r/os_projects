@@ -290,11 +290,12 @@ thread_exit (void)
      and schedule another process.  That process will destroy us
      when it calls thread_schedule_tail(). */
   intr_disable ();
-  list_remove (&thread_current()->allelem);
-  thread_current ()->status = THREAD_DYING;
+  struct thread *t = thread_current();
 #ifdef USERPROG
-  lock_release(&thread_current()->wait_on_me);
+  lock_release(&t->wait_on_me);
 #endif
+  list_remove (&t->allelem);
+  t->status = THREAD_DYING;
   schedule ();
   NOT_REACHED ();
 }
