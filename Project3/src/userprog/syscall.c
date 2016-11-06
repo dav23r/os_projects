@@ -55,7 +55,6 @@ Terminates Pintos by calling shutdown_power_off() (declared in �devices/shutdo
 This should be seldom used, because you lose some information about possible deadlock situations, etc.
 */
 static void halt(void) {
-    ASSERT(0);
 	shutdown_power_off();
 }
 
@@ -473,6 +472,7 @@ syscall_init (void)
 static void
 syscall_handler (struct intr_frame *f) 
 {
+	//ASSERT(0);
 	init_sys_handlers();
 	int i;
 	for (i = 0; i < MAX_SYSCALL_PARAMS; i++)
