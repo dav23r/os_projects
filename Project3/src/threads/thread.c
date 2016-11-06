@@ -600,7 +600,7 @@ uint32_t thread_stack_ofs = offsetof (struct thread, stack);
 struct thread *get_thread(tid_t thread_tid){
   if (thread_tid == TID_ERROR)
     return NULL;
-  thread_foreach();
+  return NULL;
 }
 
 
@@ -669,7 +669,7 @@ struct child_thread *get_child(tid_t thread_tid){
         }
   if (!found)
     return NULL;
-  return e;
+  return list_entry(e, struct child_thread, elem);
 }
 
 #endif
