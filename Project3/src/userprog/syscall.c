@@ -343,7 +343,7 @@ static void close(int fd) {
 	struct file *fl = thread_get_file(t, fd);
 	if (fl != NULL) {
 		file_close(fl);
-		thread_close_file(t, fl);
+        thread_close_file(t, fd);
 	}
 	lock_release(&file_system_lock);
 }
