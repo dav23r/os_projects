@@ -49,13 +49,22 @@ process_execute (const char *file_name)
       palloc_free_page(fn_copy);
   } else {
       struct thread *curr = thread_current ();
-      struct child_thread *ch = calloc(1, sizeof(struct child_thread));
-      if (ch) {
+	  //ASSERT(0);
+	  /*
+	  struct child_thread *ch = calloc(1, sizeof(struct child_thread));
+	  /*/
+	  struct child_thread *ch = malloc(sizeof(struct child_thread));
+	  //*/
+	  //ASSERT(0);
+	  if (ch) {
+		  //ASSERT(0);
           ch->this_thread->tid = tid;
           ch->is_waited = false;
           ch->exited = false;
           ch->parent_thread = curr;
-          list_push_back (&curr->children, ch);
+		  //ASSERT(0);
+		  list_push_back (&curr->children, ch);
+		  //ASSERT(0);
       }
   }
   return tid;
