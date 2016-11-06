@@ -183,6 +183,7 @@ static int open(const char *file) {
 	struct thread *currT = thread_current();
 	int free_pid = get_thread_first_free_id(currT);
 	struct file *opened_file;
+    // TODO pay attentiion, don't understand
 	if (free_pid < 0 || (opened_file = filesys_open(file))) {
 		currT->files[free_pid] = opened_file;
 		rv = free_pid;
