@@ -101,12 +101,12 @@ process_wait (tid_t child_tid) {
   struct thread * cur = thread_current();
   lock_acquire(&cur->child_lock);
   lock_acquire(&child->this_thread->wait_on_me);
-  if (child->waited || !child->exited ){
+  if (child->is_waited || !child->exited ){
     lock_release(&child->this_thread->wait_on_me);
     lock_release(&cur->child_lock);
     return -1;
   }
-  child->waited = true;
+  child->is_waited = true;
   lock_release(&child->this_thread->wait_on_me);
   lock_release(&cur->child_lock);
   return child->exit_status;
