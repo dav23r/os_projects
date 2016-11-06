@@ -14,6 +14,9 @@ typedef int pid_t;
 struct lock file_system_lock;
 
 
+#define max(a, b) (((a) > (b)) ? (a) : (b))
+#define min(a, b) (((a) < (b)) ? (a) : (b))
+
 #define COMMENT_AND_EXIT(comment) printf("Exiting on system call: %s\n", (comment)); thread_exit();
 
 /**
@@ -199,11 +202,17 @@ static int filesize(int fd) {
 	return rv;
 }
 
+/**
+Ensures that all the addresses of buffer have valid mapping 
+to physical memory. Currently works in brute force manner
+checking each address, does not take advantage of the fact
+that single page has particular size.
+*/
 static bool valid_buffer(void *buffer, unsigned size){
 	char *addr = buffer;
 	unsigned int i;
 	for (i = 0; i < size; ++i){
-		if (!address_valid(addr[i]))
+		if (!address_valid(addr + i))
 			return false;
 	}
 	return true;
@@ -221,7 +230,11 @@ static int read(int fd, void *buffer, unsigned size) {
 	if (!valid_buffer(buffer, size))
 		exit(-1);
 
-	if (fd == STDIN_FILENO){
+    if (fd == STDOUT_FILENO){
+        // Won't read from standard output
+        rv = 0;
+    }
+	else if (fd == STDIN_FILENO){
 		// Read from standard input
 		unsigned int i;
 		char *addr = buffer;
@@ -229,20 +242,18 @@ static int read(int fd, void *buffer, unsigned size) {
 			addr[i] = input_getc();
 		rv = size;
 	} else{
-		lock_acquire(&file_system_lock);
-
 		// Get current process' file struct with provided fd
 		struct file *fl = thread_this_get_file(fd);
 
 		// Terminate current thread if invalid file descriptor
 		if (!fl){
-			lock_release(&file_system_lock);
-			exit(-1); 
-		}
-		// Copy data to buffer using 'filesys' interface
-		rv = file_read(fl, buffer, size);
-
-		lock_release(&file_system_lock);
+            rv = 0;
+		} else {
+            lock_acquire(&file_system_lock);
+            // Copy data to buffer using 'filesys' interface
+            rv = file_read(fl, buffer, size);
+            lock_release(&file_system_lock);
+        }
 	}
 	return rv;
 }
@@ -260,14 +271,36 @@ bytes. (It is reasonable to break up larger buffers.) Otherwise, lines of text o
 by different processes may end up interleaved on the console, confusing both human
 readers and our grading scripts.
 */
+#define CHUNCK_SIZE 100  // 100 bytes per chunck
 static int write(int fd, const void *buffer, unsigned size) {
-	lock_acquire(&file_system_lock);
-	int rv = 0;
-	// DO THIS
-	struct file *fl = thread_this_get_file(fd);
+	int rv;
+
+	// Check all the addreses to point to valid physical memory
+	if (!valid_buffer(buffer, size))
+		exit(-1);
+
+    if (fd == STDOUT_FILENO){
+        // Write to standard output by chuncks of CHUCK_SIZE
+        char *addr = buffer;
+        while (size > 0){
+            unsigned int to_write = min(CHUNCK_SIZE, size);
+            putbuf(addr, to_write);
+            size -= to_write;
+            addr += to_write;
+        }
+        rv = size;
+    } else if (fd == STDIN_FILENO){
+        // Won't write to standard input
+        rv = 0;
+    } else{
+	    struct file *fl = thread_this_get_file(fd);
+        lock_acquire(&file_system_lock);
+        if (fl){
+            rv = file_write(fl, buffer, size);   
+        }
+	    lock_release(&file_system_lock);
+    }
 	
-	lock_release(&file_system_lock);
-	COMMENT_AND_EXIT("WRITE");
 	return rv;
 }
 
@@ -365,8 +398,6 @@ static void close_handler(struct intr_frame *f) {
 }
 
 #undef COMMENT_AND_EXIT
-
-#define max(a, b) (((a) > (b)) ? (a) : (b))
 
 #define MAX_SYS_CALL_ID \
 				max( \
