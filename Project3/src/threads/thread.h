@@ -104,6 +104,7 @@ struct thread
 #ifdef USERPROG
     /* Owned by userprog/process.c. */
     uint32_t *pagedir;                  /* Page directory. */
+	struct lock wait_on_me;
 	struct file *files[MAX_OPEN_FILES];	/* File descriptors. */
 	struct thread *parent_thread;		/* Parent thread. */
 	struct list children;				/* Child threads. */
@@ -120,7 +121,7 @@ struct child_thread {
 	struct thread *this_thread;
 	struct list_elem elem;
 	bool is_waited;
-    bool exited;
+  bool exited;
 	int exit_status;
 };
 
@@ -161,6 +162,8 @@ void thread_set_nice (int);
 int thread_get_recent_cpu (void);
 int thread_get_load_avg (void);
 
+struct thread *get_thread(tid_t thread_tid);
+
 #ifdef USERPROG
 struct file * thread_get_file(struct thread *t, int fd);
 bool thread_set_file(struct thread *t, int fd, struct file *file);
@@ -176,6 +179,7 @@ bool thread_this_set_file(int fd, struct file *file);
 Closes thre given file descriptor.
 */
 #define thread_this_close_file(fd) thread_this_set_file(fd, NULL);
+struct child_thread *get_child(tid_t thread_tid);
 #endif
 
 #endif /* threads/thread.h */

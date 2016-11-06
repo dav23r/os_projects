@@ -200,17 +200,51 @@ static int filesize(int fd) {
 	return rv;
 }
 
+static bool valid_buffer(void *buffer, unsigned size){
+	char *addr = buffer;
+	unsigned int i;
+	for (i = 0; i < size; ++i){
+		if (!address_valid(addr[i]))
+			return false;
+	}
+	return true;
+}
+
 /**
 Reads size bytes from the file open as fd into buffer. Returns the number of bytes
 actually read (0 at end of file), or -1 if the file could not be read (due to a condition
 other than end of file). Fd 0 reads from the keyboard using input_getc().
 */
 static int read(int fd, void *buffer, unsigned size) {
-	lock_acquire(&file_system_lock);
-	int rv = 0;
-	// DO THIS
-	lock_release(&file_system_lock);
-	COMMENT_AND_EXIT("READ");
+	int rv;
+
+	// Check all the addreses to point to valid physical memory
+	if (!valid_buffer(buffer, size))
+		exit(-1);
+
+	if (fd == STDIN_FILENO){
+		// Read from standard input
+		unsigned int i;
+		char *addr = buffer;
+		for (i = 0; i < size; ++i)
+			addr[i] = input_getc();
+		rv = size;
+	} else{
+		lock_acquire(&file_system_lock);
+
+		// Get current process' file struct with provided fd
+		struct file *fl = thread_this_get_file(fd);
+
+		// Terminate current thread if invalid file descriptor
+		if (!fl){
+			lock_release(&file_system_lock);
+			exit(-1); 
+		}
+		// Copy data to buffer using 'filesys' interface
+		rv = file_read(fl, buffer, size);
+
+		lock_release(&file_system_lock);
+	}
 	return rv;
 }
 
@@ -231,6 +265,8 @@ static int write(int fd, const void *buffer, unsigned size) {
 	lock_acquire(&file_system_lock);
 	int rv = 0;
 	// DO THIS
+	struct file *fl = thread_this_get_file(fd);
+	
 	lock_release(&file_system_lock);
 	COMMENT_AND_EXIT("WRITE");
 	return rv;

@@ -102,9 +102,24 @@ start_process (void *file_name_)
    This function will be implemented in problem 2-2.  For now, it
    does nothing. */
 int
-process_wait (tid_t child_tid UNUSED) 
-{
-  return -1;
+process_wait (tid_t child_tid) {
+  if (child_tid == TID_ERROR)
+    return -1;
+  struct child_thread * child = get_child(child_tid);
+  if (!child)
+    return  -1;
+  struct thread * cur = thread_current();
+  lock_acquire(&cur->child_lock);
+  lock_acquire(&child->this_thread->wait_on_me);
+  if (child->is_waited || !child->exited ){
+    lock_release(&child->this_thread->wait_on_me);
+    lock_release(&cur->child_lock);
+    return -1;
+  }
+  child->is_waited = true;
+  lock_release(&child->this_thread->wait_on_me);
+  lock_release(&cur->child_lock);
+  return child->exit_status;
 }
 
 /* Free the current process's resources. */
