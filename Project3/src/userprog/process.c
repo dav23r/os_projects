@@ -43,11 +43,21 @@ process_execute (const char *file_name)
   char *prog_name;
   char *args_str;
   prog_name = strtok_r(fn_copy, " ", &args_str);
-
   /* Create a new thread to execute FILE_NAME. */
   tid = thread_create (prog_name, PRI_DEFAULT, start_process, args_str);
-  if (tid == TID_ERROR)
-    palloc_free_page (fn_copy); 
+  if (tid == TID_ERROR) {
+      palloc_free_page(fn_copy);
+  } else {
+      struct thread *curr = thread_current ();
+      struct child_thread *ch = calloc(1, sizeof(struct child_thread));
+      if (ch) {
+          ch->this_thread->tid = tid;
+          ch->is_waited = false;
+          ch->exited = false;
+          ch->parent_thread = curr;
+          list_push_back (&curr->children, ch);
+      }
+  }
   return tid;
 }
 
@@ -69,8 +79,8 @@ start_process (void *file_name_)
 
   /* If load failed, quit. */
   palloc_free_page (file_name);
-  if (!success) 
-    thread_exit ();
+  if (!success)
+      thread_exit();
 
   /* Start the user process by simulating a return from an
      interrupt, implemented by intr_exit (in
@@ -92,9 +102,24 @@ start_process (void *file_name_)
    This function will be implemented in problem 2-2.  For now, it
    does nothing. */
 int
-process_wait (tid_t child_tid UNUSED) 
-{
-  return -1;
+process_wait (tid_t child_tid) {
+  if (child_tid == TID_ERROR)
+    return -1;
+  struct child_thread * child = get_child(child_tid);
+  if (!child)
+    return  -1;
+  struct thread * cur = thread_current();
+  lock_acquire(&cur->child_lock);
+  sema_down(&child->this_thread->wait_on_me);
+  if (child->is_waited || !child->exited ){
+    sema_up(&child->this_thread->wait_on_me);
+    lock_release(&cur->child_lock);
+    return -1;
+  }
+  child->is_waited = true;
+  sema_up(&child->this_thread->wait_on_me);
+  lock_release(&cur->child_lock);
+  return child->exit_status;
 }
 
 /* Free the current process's resources. */
@@ -435,6 +460,9 @@ load_segment (struct file *file, off_t ofs, uint8_t *upage,
 static bool
 setup_stack (void **esp, char *args)
 {
+    //ASSERT(thread_current ()->name[0] == 'h' && thread_current ()->name[1] == 'a' && thread_current ()->name[2] == 'l' &&
+      //            thread_current ()->name[3] == 't' && thread_current ()->name[4] == '\0' && strlen(args) == 0);
+
   uint8_t *kpage;
   bool success = false;
 
@@ -443,20 +471,20 @@ setup_stack (void **esp, char *args)
     {
       success = install_page (((uint8_t *) PHYS_BASE) - PGSIZE, kpage, true);
       if (success) {
-        // TODO: setup stack
 
         int how_far_from_base = 0;
         int len_tmp = 0;
         char *args_pointer_from_end;
 
-        // write args str in stack
+        /*write args str in stack
         len_tmp = strlen(args) + 1;
         how_far_from_base += len_tmp;
         *esp -= len_tmp;
-        memcpy(*esp, args, len_tmp);
+        memcpy(*esp, args, len_tmp);*/
 
         // write command name in stack after whole arguments string
         len_tmp = strlen(thread_current ()->name) + 1;
+          // ASSERT(len_tmp == 5); // for halt
         how_far_from_base += len_tmp;
         *esp -= len_tmp;
         args_pointer_from_end = *esp;
@@ -481,7 +509,7 @@ setup_stack (void **esp, char *args)
           }
           --how_far_from_base;
         }
-
+        // ASSERT(how_far_from_base == 4);
         int aruments_cnt = 0;
         char *pointer;
         while (how_far_from_base > 0) {
@@ -505,6 +533,8 @@ setup_stack (void **esp, char *args)
           if (curr_symb == ' ')
             *pointer = '\0';
         }
+
+         // ASSERT(how_far_from_base == 0 && aruments_cnt == 1); // for halt
 
         // write command name as next arg
         *esp -= sizeof(char *);

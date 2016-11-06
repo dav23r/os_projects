@@ -290,8 +290,12 @@ thread_exit (void)
      and schedule another process.  That process will destroy us
      when it calls thread_schedule_tail(). */
   intr_disable ();
-  list_remove (&thread_current()->allelem);
-  thread_current ()->status = THREAD_DYING;
+  struct thread *t = thread_current();
+#ifdef USERPROG
+  sema_up(&t->wait_on_me);
+#endif
+  list_remove (&t->allelem);
+  t->status = THREAD_DYING;
   schedule ();
   NOT_REACHED ();
 }
@@ -470,6 +474,7 @@ init_thread (struct thread *t, const char *name, int priority)
 	  t->files[i] = NULL;
   list_init(&t->children);
   lock_init(&t->child_lock);
+  sema_init(&t->wait_on_me, 0);
 #endif
 
   old_level = intr_disable ();
@@ -592,6 +597,12 @@ allocate_tid (void)
 uint32_t thread_stack_ofs = offsetof (struct thread, stack);
 
 
+struct thread *get_thread(tid_t thread_tid){
+  if (thread_tid == TID_ERROR)
+    return NULL;
+  return NULL;
+}
+
 
 
 #ifdef USERPROG
@@ -634,4 +645,31 @@ Links the file to the descriptor (if the descriptor is unused)
 bool thread_this_set_file(int fd, struct file *file) {
 	return thread_set_file(thread_current(), fd, file);
 }
+/*
+returns the child thread of current thread
+with passed tid. In case of none being found
+or tid being erroneous NULL is returned.
+Otherwise the found child thread gets returned
+*/
+struct child_thread *get_child(tid_t thread_tid){
+  if (thread_tid == TID_ERROR)
+    return NULL;
+  struct thread *cur = thread_current();
+  struct list children = cur->children;
+  bool found = false;
+  struct list_elem *e;
+  //from list.h
+  for (e = list_begin (&cur->children); e != list_end (&cur->children);
+           e = list_next (e)){
+          struct child_thread *f = list_entry (e, struct child_thread, elem);
+          if (f->this_thread->tid==thread_tid){
+            found = true;
+            break;
+          }
+        }
+  if (!found)
+    return NULL;
+  return list_entry(e, struct child_thread, elem);
+}
+
 #endif

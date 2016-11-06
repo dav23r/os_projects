@@ -55,6 +55,7 @@ Terminates Pintos by calling shutdown_power_off() (declared in �devices/shutdo
 This should be seldom used, because you lose some information about possible deadlock situations, etc.
 */
 static void halt(void) {
+    ASSERT(0);
 	shutdown_power_off();
 }
 
