@@ -480,6 +480,7 @@ setup_stack (void **esp, char *args)
     {
       success = install_page (((uint8_t *) PHYS_BASE) - PGSIZE, kpage, true);
       if (success) {
+        *esp = PHYS_BASE;
 
         int how_far_from_base = 0;
         int len_tmp = 0;
@@ -500,9 +501,8 @@ setup_stack (void **esp, char *args)
         memcpy(*esp, thread_current ()->name, len_tmp);
 
         // round to 4's multiple and add 4 bytes for
-        int missing_bytes_to_round = sizeof(void *) - how_far_from_base % sizeof(void *);
+        int missing_bytes_to_round = sizeof(void *) - (how_far_from_base % sizeof(void *));
           for (; missing_bytes_to_round-- > 0; *(--(*(char **)esp)) = 0);
-        *esp -= sizeof(void *);
 
         // write NULL for that argv[argc] will be NULL as required
         *esp = NULL;
