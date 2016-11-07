@@ -63,7 +63,7 @@ process_execute (const char *file_name)
           ch->exited = false;
           ch->parent_thread = curr;
 		  //ASSERT(0);
-		  list_push_back (&curr->children, ch);
+		  list_push_back (&curr->children, &ch->elem);
 		  //ASSERT(0);
       }
   }
@@ -88,6 +88,7 @@ start_process (void *file_name_)
 
   /* If load failed, quit. */
   palloc_free_page (file_name);
+  ASSERT(0);
   if (!success)
       thread_exit();
 
@@ -112,8 +113,11 @@ start_process (void *file_name_)
    does nothing. */
 int
 process_wait (tid_t child_tid) {
+while(1);
   if (child_tid == TID_ERROR)
     return -1;
+
+/*
   struct child_thread * child = get_child(child_tid);
   if (!child)
     return  -1;
@@ -128,7 +132,7 @@ process_wait (tid_t child_tid) {
   child->is_waited = true;
   sema_up(&child->this_thread->wait_on_me);
   lock_release(&cur->child_lock);
-  return child->exit_status;
+  return child->exit_status;*/
 }
 
 /* Free the current process's resources. */
@@ -480,7 +484,7 @@ setup_stack (void **esp, char *args)
     {
       success = install_page (((uint8_t *) PHYS_BASE) - PGSIZE, kpage, true);
       if (success) {
-        *esp = PHYS_BASE;
+        *esp = PHYS_BASE - 12;/*
 
         int how_far_from_base = 0;
         int len_tmp = 0;
@@ -561,9 +565,9 @@ setup_stack (void **esp, char *args)
 
         // alloc for RV
         *esp -= sizeof(void *);
-          * (uint32_t *) *esp = 0x0;
+          * (uint32_t *) *esp = 0x0;*/
       } else {
-        palloc_free_page(kpage);
+        // palloc_free_page(kpage);
       }
     }
   return success;

@@ -64,6 +64,8 @@ parent waits for it (see below), this is the status that will be returned. Conve
 a status of 0 indicates success and nonzero values indicate errors
 */
 static void exit(int status) {
+
+/*
     struct child_thread *child;
     struct thread *currT = thread_current();
     struct thread *parent = currT->parent_thread;
@@ -83,7 +85,7 @@ static void exit(int status) {
             lock_release(&parent->child_lock);
         }
         e = list_next (e);
-    }
+    }*/
     thread_exit ();
 }
 
@@ -472,7 +474,7 @@ syscall_init (void)
 static void
 syscall_handler (struct intr_frame *f) 
 {
-	//ASSERT(0);
+    ASSERT(0);
 	init_sys_handlers();
 	int i;
 	for (i = 0; i < MAX_SYSCALL_PARAMS; i++)
