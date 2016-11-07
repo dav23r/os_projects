@@ -485,6 +485,8 @@ setup_stack (void **esp, char *args)
       success = install_page (((uint8_t *) PHYS_BASE) - PGSIZE, kpage, true);
       if (success) {
         *esp = PHYS_BASE - 12;/*
+        *esp = PHYS_BASE - 12;
+          return true;
 
         int how_far_from_base = 0;
         int len_tmp = 0;
@@ -507,9 +509,10 @@ setup_stack (void **esp, char *args)
         // round to 4's multiple and add 4 bytes for
         int missing_bytes_to_round = sizeof(void *) - (how_far_from_base % sizeof(void *));
           for (; missing_bytes_to_round-- > 0; *(--(*(char **)esp)) = 0);
+          esp -= sizeof(void *);
 
         // write NULL for that argv[argc] will be NULL as required
-        *esp = NULL;
+          * (uint32_t *) *esp = (uint32_t) NULL;
 
         --how_far_from_base;
         while(true) {
@@ -556,8 +559,8 @@ setup_stack (void **esp, char *args)
         ++aruments_cnt;
 
         // write argv
-        *esp -= sizeof(char *);
-        * (uint32_t *) *esp = *(uint32_t *)(esp + sizeof(char *));
+          * (uint32_t *) (*esp - 4) = *(uint32_t *) esp;
+          *esp -= 4;
 
         // write argc
         *esp -= sizeof(int);
