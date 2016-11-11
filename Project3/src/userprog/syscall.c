@@ -197,6 +197,20 @@ readers and our grading scripts.
 */
 #define CHUNCK_SIZE 100  // 100 bytes per chunck
 static int write(int fd, const void *buffer, unsigned size) {
+	if (!pointers_valid(buffer, size)) exit(-1);
+	else if (fd == STDOUT_FILENO) {
+		// Write to standard output by chuncks of CHUCK_SIZE
+		const char *addr = buffer;
+		unsigned int rem_size = size;
+		while (rem_size > 0) {
+			unsigned int to_write = min(CHUNCK_SIZE, rem_size);
+			putbuf(addr, to_write);
+			rem_size -= to_write;
+			addr += to_write;
+		}
+		return size;
+	}
+	else if (fd == STDIN_FILENO) return 0;
 	ASSERT(0);
 }
 
