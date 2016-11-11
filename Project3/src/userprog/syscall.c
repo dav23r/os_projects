@@ -131,7 +131,14 @@ false otherwise. Creating a new file does not open it: opening the new file is
 a separate operation which would require a open system call.
 */
 static bool create(const char *file, unsigned initial_size) {
-	ASSERT(0);
+	if (!string_valid(file)) exit(-1);
+	else {
+		lock_acquire(&filesys_lock);
+		bool rv = filesys_create(file, initial_size);
+		lock_release(&filesys_lock);
+		return rv;
+	}
+	return false;
 }
 
 
@@ -141,7 +148,14 @@ removed regardless of whether it is open or closed, and removing an open file do
 not close it. See [Removing an Open File], page 35, for details.
 */
 static bool remove(const char *file) {
-	ASSERT(0);
+	if (!string_valid(file)) exit(-1);
+	else {
+		lock_acquire(&filesys_lock);
+		bool rv = filesys_remove(file);
+		lock_release(&filesys_lock);
+		return rv;
+	}
+	return false;
 }
 
 
@@ -160,7 +174,31 @@ file are closed independently in separate calls to close and they do not share a
 position.
 */
 static int open(const char *file) {
-	ASSERT(0);
+	if (!string_valid(file)) exit(-1);
+	else {
+		lock_acquire(&filesys_lock);
+
+		struct thread *this_thread = thread_current();
+		
+		file_descriptor fd = thread_get_free_fd(this_thread);
+		if (fd >= 0) {
+			struct file *opened_file = filesys_open(file);
+			if (opened_file != NULL) {
+				if (!thread_set_file(this_thread, opened_file, fd)) {
+					file_close(opened_file);
+					fd = -1;
+				}
+			}
+			else {
+				fd = -1;
+			}
+		}
+
+		lock_release(&filesys_lock);
+		
+		return fd;
+	}
+	return -1;
 }
 
 
