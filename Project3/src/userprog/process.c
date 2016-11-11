@@ -497,7 +497,7 @@ setup_stack (void **esp, const char *file_name)
 		if (success) {
 			*esp = PHYS_BASE;
 
-			char *prog_name = strtok_r(file_name, " ", &file_name);
+			char *prog_name = strtok_r((char*)file_name, " ", (char**)&file_name);
 			int str_len = 0;
 			int how_far = 0;
 
