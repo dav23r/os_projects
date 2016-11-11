@@ -105,6 +105,7 @@ static pid_t exec(const char *cmd_line) {
 		}
 		else return -1;
 	}
+	return -1;
 }
 
 
@@ -255,6 +256,7 @@ static int read(int fd, void *buffer, unsigned size) {
 		lock_release(&filesys_lock);
 		return rv;
 	}
+	return 0;
 }
 
 
@@ -294,6 +296,7 @@ static int write(int fd, const void *buffer, unsigned size) {
 		lock_release(&filesys_lock);
 		return rv;
 	}
+	return 0;
 }
 
 
