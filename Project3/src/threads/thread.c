@@ -489,7 +489,7 @@ init_thread (struct thread *t, const char *name, int priority)
   else t->parent = NULL;
   int i; for (i = 0; i < MAX_OPEN_FILES; i++) t->open_files[i] = NULL;
   t->load_status = false;
-  sema_init(&t->successful_load_lock, 0);
+  sema_init(&t->load_lock, 0);
 #endif
 
   old_level = intr_disable ();

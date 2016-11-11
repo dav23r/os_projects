@@ -350,6 +350,7 @@ load (const char *file_name, void (**eip) (void), void **esp)
   /* Set up stack. */
   if (!setup_stack (esp, file_name))
     goto done;
+  t->load_status = true;
 
   /* Start address. */
   *eip = (void (*) (void)) ehdr.e_entry;
@@ -358,6 +359,7 @@ load (const char *file_name, void (**eip) (void), void **esp)
 
  done:
   /* We arrive here whether the load is successful or not. */
+  sema_up(&t->load_lock);
   if (success)
 	  t->executable_file = file;
   else {
