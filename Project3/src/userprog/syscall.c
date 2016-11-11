@@ -10,6 +10,7 @@
 #include "devices/shutdown.h"
 #include "filesys/filesys.h"
 #include "filesys/file.h"
+#include "devices/input.h"
 
 
 #define max(a, b) (((a) > (b)) ? (a) : (b))
