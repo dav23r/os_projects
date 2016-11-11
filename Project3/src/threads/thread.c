@@ -13,6 +13,7 @@
 #include "threads/vaddr.h"
 #ifdef USERPROG
 #include "userprog/process.h"
+#include "userprog/syscall.h"
 #endif
 
 /* Random value for struct thread's `magic' member.
@@ -486,6 +487,7 @@ init_thread (struct thread *t, const char *name, int priority)
 	  sema_up(&cur->child_lock);
   }
   else t->parent = NULL;
+  int i; for (i = 0; i < MAX_OPEN_FILES; i++) t->open_files[i] = NULL;
 #endif
 
   old_level = intr_disable ();
@@ -640,4 +642,59 @@ void thread_free_all_children(struct thread *t) {
 	}
 	sema_up(&t->child_lock);
 }
+
+
+
+
+// Returns the file based on the file descriptor.
+struct file* thread_get_file(struct thread *t, file_descriptor fd) {
+	if (fd < 0 || fd >= MAX_OPEN_FILES) return NULL;
+	else return t->open_files[fd];
+}
+// Finds and returns the first unused file descriptor it finds.
+file_descriptor thread_get_free_fd(struct thread *t) {
+	file_descriptor i = 2;
+	while (i < MAX_OPEN_FILES) {
+		if (t->open_files[i] == NULL) return i;
+		i++;
+	}
+	return (-1);
+}
+// Links the file descriptor to the actual file (if and only if the file descriptor is unused).
+bool thread_set_file(struct thread *t, struct file *file, file_descriptor fd) {
+	if (fd < 0 || fd >= MAX_OPEN_FILES || t->open_files[fd] != NULL) {
+		return false;
+	}
+	else {
+		t->open_files[fd] = file;
+		return true;
+	}
+}
+// Links the file descriptor to the actual file (closing the previous file if any open).
+bool thread_set_file_force(struct thread *t, struct file *file, file_descriptor fd) {
+	if (fd < 0 || fd >= MAX_OPEN_FILES) return false;
+	else {
+		if (t->open_files[fd] != NULL) {
+			filesys_lock_acquire();
+			file_close(t->open_files[fd]);
+			filesys_lock_release();
+		}
+		t->open_files[fd] = file;
+		return true;
+	}
+}
+// Closes all the files opened for the given thread.
+void thread_close_all_files(struct thread *t) {
+	filesys_lock_acquire();
+	file_descriptor i = 0;
+	while (i < MAX_OPEN_FILES) {
+		if (t->open_files[i] != NULL) {
+			file_close(t->open_files[i]);
+			t->open_files[i] = NULL;
+		}
+		i++;
+	}
+	filesys_lock_release();
+}
+
 

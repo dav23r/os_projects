@@ -129,6 +129,7 @@ process_exit (void)
   }
   filesys_lock_release();
   thread_free_all_children(cur);
+  thread_close_all_files(cur);
 
   /* Destroy the current process's page directory and switch back
      to the kernel-only page directory. */

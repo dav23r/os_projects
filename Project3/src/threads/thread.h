@@ -28,6 +28,8 @@ typedef int tid_t;
 
 typedef tid_t pid_t;
 
+#define MAX_OPEN_FILES 256
+
 /* A kernel thread or user process.
 
    Each thread structure is stored in its own 4 kB page.  The
@@ -109,6 +111,7 @@ struct thread
 	struct semaphore wait_lock;
 	struct semaphore zombie_lock;
 	struct thread *parent;
+	struct file* open_files[MAX_OPEN_FILES];
 #endif
 
     /* Owned by thread.c. */
@@ -154,5 +157,12 @@ int thread_get_load_avg (void);
 
 struct thread* get_child_by_pid(struct thread *parent, pid_t pid);
 void thread_free_all_children(struct thread *t);
+
+typedef int file_descriptor; // file_descriptor will be same as int.
+struct file* thread_get_file(struct thread *t, file_descriptor fd);
+file_descriptor thread_get_free_fd(struct thread *t);
+bool thread_set_file(struct thread *t, struct file *file, file_descriptor fd);
+bool thread_set_file_force(struct thread *t, struct file *file, file_descriptor fd);
+void thread_close_all_files(struct thread *t);
 
 #endif /* threads/thread.h */
