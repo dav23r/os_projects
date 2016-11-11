@@ -112,6 +112,8 @@ struct thread
 	struct semaphore zombie_lock;
 	struct thread *parent;
 	struct file* open_files[MAX_OPEN_FILES];
+	bool load_status;
+	struct semaphore successful_load_lock;
 #endif
 
     /* Owned by thread.c. */
