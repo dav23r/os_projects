@@ -216,7 +216,23 @@ actually read (0 at end of file), or -1 if the file could not be read (due to a 
 other than end of file). Fd 0 reads from the keyboard using input_getc().
 */
 static int read(int fd, void *buffer, unsigned size) {
-	ASSERT(0);
+	if (!pointers_valid(buffer, size)) exit(-1);
+	else if (fd == STDIN_FILENO) {
+		// Read from standard input
+		unsigned int i;
+		char *addr = buffer;
+		for (i = 0; i < size; ++i)
+			addr[i] = input_getc();
+		return size;
+	}
+	else if (fd == STDOUT_FILENO) return 0;
+	else {
+		lock_acquire(&filesys_lock);
+		struct file *file_ptr = thread_get_file(thread_current(), fd);
+		int rv = ((file_ptr != NULL) ? file_read(file_ptr, (void*)buffer, size) : 0);
+		lock_release(&filesys_lock);
+		return rv;
+	}
 }
 
 
