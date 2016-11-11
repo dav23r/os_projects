@@ -17,6 +17,7 @@
 #include "threads/palloc.h"
 #include "threads/thread.h"
 #include "threads/vaddr.h"
+#include "syscall.h"
 
 static thread_func start_process NO_RETURN;
 static bool load (const char *cmdline, void (**eip) (void), void **esp);
@@ -28,21 +29,31 @@ static bool load (const char *cmdline, void (**eip) (void), void **esp);
 tid_t
 process_execute (const char *file_name) 
 {
-  char *fn_copy;
-  tid_t tid;
+	char *fn_copy;
+	tid_t tid;
 
-  /* Make a copy of FILE_NAME.
-     Otherwise there's a race between the caller and load(). */
-  fn_copy = palloc_get_page (0);
-  if (fn_copy == NULL)
-    return TID_ERROR;
-  strlcpy (fn_copy, file_name, PGSIZE);
+	/* Make a copy of FILE_NAME.
+	Otherwise there's a race between the caller and load(). */
+	fn_copy = palloc_get_page(0);
+	if (fn_copy == NULL)
+		return TID_ERROR;
+	strlcpy(fn_copy, file_name, PGSIZE);
 
-  /* Create a new thread to execute FILE_NAME. */
-  tid = thread_create (file_name, PRI_DEFAULT, start_process, fn_copy);
-  if (tid == TID_ERROR)
-    palloc_free_page (fn_copy); 
-  return tid;
+	char *file_name_only = palloc_get_page(0);
+	if (file_name_only == NULL) {
+		palloc_free_page((void*)fn_copy);
+		return TID_ERROR;
+	}
+	int i; for (i = 0; (file_name[i] != '\0' && file_name[i] != ' '); i++) file_name_only[i] = file_name[i];
+	file_name_only[i] = '\0';
+
+	/* Create a new thread to execute FILE_NAME. */
+	tid = thread_create(file_name_only, PRI_DEFAULT, start_process, fn_copy);
+	if (tid == TID_ERROR) {
+		palloc_free_page((void*)fn_copy);
+		palloc_free_page((void*)file_name_only);
+	}
+	return tid;
 }
 
 /* A thread function that loads a user process and starts it
@@ -62,7 +73,7 @@ start_process (void *file_name_)
   success = load (file_name, &if_.eip, &if_.esp);
 
   /* If load failed, quit. */
-  palloc_free_page (file_name);
+  palloc_free_page ((void*)file_name);
   if (!success) 
     thread_exit ();
 
@@ -99,7 +110,7 @@ process_exit (void)
   uint32_t *pd;
 
   if (cur->executable_name != NULL) printf("%s: exit(%d)\n", cur->executable_name, cur->exit_status);
-  if (cur->executable_name != NULL) palloc_free_page(cur->executable_name);
+  if (cur->executable_name != NULL) palloc_free_page((void*)cur->executable_name);
   filesys_lock_acquire();
   if (cur->executable_file != NULL) {
 	  file_allow_write(cur->executable_file);
@@ -231,9 +242,19 @@ load (const char *file_name, void (**eip) (void), void **esp)
   process_activate ();
 
   /* Open executable file. */
+  char saved_char;
+  i = 0;
+  while (true) {
+	  if (file_name[i] == ' ' || file_name[i] == '\0') {
+		  saved_char = file_name[i];
+		  ((char*)file_name)[i] = '\0';
+		  break;
+	  }
+	  i++;
+  }
   filesys_lock_acquire();
   file = filesys_open(file_name);
-  file = filesys_open (file_name);
+  ((char*)file_name)[i] = saved_char;
   if (file == NULL) 
     {
       printf ("load: %s: open failed\n", file_name);
@@ -331,7 +352,7 @@ load (const char *file_name, void (**eip) (void), void **esp)
 		  file_allow_write(file);
 		  file_close(file);
 	  }
-	  palloc_free_page(t->executable_name);
+	  palloc_free_page((void*)t->executable_name);
 	  t->executable_name = NULL;
   }
   filesys_lock_release();
