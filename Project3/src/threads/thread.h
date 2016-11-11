@@ -103,6 +103,12 @@ struct thread
 	struct file *executable_file;
 	int exit_status;
 	uint32_t *pagedir;                  /* Page directory. */
+	struct list child_list;
+	struct list_elem child_elem;
+	struct semaphore child_lock;
+	struct semaphore wait_lock;
+	struct semaphore zombie_lock;
+	struct thread *parent;
 #endif
 
     /* Owned by thread.c. */
@@ -144,5 +150,9 @@ int thread_get_nice (void);
 void thread_set_nice (int);
 int thread_get_recent_cpu (void);
 int thread_get_load_avg (void);
+
+
+struct thread* get_child_by_pid(struct thread *parent, pid_t pid);
+void thread_free_all_children(struct thread *t);
 
 #endif /* threads/thread.h */

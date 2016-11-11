@@ -289,7 +289,10 @@ thread_exit (void)
   ASSERT (!intr_context ());
 
 #ifdef USERPROG
-  process_exit ();
+  struct thread *cur_t = thread_current();
+  sema_up(&cur_t->wait_lock);
+  process_exit();
+  sema_down(&cur_t->zombie_lock);
 #endif
 
   /* Remove thread from all threads list, set our status to dying,
@@ -470,6 +473,21 @@ init_thread (struct thread *t, const char *name, int priority)
   t->priority = priority;
   t->magic = THREAD_MAGIC;
 
+#ifdef USERPROG
+  sema_init(&t->child_lock, 1);
+  list_init(&t->child_list);
+  sema_init(&t->wait_lock, 0);
+  sema_init(&t->zombie_lock, 0);
+  struct thread *cur = running_thread();
+  if (is_thread(cur) && (cur->status == THREAD_RUNNING)) {
+	  t->parent = cur;
+	  sema_down(&cur->child_lock);
+	  list_push_back(&cur->child_list, &t->child_elem);
+	  sema_up(&cur->child_lock);
+  }
+  else t->parent = NULL;
+#endif
+
   old_level = intr_disable ();
   list_push_back (&all_list, &t->allelem);
   intr_set_level (old_level);
@@ -588,3 +606,38 @@ allocate_tid (void)
 /* Offset of `stack' member within `struct thread'.
    Used by switch.S, which can't figure it out on its own. */
 uint32_t thread_stack_ofs = offsetof (struct thread, stack);
+
+
+
+
+
+
+// Returns a child with the given pid (NULL if not found)
+struct thread* get_child_by_pid(struct thread *parent, pid_t pid) {
+	struct thread *waited_thread = NULL;
+	sema_down(&parent->child_lock);
+	if (!list_empty(&parent->child_list)) {
+		struct list_elem *child = list_begin(&parent->child_list);
+		while (child != list_end(&parent->child_list)) {
+			struct thread *child_thread = list_entry(child, struct thread, child_elem);
+			if (child_thread->tid == pid) {
+				waited_thread = child_thread;
+				break;
+			}
+			child = list_next(child);
+		}
+	}
+	sema_up(&parent->child_lock);
+	return waited_thread;
+}
+// Lets every single child die
+void thread_free_all_children(struct thread *t) {
+	sema_down(&t->child_lock);
+	while (!list_empty(&t->child_list)) {
+		struct list_elem *child = list_pop_back(&t->child_list);
+		struct thread *child_thread = list_entry(child, struct thread, child_elem);
+		sema_up(&child_thread->zombie_lock);
+	}
+	sema_up(&t->child_lock);
+}
+
