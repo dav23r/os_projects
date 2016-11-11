@@ -283,7 +283,6 @@ thread_exit (void)
   ASSERT (!intr_context ());
 
 #ifdef USERPROG
-  sema_up(&thread_current()->wait_on_me);
   process_exit ();
 #endif
 
@@ -292,7 +291,7 @@ thread_exit (void)
      when it calls thread_schedule_tail(). */
   intr_disable ();
   list_remove (&thread_current()->allelem);
-  thread_current()->status = THREAD_DYING;
+  thread_current ()->status = THREAD_DYING;
   schedule ();
   NOT_REACHED ();
 }
@@ -465,15 +464,6 @@ init_thread (struct thread *t, const char *name, int priority)
   t->priority = priority;
   t->magic = THREAD_MAGIC;
 
-#ifdef USERPROG
-  int i;
-  for (i = 0; i < MAX_OPEN_FILES; i++)
-	  t->files[i] = NULL;
-  list_init(&t->children);
-  lock_init(&t->child_lock);
-  sema_init(&t->wait_on_me, 0);
-#endif
-
   old_level = intr_disable ();
   list_push_back (&all_list, &t->allelem);
   intr_set_level (old_level);
@@ -592,81 +582,3 @@ allocate_tid (void)
 /* Offset of `stack' member within `struct thread'.
    Used by switch.S, which can't figure it out on its own. */
 uint32_t thread_stack_ofs = offsetof (struct thread, stack);
-
-
-struct thread *get_thread(tid_t thread_tid){
-  if (thread_tid == TID_ERROR)
-    return NULL;
-  return NULL;
-}
-
-
-
-#ifdef USERPROG
-/**
-Returns file linked to the given file descriptor
-*/
-struct file * thread_get_file(struct thread *t, int fd) {
-	if (fd < 0 || fd >= MAX_OPEN_FILES) return NULL;
-	else return t->files[fd];
-}
-/**
-Links the file to the descriptor (if the descriptor is unused)
-*/
-bool thread_set_file(struct thread *t, int fd, struct file *file) {
-	if (fd < 0 || fd >= MAX_OPEN_FILES) return false;
-	if (t->files[fd] != NULL) return false;
-	else {
-		t->files[fd] = file;
-		return true;
-	}
-}
-
-int get_thread_first_free_id(struct thread *t) {
-    int i, pid = -1;
-    for (i = 2; i < MAX_OPEN_FILES; i++) {
-        if (!t->files[i]) return i;
-    }
-    return pid;
-}
-
-/**
-Returns file linked to the given file descriptor
-*/
-struct file * thread_this_get_file(int fd) {
-	return thread_get_file(thread_current(), fd);
-}
-/**
-Links the file to the descriptor (if the descriptor is unused)
-*/
-bool thread_this_set_file(int fd, struct file *file) {
-	return thread_set_file(thread_current(), fd, file);
-}
-/*
-returns the child thread of current thread
-with passed tid. In case of none being found
-or tid being erroneous NULL is returned.
-Otherwise the found child thread gets returned
-*/
-struct child_thread *get_child(tid_t thread_tid){
-  if (thread_tid == TID_ERROR)
-    return NULL;
-  struct thread *cur = thread_current();
-  struct list children = cur->children;
-  bool found = false;
-  struct list_elem *e;
-  //from list.h
-  for (e = list_begin (&cur->children); e != list_end (&cur->children);
-           e = list_next (e)){
-          struct child_thread *f = list_entry (e, struct child_thread, elem);
-          if (f->this_thread->tid==thread_tid){
-            found = true;
-            break;
-          }
-        }
-  if (!found)
-    return NULL;
-  return list_entry(e, struct child_thread, elem);
-}
-
-#endif

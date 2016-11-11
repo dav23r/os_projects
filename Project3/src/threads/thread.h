@@ -4,11 +4,6 @@
 #include <debug.h>
 #include <list.h>
 #include <stdint.h>
-#include "threads/synch.h"
-
-#ifdef USERPROG
-#include "filesys/file.h"
-#endif
 
 /* States in a thread's life cycle. */
 enum thread_status
@@ -28,9 +23,6 @@ typedef int tid_t;
 #define PRI_MIN 0                       /* Lowest priority. */
 #define PRI_DEFAULT 31                  /* Default priority. */
 #define PRI_MAX 63                      /* Highest priority. */
-#ifdef USERPROG
-#define MAX_OPEN_FILES 256
-#endif
 
 /* A kernel thread or user process.
 
@@ -104,27 +96,11 @@ struct thread
 #ifdef USERPROG
     /* Owned by userprog/process.c. */
     uint32_t *pagedir;                  /* Page directory. */
-	struct semaphore wait_on_me;
-	struct file *files[MAX_OPEN_FILES];	/* File descriptors. */
-	struct thread *parent_thread;		/* Parent thread. */
-	struct list children;				/* Child threads. */
-	struct lock child_lock;				/* Lock for children. */
 #endif
 
     /* Owned by thread.c. */
     unsigned magic;                     /* Detects stack overflow. */
   };
-
-
-struct child_thread {
-	struct thread *parent_thread;
-	struct thread *this_thread;
-	struct list_elem elem;
-	bool is_waited;
-  bool exited;
-	int exit_status;
-};
-
 
 /* If false (default), use round-robin scheduler.
    If true, use multi-level feedback queue scheduler.
@@ -161,25 +137,5 @@ int thread_get_nice (void);
 void thread_set_nice (int);
 int thread_get_recent_cpu (void);
 int thread_get_load_avg (void);
-
-struct thread *get_thread(tid_t thread_tid);
-
-#ifdef USERPROG
-struct file * thread_get_file(struct thread *t, int fd);
-bool thread_set_file(struct thread *t, int fd, struct file *file);
-int get_thread_first_free_id(struct thread *);
-/**
-Closes thre given file descriptor.
-*/
-#define thread_close_file(t, fd) thread_set_file(t, fd, NULL);
-
-struct file * thread_this_get_file(int fd);
-bool thread_this_set_file(int fd, struct file *file);
-/**
-Closes thre given file descriptor.
-*/
-#define thread_this_close_file(fd) thread_this_set_file(fd, NULL);
-struct child_thread *get_child(tid_t thread_tid);
-#endif
 
 #endif /* threads/thread.h */
