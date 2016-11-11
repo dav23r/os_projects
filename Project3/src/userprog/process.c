@@ -38,35 +38,10 @@ process_execute (const char *file_name)
     return TID_ERROR;
   strlcpy (fn_copy, file_name, PGSIZE);
 
-  // TODO: tokenize file_name that includes command and args, first is thread/program name, rest are arguments
-  // TODO: pass only args array in thread_create() as last param
-  char *prog_name;
-  char *args_str;
-  prog_name = strtok_r(fn_copy, " ", &args_str);
   /* Create a new thread to execute FILE_NAME. */
-  tid = thread_create (prog_name, PRI_DEFAULT, start_process, args_str);
-  if (tid == TID_ERROR) {
-      palloc_free_page(fn_copy);
-  } else {
-      struct thread *curr = thread_current ();
-	  //ASSERT(0);
-	  /*
-	  struct child_thread *ch = calloc(1, sizeof(struct child_thread));
-	  /*/
-	  struct child_thread *ch = malloc(sizeof(struct child_thread));
-	  //*/
-	  //ASSERT(0);
-	  if (ch) {
-		  //ASSERT(0);
-          ch->this_thread->tid = tid;
-          ch->is_waited = false;
-          ch->exited = false;
-          ch->parent_thread = curr;
-		  //ASSERT(0);
-		  list_push_back (&curr->children, &ch->elem);
-		  //ASSERT(0);
-      }
-  }
+  tid = thread_create (file_name, PRI_DEFAULT, start_process, fn_copy);
+  if (tid == TID_ERROR)
+    palloc_free_page (fn_copy); 
   return tid;
 }
 
@@ -88,9 +63,8 @@ start_process (void *file_name_)
 
   /* If load failed, quit. */
   palloc_free_page (file_name);
-  ASSERT(0);
-  if (!success)
-      thread_exit();
+  if (!success) 
+    thread_exit ();
 
   /* Start the user process by simulating a return from an
      interrupt, implemented by intr_exit (in
@@ -112,27 +86,9 @@ start_process (void *file_name_)
    This function will be implemented in problem 2-2.  For now, it
    does nothing. */
 int
-process_wait (tid_t child_tid) {
-while(1);
-  if (child_tid == TID_ERROR)
-    return -1;
-
-/*
-  struct child_thread * child = get_child(child_tid);
-  if (!child)
-    return  -1;
-  struct thread * cur = thread_current();
-  lock_acquire(&cur->child_lock);
-  sema_down(&child->this_thread->wait_on_me);
-  if (child->is_waited || !child->exited ){
-    sema_up(&child->this_thread->wait_on_me);
-    lock_release(&cur->child_lock);
-    return -1;
-  }
-  child->is_waited = true;
-  sema_up(&child->this_thread->wait_on_me);
-  lock_release(&cur->child_lock);
-  return child->exit_status;*/
+process_wait (tid_t child_tid UNUSED) 
+{
+  return -1;
 }
 
 /* Free the current process's resources. */
@@ -239,7 +195,7 @@ struct Elf32_Phdr
 #define PF_W 2          /* Writable. */
 #define PF_R 4          /* Readable. */
 
-static bool setup_stack (void **esp, char *args);
+static bool setup_stack (void **esp);
 static bool validate_segment (const struct Elf32_Phdr *, struct file *);
 static bool load_segment (struct file *file, off_t ofs, uint8_t *upage,
                           uint32_t read_bytes, uint32_t zero_bytes,
@@ -250,9 +206,9 @@ static bool load_segment (struct file *file, off_t ofs, uint8_t *upage,
    and its initial stack pointer into *ESP.
    Returns true if successful, false otherwise. */
 bool
-load (const char *args, void (**eip) (void), void **esp)
+load (const char *file_name, void (**eip) (void), void **esp) 
 {
-  struct thread *curr_t = thread_current ();
+  struct thread *t = thread_current ();
   struct Elf32_Ehdr ehdr;
   struct file *file = NULL;
   off_t file_ofs;
@@ -260,16 +216,16 @@ load (const char *args, void (**eip) (void), void **esp)
   int i;
 
   /* Allocate and activate page directory. */
-  curr_t->pagedir = pagedir_create ();
-  if (curr_t->pagedir == NULL)
+  t->pagedir = pagedir_create ();
+  if (t->pagedir == NULL) 
     goto done;
   process_activate ();
 
   /* Open executable file. */
-  file = filesys_open (curr_t->name);
+  file = filesys_open (file_name);
   if (file == NULL) 
     {
-      printf ("load: %s: open failed\n", curr_t->name);
+      printf ("load: %s: open failed\n", file_name);
       goto done; 
     }
 
@@ -282,7 +238,7 @@ load (const char *args, void (**eip) (void), void **esp)
       || ehdr.e_phentsize != sizeof (struct Elf32_Phdr)
       || ehdr.e_phnum > 1024) 
     {
-      printf ("load: %s: error loading executable\n", curr_t);
+      printf ("load: %s: error loading executable\n", file_name);
       goto done; 
     }
 
@@ -346,7 +302,7 @@ load (const char *args, void (**eip) (void), void **esp)
     }
 
   /* Set up stack. */
-  if (!setup_stack (esp, args))
+  if (!setup_stack (esp))
     goto done;
 
   /* Start address. */
@@ -471,11 +427,8 @@ load_segment (struct file *file, off_t ofs, uint8_t *upage,
 /* Create a minimal stack by mapping a zeroed page at the top of
    user virtual memory. */
 static bool
-setup_stack (void **esp, char *args)
+setup_stack (void **esp) 
 {
-    //ASSERT(thread_current ()->name[0] == 'h' && thread_current ()->name[1] == 'a' && thread_current ()->name[2] == 'l' &&
-      //            thread_current ()->name[3] == 't' && thread_current ()->name[4] == '\0' && strlen(args) == 0);
-
   uint8_t *kpage;
   bool success = false;
 
@@ -483,95 +436,10 @@ setup_stack (void **esp, char *args)
   if (kpage != NULL) 
     {
       success = install_page (((uint8_t *) PHYS_BASE) - PGSIZE, kpage, true);
-      if (success) {
-        *esp = PHYS_BASE - 12;/*
-        *esp = PHYS_BASE - 12;
-          return true;
-
-        int how_far_from_base = 0;
-        int len_tmp = 0;
-        char *args_pointer_from_end;
-
-        // write args str in stack
-        len_tmp = strlen(args) + 1;
-        how_far_from_base += len_tmp;
-        *esp -= len_tmp;
-        memcpy(*esp, args, len_tmp);
-
-        // write command name in stack after whole arguments string
-        len_tmp = strlen(thread_current ()->name) + 1;
-          // ASSERT(len_tmp == 5); // for halt
-        how_far_from_base += len_tmp;
-        *esp -= len_tmp;
-        args_pointer_from_end = *esp;
-        memcpy(*esp, thread_current ()->name, len_tmp);
-
-        // round to 4's multiple and add 4 bytes for
-        int missing_bytes_to_round = sizeof(void *) - (how_far_from_base % sizeof(void *));
-          for (; missing_bytes_to_round-- > 0; *(--(*(char **)esp)) = 0);
-          esp -= sizeof(void *);
-
-        // write NULL for that argv[argc] will be NULL as required
-          * (uint32_t *) *esp = (uint32_t) NULL;
-
-        --how_far_from_base;
-        while(true) {
-          if (*(args_pointer_from_end + how_far_from_base) != ' ' &&
-                  *(args_pointer_from_end + how_far_from_base) != '\0') {
-            break;
-          }
-
-          if (*(args_pointer_from_end + how_far_from_base) == ' ') {
-            *(args_pointer_from_end + how_far_from_base) = '\0';
-          }
-          --how_far_from_base;
-        }
-        // ASSERT(how_far_from_base == 4);
-        int aruments_cnt = 0;
-        char *pointer;
-        while (how_far_from_base > 0) {
-          pointer = (char *) (args_pointer_from_end + how_far_from_base);
-          char curr_symb = *pointer;
-          if (curr_symb == ' ' || curr_symb == '\0') {
-            char prev_symb = *(pointer + 1);
-            if (prev_symb == ' ' || prev_symb == '\0') {
-              if (curr_symb == ' ') *pointer = '\0';
-              continue;
-            }
-
-            ++aruments_cnt;
-            *esp -= sizeof(char *);
-            * (uint32_t *) *esp = (uint32_t) pointer + 1;
-
-          }
-
-          --how_far_from_base;
-
-          if (curr_symb == ' ')
-            *pointer = '\0';
-        }
-
-         // ASSERT(how_far_from_base == 0 && aruments_cnt == 1); // for halt
-
-        // write command name as next arg
-        *esp -= sizeof(char *);
-        * (uint32_t *) *esp = (uint32_t) args_pointer_from_end;
-        ++aruments_cnt;
-
-        // write argv
-          * (uint32_t *) (*esp - 4) = *(uint32_t *) esp;
-          *esp -= 4;
-
-        // write argc
-        *esp -= sizeof(int);
-        *(int *) *esp = aruments_cnt;
-
-        // alloc for RV
-        *esp -= sizeof(void *);
-          * (uint32_t *) *esp = 0x0;*/
-      } else {
-        // palloc_free_page(kpage);
-      }
+      if (success)
+        *esp = PHYS_BASE;
+      else
+        palloc_free_page (kpage);
     }
   return success;
 }
@@ -581,7 +449,7 @@ setup_stack (void **esp, char *args)
    If WRITABLE is true, the user process may modify the page;
    otherwise, it is read-only.
    UPAGE must not already be mapped.
-   KPAGE should probably be a pfage obtained from the user pool
+   KPAGE should probably be a page obtained from the user pool
    with palloc_get_page().
    Returns true on success, false if UPAGE is already mapped or
    if memory allocation fails. */
