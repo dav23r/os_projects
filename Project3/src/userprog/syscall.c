@@ -86,7 +86,25 @@ process successfully loaded its executable. You must use appropriate synchroniza
 to ensure this.
 */
 static pid_t exec(const char *cmd_line) {
-	ASSERT(0);
+	if (!string_valid(cmd_line)) exit(-1);
+	else {
+		pid_t p = process_execute(cmd_line);
+		if (p != TID_ERROR) {
+			struct thread *cur_thread = thread_current();
+			struct thread *child = get_child_by_pid(cur_thread, p);
+			if (child == NULL) {
+				return -1;
+			}
+			else {
+				sema_down(&child->load_lock);
+				if (!child->load_status) {
+					return -1;
+				}
+			}
+			return p;
+		}
+		else return -1;
+	}
 }
 
 
