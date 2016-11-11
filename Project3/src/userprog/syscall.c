@@ -289,7 +289,14 @@ writes past end of file will return an error.) These semantics are implemented i
 file system and do not require any special effort in system call implementation.
 */
 static void seek(int fd, unsigned position) {
-	ASSERT(0);
+	lock_acquire(&filesys_lock);
+
+	struct file *file_ptr = thread_get_file(thread_current(), fd);
+
+	if (file_ptr != NULL)
+		file_seek(file_ptr, position);
+
+	lock_release(&filesys_lock);
 }
 
 
