@@ -98,6 +98,15 @@ process_exit (void)
   struct thread *cur = thread_current ();
   uint32_t *pd;
 
+  if (cur->executable_name != NULL) printf("%s: exit(%d)\n", cur->executable_name, cur->exit_status);
+  if (cur->executable_name != NULL) palloc_free_page(cur->executable_name);
+  filesys_lock_acquire();
+  if (cur->executable_file != NULL) {
+	  file_allow_write(cur->executable_file);
+	  file_close(cur->executable_file);
+  }
+  filesys_lock_release();
+
   /* Destroy the current process's page directory and switch back
      to the kernel-only page directory. */
   pd = cur->pagedir;
@@ -222,12 +231,15 @@ load (const char *file_name, void (**eip) (void), void **esp)
   process_activate ();
 
   /* Open executable file. */
+  filesys_lock_acquire();
+  file = filesys_open(file_name);
   file = filesys_open (file_name);
   if (file == NULL) 
     {
       printf ("load: %s: open failed\n", file_name);
       goto done; 
     }
+  file_deny_write(file);
 
   /* Read and verify executable header. */
   if (file_read (file, &ehdr, sizeof ehdr) != sizeof ehdr
@@ -312,7 +324,17 @@ load (const char *file_name, void (**eip) (void), void **esp)
 
  done:
   /* We arrive here whether the load is successful or not. */
-  file_close (file);
+  if (success)
+	  t->executable_file = file;
+  else {
+	  if (file != NULL) {
+		  file_allow_write(file);
+		  file_close(file);
+	  }
+	  palloc_free_page(t->executable_name);
+	  t->executable_name = NULL;
+  }
+  filesys_lock_release();
   return success;
 }
 
