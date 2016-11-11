@@ -305,7 +305,14 @@ Returns the position of the next byte to be read or written in open file fd, exp
 in bytes from the beginning of the file.
 */
 static unsigned tell(int fd) {
-	ASSERT(0);
+	lock_acquire(&filesys_lock);
+
+	struct file *file_ptr = thread_get_file(thread_current(), fd);
+	int rv = ((file_ptr != NULL) ? file_tell(file_ptr) : 0);
+	
+	lock_release(&filesys_lock);
+
+	return rv;
 }
 
 
