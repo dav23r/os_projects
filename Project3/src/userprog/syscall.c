@@ -15,6 +15,17 @@
 #define max(a, b) (((a) > (b)) ? (a) : (b))
 #define min(a, b) (((a) < (b)) ? (a) : (b))
 
+struct lock filesys_lock;
+
+// Locks the file system
+void filesys_lock_acquire(void) {
+	lock_acquire(&filesys_lock);
+}
+// Unlocks the file system
+void filesys_lock_release(void) {
+	lock_release(&filesys_lock);
+}
+
 
 // Checks, if the user address is valid (by making sure, it's below PHYS_BASE and it's already mapped/allocated)
 static int user_address_valid(void *addr) {
@@ -357,6 +368,7 @@ syscall_init(void)
 {
 	intr_register_int(0x30, 3, INTR_ON, syscall_handler, "syscall");
 	init_sys_handlers();
+	lock_init(&filesys_lock);
 }
 
 static void
