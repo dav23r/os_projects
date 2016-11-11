@@ -206,7 +206,11 @@ static int open(const char *file) {
 Returns the size, in bytes, of the file open as fd.
 */
 static int filesize(int fd) {
-	ASSERT(0);
+	lock_acquire(&filesys_lock);
+	struct file *file_ptr = thread_get_file(thread_current(), fd);
+	int rv = ((file_ptr != NULL) ? file_length(file_ptr) : (-1));
+	lock_release(&filesys_lock);
+	return rv;
 }
 
 
