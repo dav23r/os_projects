@@ -198,6 +198,12 @@ thread_create (const char *name, int priority,
   sf->eip = switch_entry;
   sf->ebp = 0;
 
+#ifdef USERPROG
+  t->executable_name = name;
+  t->executable_file = NULL;
+  t->exit_status = -1;
+#endif
+
   /* Add to run queue. */
   thread_unblock (t);
 

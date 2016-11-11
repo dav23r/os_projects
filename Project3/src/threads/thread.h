@@ -95,7 +95,10 @@ struct thread
 
 #ifdef USERPROG
     /* Owned by userprog/process.c. */
-    uint32_t *pagedir;                  /* Page directory. */
+	const char *executable_name;
+	struct file *executable_file;
+	int exit_status;
+	uint32_t *pagedir;                  /* Page directory. */
 #endif
 
     /* Owned by thread.c. */
