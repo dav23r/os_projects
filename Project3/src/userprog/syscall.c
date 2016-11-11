@@ -69,7 +69,8 @@ parent waits for it (see below), this is the status that will be returned. Conve
 a status of 0 indicates success and nonzero values indicate errors.
 */
 static void exit(int status) {
-	ASSERT(0);
+	thread_current()->exit_status = status;
+	thread_exit();
 }
 
 
@@ -98,15 +99,15 @@ to wait for child processes that have already terminated by the time the parent 
 wait, but the kernel must still allow the parent to retrieve its child’s exit status, or
 learn that the child was terminated by the kernel.
 wait must fail and return -1 immediately if any of the following conditions is true:
-• pid does not refer to a direct child of the calling process. pid is a direct child
-of the calling process if and only if the calling process received pid as a return
-value from a successful call to exec.
-Note that children are not inherited: if A spawns child B and B spawns child
-process C, then A cannot wait for C, even if B is dead. A call to wait(C) by
-process A must fail. Similarly, orphaned processes are not assigned to a new
-parent if their parent process exits before they do.
-• The process that calls wait has already called wait on pid. That is, a process
-may wait for any given child at most once.
+	• pid does not refer to a direct child of the calling process. pid is a direct child
+	of the calling process if and only if the calling process received pid as a return
+	value from a successful call to exec.
+	Note that children are not inherited: if A spawns child B and B spawns child
+	process C, then A cannot wait for C, even if B is dead. A call to wait(C) by
+	process A must fail. Similarly, orphaned processes are not assigned to a new
+	parent if their parent process exits before they do.
+	• The process that calls wait has already called wait on pid. That is, a process
+	may wait for any given child at most once.
 Processes may spawn any number of children, wait for them in any order, and may
 even exit without having waited for some or all of their children. Your design should
 consider all the ways in which waits can occur. All of a process’s resources, including
