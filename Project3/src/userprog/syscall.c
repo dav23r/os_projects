@@ -249,7 +249,13 @@ static int write(int fd, const void *buffer, unsigned size) {
 		return size;
 	}
 	else if (fd == STDIN_FILENO) return 0;
-	ASSERT(0);
+	else {
+		lock_acquire(&filesys_lock);
+		struct file *file_ptr = thread_get_file(thread_current(), fd);
+		int rv = ((file_ptr != NULL) ? file_write(file_ptr, (void*)buffer, size) : 0);
+		lock_release(&filesys_lock);
+		return rv;
+	}
 }
 
 
