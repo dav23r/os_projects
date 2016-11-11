@@ -227,7 +227,7 @@ struct Elf32_Phdr
 #define PF_W 2          /* Writable. */
 #define PF_R 4          /* Readable. */
 
-static bool setup_stack (void **esp);
+static bool setup_stack (void **esp, const char *file_name);
 static bool validate_segment (const struct Elf32_Phdr *, struct file *);
 static bool load_segment (struct file *file, off_t ofs, uint8_t *upage,
                           uint32_t read_bytes, uint32_t zero_bytes,
@@ -347,7 +347,7 @@ load (const char *file_name, void (**eip) (void), void **esp)
     }
 
   /* Set up stack. */
-  if (!setup_stack (esp))
+  if (!setup_stack (esp, file_name))
     goto done;
 
   /* Start address. */
@@ -482,21 +482,82 @@ load_segment (struct file *file, off_t ofs, uint8_t *upage,
 /* Create a minimal stack by mapping a zeroed page at the top of
    user virtual memory. */
 static bool
-setup_stack (void **esp) 
+setup_stack (void **esp, const char *file_name)
 {
-  uint8_t *kpage;
-  bool success = false;
+	uint8_t *kpage;
+	bool success = false;
 
-  kpage = palloc_get_page (PAL_USER | PAL_ZERO);
-  if (kpage != NULL) 
-    {
-      success = install_page (((uint8_t *) PHYS_BASE) - PGSIZE, kpage, true);
-      if (success)
-        *esp = PHYS_BASE - 12;
-      else
-        palloc_free_page (kpage);
-    }
-  return success;
+	kpage = palloc_get_page(PAL_USER | PAL_ZERO);
+	if (kpage != NULL)
+	{
+		success = install_page(((uint8_t *)PHYS_BASE) - PGSIZE, kpage, true);
+		if (success) {
+			*esp = PHYS_BASE;
+
+			char *prog_name = strtok_r(file_name, " ", &file_name);
+			int str_len = 0;
+			int how_far = 0;
+
+			str_len = strlen(file_name) + 1;
+			how_far += str_len;
+			*esp -= str_len;
+			memcpy(*esp, file_name, str_len);
+
+			uint8_t *args_begin;
+			str_len = strlen(prog_name) + 1;
+			how_far += str_len;
+			*esp -= str_len;
+			args_begin = *esp;
+			memcpy(*esp, prog_name, str_len);
+
+			*esp -= 8 - how_far % 4;
+			*(uint32_t *)*esp = (uint32_t)NULL;
+
+			--how_far;
+			while (true)
+			{
+				if (!(*(args_begin + how_far) == ' ' || *(args_begin + how_far) == '\0')) break;
+				if (*(args_begin + how_far) == ' ')
+				{
+					*(args_begin + how_far) = '\0';
+				}
+				--how_far;
+			}
+
+			int argc = 0;
+			char *curr_char = (char *)(args_begin + how_far);
+			while (how_far > 0)
+			{
+				if ((*curr_char == '\0' || *curr_char == ' '))
+				{
+					if (*(curr_char + 1) != '\0' && *(curr_char + 1) != ' ')
+					{
+						++argc;
+						*esp -= 4;
+						*(uint32_t *)*esp = (uint32_t)curr_char + 1;
+					}
+				}
+
+				if (*curr_char == ' ')
+					*curr_char = '\0';
+				curr_char = (char*)(args_begin + how_far--);
+			}
+
+			++argc;
+			*esp -= 4;
+			*(uint32_t *)*esp = (uint32_t)args_begin;
+
+			*(uint32_t *)(*esp - 4) = *(uint32_t *)esp;
+			*esp -= 8;
+			*(int *)*esp = argc;
+
+			*esp -= 4;
+			*(uint32_t *)*esp = (uint32_t)NULL;
+		}
+		else
+			palloc_free_page(kpage);
+	}
+	return success;
 }
 
 /* Adds a mapping from user virtual address UPAGE to kernel
