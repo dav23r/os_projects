@@ -281,7 +281,14 @@ Closes file descriptor fd. Exiting or terminating a process implicitly closes al
 file descriptors, as if by calling this function for each one.
 */
 static int close(int fd) {
-	ASSERT(0);
+	int rv = -1;
+	struct thread *t = thread_current();
+	struct file *fl = thread_get_file(t, fd);
+	if (fl != NULL) {
+		thread_set_file_force(t, NULL, fd); // File is closed automatically inside of this function.
+		rv = 0;
+	}
+	return rv;
 }
 
 
