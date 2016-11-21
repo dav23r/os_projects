@@ -42,6 +42,18 @@ Nothing.
 
 We disassemble the command with strtok_r() and fill the stack 
 with it, but in reverse order, to fill the stack in correct order.
+At the beginning of setup_stack() we get two strings: program name
+and rest of the original string (arguments). Then, we copy this 
+strings into the stack. After that, we have two iteration over,
+first one repleaces spaces with c-string null terminations ('\0')
+and the second one pushes pointers of each argument into the stack
+in reverse order. Then, as mentioned in a guide of Pintos, we write
+command name, argv, argc and return address as next arguments below
+others.
+We decided not to check stack pointer until it fails. Instead of 
+cheacking validity of the esp pointer every time, we let it fail
+and handle it in the page fault exception (exception.c), that just
+exits the current thread.
 
 
 
