@@ -147,6 +147,11 @@ process_exit (void)
       pagedir_activate (NULL);
       pagedir_destroy (pd);
     }
+
+#ifdef VM
+    if (cur->suppl_page_table)
+        suppl_pt_delete(cur->suppl_page_table);
+#endif
 }
 
 /* Sets up the CPU for running user code in the current
@@ -248,9 +253,16 @@ load (const char *file_name, void (**eip) (void), void **esp)
   bool success = false;
   int i;
 
+#ifdef VM
+    t->suppl_page_table = suppl_pt_new();
+    if (t->suppl_page_table == NULL)
+        goto done;
+	else t->suppl_page_table->owner_thread = t;
+#endif
+
   /* Allocate and activate page directory. */
   t->pagedir = pagedir_create ();
-  if (t->pagedir == NULL) 
+  if (t->pagedir == NULL)
     goto done;
   process_activate ();
 
@@ -580,5 +592,10 @@ install_page (void *upage, void *kpage, bool writable)
   /* Verify that there's not already a page at that virtual
      address, then map our page there. */
   return (pagedir_get_page (t->pagedir, upage) == NULL
-          && pagedir_set_page (t->pagedir, upage, kpage, writable));
+#ifdef VM
+          && suppl_table_set_page(t->pagedir, upage, kpage, writable)
+#else
+	  && pagedir_set_page(t->pagedir, upage, kpage, writable)
+#endif
+	  );
 }
