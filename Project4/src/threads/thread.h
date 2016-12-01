@@ -6,6 +6,9 @@
 #include <stdint.h>
 #include "synch.h"
 #include "filesys/file.h"
+#ifdef VM
+#include "vm/supplemental_page.h"
+#endif
 
 /* States in a thread's life cycle. */
 enum thread_status
@@ -114,6 +117,10 @@ struct thread
 	struct file* open_files[MAX_OPEN_FILES];
 	bool load_status;
 	struct semaphore load_lock;
+#endif
+
+#ifdef VM
+	struct suppl_pt *suppl_page_table;
 #endif
 
     /* Owned by thread.c. */
