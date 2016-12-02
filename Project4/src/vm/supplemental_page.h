@@ -1,7 +1,6 @@
 //
 // Created by maisu on 12/1/16.
 //
-
 #ifndef PROJECT4_SUPPLEMENTAL_PAGE_H
 #define PROJECT4_SUPPLEMENTAL_PAGE_H
 
@@ -43,7 +42,9 @@ struct suppl_pt * suppl_pt_new(void);
 void suppl_pt_dispose(struct suppl_pt *pt);
 void suppl_pt_delete(struct suppl_pt *pt);
 
-bool suppl_table_set_page(uint32_t *pd, void *upage, void *kpage, bool rw);
-// line 1: call - pagedir_set_page (t->pagedir, upage, kpage, writable)
+bool suppl_table_set_page(struct thread *t, void *upage, void *kpage, bool rw); // line 1: call - pagedir_set_page (t->pagedir, upage, kpage, writable)
+bool suppl_table_alloc_user_page(struct thread *t, void *upage, bool writeable);
+
+struct suppl_page *suppl_pt_lookup(struct suppl_pt *pt, void *vaddr);
 
 #endif //PROJECT4_SUPPLEMENTAL_PAGE_H
