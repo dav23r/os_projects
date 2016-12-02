@@ -1,7 +1,8 @@
 #include "swap.h"
 #include "lib/stdbool.h"
 #include "lib/kernel/bitmap.h"
-#include "block.h"
+#include "devices/block.h"
+#include "lib/debug.h"
 
 static bool swap_initialized = false;
 static struct bitmap *alloc_map;
@@ -14,9 +15,13 @@ static char *SWAP_ID = "swap_block";
 
 #define START 0
 
-static block *create_swap_block(){
-    block *swap_block = block_register(SWAP_ID, BLOCK_SWAP, NULL, 
-                                       MAX_SECTORS_IN_SWAP, NULL, NULL);
+// Prototypes of static functions 
+static struct block *create_swap_block(void);
+static void swap_init(void);
+
+static struct block *create_swap_block(){
+    struct block *swap_block = block_register(SWAP_ID, BLOCK_SWAP, 
+                                NULL, MAX_SECTORS_IN_SWAP, NULL, NULL);
     return swap_block;
 }
 
@@ -28,49 +33,56 @@ static void swap_init() {
 }
 
 swap_page swap_get_page(void) {
-	swap_init();
-    size_t start_sector = bitmap_scan_and_flip(alloc_map, START, SECTORS_PER_PAGE, false);
-    if (start_index == BITMAP_ERROR)
+    swap_init();
+    swap_page start_sector = bitmap_scan_and_flip(alloc_map, START, SECTORS_PER_PAGE, false);
+    if (start_sector == BITMAP_ERROR)
         return SWAP_NO_PAGE;
     return start_sector;
 }
 
 void swap_free_page(swap_page page) {
-	swap_init();
+    swap_init();
 
     if (bitmap_contains(alloc_map, page * SECTORS_PER_PAGE, SECTORS_PER_PAGE, false))
-        PANIC("Attempting to free non-allocated swap sector %d", swap_page);
+        PANIC("Attempting to free non-allocated swap sector %d", (int) page);
 
     bitmap_set_multiple(alloc_map, page * SECTORS_PER_PAGE, SECTORS_PER_PAGE, false); 
 }
 
 void swap_load_page_to_ram(swap_page page, void *addr) {
     swap_init();
-    block swap_block = *block_get_by_name(SWAP_ID);    
+    struct block *swap_block = block_get_by_name(SWAP_ID);    
     if (swap_block == NULL)
-        block = swap_init();
+        swap_block = create_swap_block();
 
     if (bitmap_contains(alloc_map, page * SECTORS_PER_PAGE, SECTORS_PER_PAGE, false))
-        PANIC("Attempting to load non-allocated swap sector %d", swap_page);
+        PANIC("Attempting to load non-allocated swap sector %d", (int) page);
     bitmap_set_multiple(alloc_map, page * SECTORS_PER_PAGE, SECTORS_PER_PAGE, false); 
 
     char *addr_for_cur_sector = addr;
-    for (int i = 0; i < SECTORS_PER_PAGE; i++){
-        block_read(swap_block, swap_page, addr_for_cur_sector);    
+    int i;
+    for (i = 0; i < SECTORS_PER_PAGE; i++){
+        block_read(swap_block, page, addr_for_cur_sector);    
         addr_for_cur_sector += BLOCK_SECTOR_SIZE;
     }
 }
 
 void swap_load_page_to_swap(swap_page page, void *addr) {
     swap_init();
-	block *block_get_by_name(SWAP_ID);    
-    if (block == NULL)
-        block = swap_init();
+    struct block *swap_block = block_get_by_name(SWAP_ID);    
+    if (swap_block == NULL)
+        swap_block = create_swap_block();
 
     if (bitmap_contains(alloc_map, page * SECTORS_PER_PAGE, SECTORS_PER_PAGE, true))
-        PANIC("Attempting to write to used swap sector");
+        PANIC("Attempting to write to used swap sector %d", (int) page);
 
     bitmap_set_multiple(alloc_map, page * SECTORS_PER_PAGE, SECTORS_PER_PAGE, true); 
-    block_write(swap_block, swap_page, addr);
+
+    char *addr_for_cur_sector = addr;
+    int i;
+    for (i = 0; i < SECTORS_PER_PAGE; i++){
+        block_write(swap_block, page, addr_for_cur_sector);
+        addr_for_cur_sector += BLOCK_SECTOR_SIZE;
+    }
 }
 
