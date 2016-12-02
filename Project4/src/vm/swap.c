@@ -29,18 +29,33 @@ static void swap_init() {
 
 swap_page swap_get_page(void) {
 	swap_init();
-    size_t start_index = bitmap_scan_and_flip(alloc_map, START, 1, false);
+    size_t start_sector = bitmap_scan_and_flip(alloc_map, START, SECTORS_PER_PAGE, false);
     if (start_index == BITMAP_ERROR)
         return SWAP_NO_PAGE;
-    return start_index;
+    return start_sector;
 }
 
 void swap_free_page(swap_page page) {
 	swap_init();
-    if (bitmap_test(alloc_map, page) != true)
+
+    if (bitmap_contains(alloc_map, page * SECTORS_PER_PAGE, SECTORS_PER_PAGE, false))
         PANIC("Attempting to free non-allocated swap sector %d", swap_page);
-    bitmap_set(alloc_map, page, true); 
+
+    bitmap_set_multiple(alloc_map, page * SECTORS_PER_PAGE, SECTORS_PER_PAGE, false); 
 }
 
 
+
+void swap_load_page_to_swap(swap_page page, void *addr) {
+    swap_init();
+	block *block_get_by_name(SWAP_ID);    
+    if (block == NULL)
+        block = swap_init();
+
+    if (bitmap_contains(alloc_map, page * SECTORS_PER_PAGE, SECTORS_PER_PAGE, true))
+        PANIC("Attempting to write to used swap sector");
+
+    bitmap_set_multiple(alloc_map, page * SECTORS_PER_PAGE, SECTORS_PER_PAGE, true); 
+    block_write(swap_block, swap_page, addr);
+}
 
