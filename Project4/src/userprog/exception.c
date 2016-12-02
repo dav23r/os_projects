@@ -4,6 +4,8 @@
 #include "userprog/gdt.h"
 #include "threads/interrupt.h"
 #include "threads/thread.h"
+#include "vm/supplemental_page.h"
+#include "vm/vm_util.h"
 
 /* Number of page faults processed. */
 static long long page_fault_cnt;
@@ -147,6 +149,25 @@ page_fault (struct intr_frame *f)
   not_present = (f->error_code & PF_P) == 0;
   write = (f->error_code & PF_W) != 0;
   user = (f->error_code & PF_U) != 0;
+
+  struct thread *cur = thread_current();
+  if (cur != NULL && cur->suppl_page_table != NULL) {
+	  struct suppl_page *page = suppl_pt_lookup(cur->suppl_page_table, fault_addr);
+	  if (page != NULL) {
+		  if (page->location == PG_LOCATION_SWAP) {
+
+		  } else if (page->location == PG_LOCATION_FILE) {
+
+		  }
+	  } else if (stack_grow_needed(fault_addr, f->esp)) {
+		  //printf("############################### SHOULD GROW STACK ##################################\n");
+		  if (!suppl_table_alloc_user_page(cur, fault_addr, true)) {
+			  PANIC("################################## UNABLE TO GROW STACK ################################\n");
+		  }
+		  else return;
+	  }
+  }
+
 
   /* To implement virtual memory, delete the rest of the function
      body, and replace it with code that brings in the page to
