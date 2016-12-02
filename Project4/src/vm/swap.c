@@ -44,7 +44,22 @@ void swap_free_page(swap_page page) {
     bitmap_set_multiple(alloc_map, page * SECTORS_PER_PAGE, SECTORS_PER_PAGE, false); 
 }
 
+void swap_load_page_to_ram(swap_page page, void *addr) {
+    swap_init();
+    block swap_block = *block_get_by_name(SWAP_ID);    
+    if (swap_block == NULL)
+        block = swap_init();
 
+    if (bitmap_contains(alloc_map, page * SECTORS_PER_PAGE, SECTORS_PER_PAGE, false))
+        PANIC("Attempting to load non-allocated swap sector %d", swap_page);
+    bitmap_set_multiple(alloc_map, page * SECTORS_PER_PAGE, SECTORS_PER_PAGE, false); 
+
+    char *addr_for_cur_sector = addr;
+    for (int i = 0; i < SECTORS_PER_PAGE; i++){
+        block_read(swap_block, swap_page, addr_for_cur_sector);    
+        addr_for_cur_sector += BLOCK_SECTOR_SIZE;
+    }
+}
 
 void swap_load_page_to_swap(swap_page page, void *addr) {
     swap_init();
