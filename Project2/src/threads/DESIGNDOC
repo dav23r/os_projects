@@ -78,6 +78,12 @@ Enable interrupts.
 
 >> A3: What steps are taken to minimize the amount of time spent in
 >> the timer interrupt handler?
+ჩამატება O(n)-ია, მაგრამ ამოღება O(1) რადგან დალაგებულად
+ხდება ჩამატება ყოველ ჯერზე. თუ ბევრი სრედია გასაღვიძებელი,
+ეს საუკეთესო გზა იქნება, რადგან დრო რასაც გაღვიძება წაიღებს
+პროპორციული იქნება მხოლოდ ამ მომენტში საჭირო გასაღვიძებელ სრედთა
+რაოდენობის და არა ყველა მძინარე სრდეთა რაოდენობის.
+
 Insertion is O(n) but removal is O(1) as it is inserted in
 an orderly fashion. If many threads need to be awoken,
 it will be the best way as checking will take time
