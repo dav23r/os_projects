@@ -132,6 +132,7 @@ process_exit (void)
   thread_close_all_files(cur);
 
 #ifdef VM
+  file_mappings_dispose(&cur->mem_mappings);
   if (cur->suppl_page_table)
 	  suppl_pt_delete(cur->suppl_page_table);
 #endif
@@ -258,6 +259,7 @@ load (const char *file_name, void (**eip) (void), void **esp)
     if (t->suppl_page_table == NULL)
         goto done;
 	else t->suppl_page_table->owner_thread = t;
+	file_mappings_init(&t->mem_mappings);
 #endif
 
   /* Allocate and activate page directory. */
