@@ -221,7 +221,10 @@ thread releases the zombie lock of every child upon its death.)
 >> allocated resources (locks, buffers, etc.) are freed?  In a few
 >> paragraphs, describe the strategy or strategies you adopted for
 >> managing these issues.  Give an example.
-
+ჩვენ ბაიტ-ბაიტად ვამოწმებთ. სისწორე გარანტირებულია მანამ,
+სანამ კერნელი ცდის მომხმარებლის ბრძანებების შესრულებას.
+თუ არავალიდური პოინტერი მოგვცეს exit(-1)-ს ვიძახებთ პროცესზე
+და მთელი გასუფთავება/დეალოკაცია ხდება. სულ ესაა. 
 We check every user byte one by one. Validity is ensured
 before kernel tries to do what user asked it. If it's an invalid
 pointer, then we call exit(-1) on the process which does all of
@@ -233,6 +236,10 @@ the cleanup. As simple as that.
 >> fails, so it cannot return before the new executable has completed
 >> loading.  How does your code ensure this?  How is the load
 >> success/failure status passed back to the thread that calls "exec"?
+ჩვენ ამის გარანტია გვაქვს load_lock-ით. გამომძახებელი პროცესი ცდილობს
+მის აღებას და არ შეუძლია ამისი გაკეთება მანამ სანამ ჩატვირთვა არ მორჩება.
+ლოქი ცხადია თავისუფლდება მიუხედავად იმისა წარმატებულად ჩაიტვირთა თუ არა 
+პროცესი, მთავარია რომ მორჩა ჩატვირთვა.
 
 We ensure this with load_lock. The calling process tries to
 acquire the lock and can't do that before the loading 
@@ -245,6 +252,15 @@ of load fail or success).
 >> that all resources are freed in each case?  How about when P
 >> terminates without waiting, before C exits?  After C exits?  Are
 >> there any special cases?
+
+ჩვენთვის ეს ყველა შემთხვევა ჩვეულებრივი შემთხვევაა. ზომბი ლოქი
+და wait_lock ხსნის ამ ყველა პრობლემას. როცა პროცესი ცდილობს რომ 
+მოკვდეს მას საშუალება არ ეძლევა ამის გაკეთების, მანამ სანამ მშობელი
+არ მისცემს ნებას(მკვდარი სრედებიდან რომ არ ცადოს მერე მშობელმა 
+ინფორმაციის მიღება). თუ სრედი კვდება, ყველა ზომბი ლოქს ანთავისუფლებს.
+wait_lock არის ლოქი, რომელიც თავიდან აღებულია და როცა სრედი ცდილობს 
+რომ ამ სრედს დაუცადოს(wait) ამ ლოქის აღებას ცდილობს. ნებისმიერი სრედი
+სიკვდილის წინ ამ ლოქს ანთავისუფლებს და ცდილობს ზომბის აღებას. 
 
 As mentioned before, all of these cases are regular cases
 and get solved with zombie_lock and wait_lock. When a process
@@ -259,17 +275,20 @@ process to die.
 
 >> B9: Why did you choose to implement access to user memory from the
 >> kernel in the way that you did?
- 
+
+მარტივია, ეფექტური და მოგვწონს.
 Because it's simple, it's effective and we liked it.
 
 >> B10: What advantages or disadvantages can you see to your design
 >> for file descriptors?
-
+უპირატესობა - ადვილი იყო დასაწერად, მუშაა.
+უარყოფითი მხარე - სნობებს არ მოეწონებათ.
 Advantages - simple and easy to implement. Also works.
 Disadvntages - pretentious people won't like them.
 
 >> B11: The default tid_t to pid_t mapping is the identity mapping.
 >> If you changed it, what advantages are there to your approach?
+არ შეგვიცვლია, რადგან ასე კოდი უფრო ადვილი საწერი იყო.
 We didn't change it since it made code much easier.
 
 
