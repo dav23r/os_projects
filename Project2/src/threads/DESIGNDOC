@@ -289,6 +289,12 @@ ticks   A   B   C   A   B   C   to run
 >> C3: Did any ambiguities in the scheduler specification make values
 >> in the table uncertain?  If so, what rule did you use to resolve
 >> them?  Does this match the behavior of your scheduler?
+გაურკვეველი იყო თანაბარ პრიორიტეტიანი სრედები რა მიმდევრობით უნდა 
+გაგვეშვა. ჩვენ ეს ისევე გავაკეთეთ როგორც ჩვენი შედულერი აკეთებს:
+რაუნდ რობინით. რადგან სრედი ქმედების შემდეგ ბოლოში ემატება
+იგივე პრიორიტეტის სრედების სიას, სრედი იგივე პრიორიტეტიანი
+სრედის გამო არ იშიმშილებს. 
+
 Yes, it's ambiguous how to schedule equal priority 
 threads. We and our scheduler do the same here: round robin.
 Since we insert in the end of priority cell-list after it is
@@ -297,6 +303,11 @@ rescheduled, no thread will starve because of same priority thread.
 
 >> C4: How is the way you divided the cost of scheduling between code
 >> inside and outside interrupt context likely to affect performance?
+რადგან უმეტესობა გამოთვლა საჭირო იყო რომ ინტერაპტ ჰენდლერში დაწერილიყო
+ყოველ 4 ტიკში და ზოგი ყოველ წამში ერთხელ, ეს შედულერი ძალიან ცუდია
+ბევრი სრედითვის. ერთადერთი ნაისი არის გატანილი ჰენდლერიდან, თუმცა
+სამწუხაროდ მისი დათვლაც ინტერაპტების გამოთვლას საჭიროებს.
+
 Since most of computation has to be done inside the interrupt handler
 every 4 ticks and some every second, this scheduler from assignment
 is very bad for many threads. Only nice gets changed out of that,
