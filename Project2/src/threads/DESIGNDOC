@@ -46,6 +46,17 @@ int64_t ticks_left_to_sleep;       /* Number of ticks till which the thread must
 >> A2: Briefly describe what happens in a call to timer_sleep(),
 >> including the effects of the timer interrupt handler.
 
+ინტერაპტებს ვაუქმებთ.
+ახლანდელი სრედის ტიკები აფდეითდება გადაცემულ
+არგუმენტს + ამ მომენტის სისტემური ტიკების რაოდენობად.
+ეს სრედი ჩაინსერტდება მძინარეთა ლისტში დასორტირებულად.
+ინტერაპტებს ვრთავთ.
+ინტერაპტ ჰენდლერში  პირველი შემოწმება ხდება საერთოდ 
+არიან თუ არა მძინარე სრედები, რომ გავაღვიძოთ. შემდეგ 
+ყველა გასაღვიძებელ სრედს ვაღვიძებთ ლისტში გადაყოლით 
+შემდეგნაირად: ვამოწმებთ გასაღვიძებელია თუ არა, ვარესეტებთ
+ტიკებს. ვაუქმებთ ინტერაპტებს, ბლოკს ვხსნით სრედს, რედი ლისტში
+ვსვამთ, ვრთავთ სრედებს. 
 Interrupts get disabled.
 Current thread's ticks are updated 
 to passed argument+ current system ticks.
