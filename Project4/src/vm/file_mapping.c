@@ -56,12 +56,30 @@ static int file_mappings_seek_free_id(struct file_mappings *m) {
 	}
 }
 
-static bool file_mappable(struct thread *t UNUSED, struct file *fl UNUSED, void *vaddr UNUSED) {
+static bool file_mappable(struct thread *t, struct file *fl, void *vaddr) {
+	if (t == NULL || fl == NULL || vaddr == NULL) return false;
+	int file_sz = file_length(fl);
+	// ETC...
 	return false;
 }
 
-static bool file_map(struct thread *t UNUSED, struct file *fl UNUSED, void *vaddr UNUSED, struct file_mapping *mapping UNUSED) {
-	return false;
+static bool file_map(struct thread *t, struct file *fl, void *vaddr, struct file_mapping *mapping) {
+	if (t == NULL || fl == NULL || vaddr == NULL || mapping == NULL) return false;
+	struct file *new_file = file_reopen(fl);
+	if (new_file == NULL) return false;
+	int file_sz = file_length(new_file);
+	if (file_sz < 0) {
+		file_close(new_file);
+		return false;
+	}
+	bool success = true;
+	// ETC...
+	if (success) {
+		mapping->fl = new_file;
+		mapping->start_vaddr = vaddr;
+	}
+	else file_close(new_file);
+	return success;
 }
 
 int file_mappings_map(struct thread *t, struct file *fl, void *vaddr) {
