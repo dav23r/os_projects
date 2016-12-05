@@ -353,6 +353,26 @@ static int close(int fd) {
 	return rv;
 }
 
+#ifdef VM
+/**
+Maps the given file descriptor to the given virtual address
+*/
+static int mmap(int fd, void *vaddr) {
+	struct thread *t = thread_current();
+	struct file *fl = thread_get_file(t, fd);
+	if (fl == NULL) return (-1);
+	PANIC("################################# MMAP called ############################################\n");
+	return ((int)vaddr);
+}
+/**
+Unmaps given file mapping
+*/
+static int munmap(int map_id) {
+	PANIC("################################# MUNMAP called ############################################\n");
+	return map_id;
+}
+#endif
+
 
 
 
@@ -423,6 +443,16 @@ static void close_handler(struct intr_frame *f) {
 	if (!check_args(f, 1, 2)) exit(-1);
 	else EAX = close(I_PARAM(1));
 }
+#ifdef VM
+static void mmap_handler(struct intr_frame *f) {
+	if (!check_args(f, 1, 3)) exit(-1);
+	else EAX = mmap(I_PARAM(1), V_PARAM(2));
+}
+static void munmap_handler(struct intr_frame *f) {
+	if (!check_args(f, 1, 2)) exit(-1);
+	else EAX = munmap(I_PARAM(1));
+}
+#endif
 
 #define MAX_SYS_CALL_ID \
 				max( \
@@ -478,6 +508,10 @@ static void init_sys_handlers(void) {
 		sys_handlers[SYS_SEEK] = seek_handler;
 		sys_handlers[SYS_TELL] = tell_handler;
 		sys_handlers[SYS_CLOSE] = close_handler;
+#ifdef VM
+		sys_handlers[SYS_MMAP] = mmap_handler;
+		sys_handlers[SYS_MUNMAP] = munmap_handler;
+#endif
 		sys_initialized = true;
 	}
 }
