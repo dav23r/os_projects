@@ -36,7 +36,21 @@ static int file_mappings_seek_free_id(struct file_mappings *m) {
 		}
 	if (free_id >= 0) return free_id;
 	else {
-		// ETC...
+		int new_pool_size = (2 * m->pool_size);
+		if (new_pool_size < 2) new_pool_size = 2;
+		
+		struct file_mapping *new_pool = malloc(sizeof(struct file_mapping) * new_pool_size);
+		if (new_pool == NULL) PANIC("UNABLE TO ALLOCATE MEMORY TO STORE FILE MAPPINGS");
+		free_id = m->pool_size;
+		for (i = 0; i < m->pool_size; i++)
+			new_pool[i] = m->mappings[i];
+		free(m->mappings);
+
+		m->mappings = new_pool;
+		m->pool_size = new_pool_size;
+		for (i = free_id; i < m->pool_size; i++)
+			file_mapping_init(m->mappings + i);
+		return free_id;
 	}
 }
 
