@@ -46,6 +46,17 @@ int64_t ticks_left_to_sleep;       /* Number of ticks till which the thread must
 >> A2: Briefly describe what happens in a call to timer_sleep(),
 >> including the effects of the timer interrupt handler.
 
+ინტერაპტებს ვაუქმებთ.
+ახლანდელი სრედის ტიკები აფდეითდება გადაცემულ
+არგუმენტს + ამ მომენტის სისტემური ტიკების რაოდენობად.
+ეს სრედი ჩაინსერტდება მძინარეთა ლისტში დასორტირებულად.
+ინტერაპტებს ვრთავთ.
+ინტერაპტ ჰენდლერში  პირველი შემოწმება ხდება საერთოდ 
+არიან თუ არა მძინარე სრედები, რომ გავაღვიძოთ. შემდეგ 
+ყველა გასაღვიძებელ სრედს ვაღვიძებთ ლისტში გადაყოლით 
+შემდეგნაირად: ვამოწმებთ გასაღვიძებელია თუ არა, ვარესეტებთ
+ტიკებს. ვაუქმებთ ინტერაპტებს, ბლოკს ვხსნით სრედს, რედი ლისტში
+ვსვამთ, ვრთავთ სრედებს. 
 Interrupts get disabled.
 Current thread's ticks are updated 
 to passed argument+ current system ticks.
@@ -67,6 +78,12 @@ Enable interrupts.
 
 >> A3: What steps are taken to minimize the amount of time spent in
 >> the timer interrupt handler?
+ჩამატება O(n)-ია, მაგრამ ამოღება O(1) რადგან დალაგებულად
+ხდება ჩამატება ყოველ ჯერზე. თუ ბევრი სრედია გასაღვიძებელი,
+ეს საუკეთესო გზა იქნება, რადგან დრო რასაც გაღვიძება წაიღებს
+პროპორციული იქნება მხოლოდ ამ მომენტში საჭირო გასაღვიძებელ სრედთა
+რაოდენობის და არა ყველა მძინარე სრდეთა რაოდენობის.
+
 Insertion is O(n) but removal is O(1) as it is inserted in
 an orderly fashion. If many threads need to be awoken,
 it will be the best way as checking will take time
@@ -79,6 +96,9 @@ to be awoken right now, not complete amount of sleepers.
 
 >> A4: How are race conditions avoided when multiple threads call
 >> timer_sleep() simultaneously?
+საჭირო ოპერაციები რომლებიც ლისტზე უნდა ჩატარდეს ხდება მაშინ,
+როცა ინტერაპტები გამორთულია.
+
 Operations that are necessary on the list happen when interrupts are 
 disabled.
 
@@ -86,6 +106,7 @@ disabled.
 
 >> A5: How are race conditions avoided when a timer interrupt occurs
 >> during a call to timer_sleep()?
+გამორთული ინტერაპტების მეშვეობით.
 Interrupts are disabled, so that helps.
 
 
@@ -93,6 +114,9 @@ Interrupts are disabled, so that helps.
 
 >> A6: Why did you choose this design?  In what ways is it superior to
 >> another design you considered?
+სხვა დიზაინი არ განგვიხილავს რადგან ეს დიზაინი 
+საკმაოდ სწრაფად და სწორად ავამუშავეთ როცა დავწერეთ.
+კარგად მუშაობს დალაგებული სიების გამო.
 We didn't consider other design as it worked pretty quickly
 and pretty well the first time we wrote it.
 It works very well because of sorted list.
@@ -119,6 +143,21 @@ struct lock *locked_on;             /* The lock, the thread is locked on */
 
 >> B2: Explain the data structure used to track priority donation.
 
+პრიორიტეტის დონაციებს ვაკონტროლებთ ლოქების მეშვეობით.
+ყველა ლოქს აქვს მომლოდინეთა სია და ყველა სრედს აქვს
+იმ ლოქთა სია რომელთაც ფლობს და ის ლოქი რომლის
+განთავისუფლებასაც უცდის, თუ არსებობს ასეთი. prior_don
+არის დონირებული პრიორიტეტი, რომელიც იცვლება თუ სრედი
+დაიბლოკა როცა ლოქის აღებას ცდილობდა. დაბლოკვის შემდეგ,
+იგი ცდილობს დონაციის გაკეთებას იმ სრედისთვის რომელიც
+ფლობს ლოქს ამ მომენტში. განბლოკვის შემდეგაც ყველა
+შესაბამისი დონაცია აფდეითდება. ჩვენ ეს მარტივი იდეით
+განვახორციელეთ. ყოველი ასეთი განახლების შემდეგ, ლოქის
+მფლობელ სრედს უნდა ქონდეს მაქსიმალური პრიორიტეტი
+საკუთარსა და მის მომლოდინე სრედებს შორის მაქსიმალურ
+პრიორიტეტს შორის.
+
+
 Priority donation is tracked via locks. Every lock
 has a waiter's list and every thread has a list of
 every lock it owns and a lock which it is locked on,
@@ -130,17 +169,25 @@ gets unblocked donations get updated as well.
 We wrote it with easy idea in mind, after such update,
 lock holder's donated priority should be the maximum
 of all the threads that are waiting on all the locks
-it holds. 
+it holds and its own. 
 
 
 ---- ALGORITHMS ----
 
 >> B3: How do you ensure that the highest priority thread waiting for
 >> a lock, semaphore, or condition variable wakes up first?
+ჩვენ უბრალოდ ყველას ვაღვიძებთ და შემდეგ შედულერი გადაწყვეტს 
+სწორად.
 We simply wake up all of them and then scheduler decides.
 
 >> B4: Describe the sequence of events when a call to lock_acquire()
 >> causes a priority donation.  How is nested donation handled?
+ლოქის აღების გამოძახების შემდეგ, თუ სრედი დაიბლოკა, იგი
+იძახებს დონაციის ფუნქციას. თუ ლოქის მფლობელ სრედს აქვს უფრო
+დაბალი პრიორიტეტი, მისი prior_don განახლდება. რადგან ყველა
+სრედი უნახლებს სხვა სრედებს პრიორიტეტს საჭიროების მიხედვით,
+ეს პროცესი შეიძლება რეკურსიულად გაგრძელდეს.
+
 After call to lock acquire, if thread gets blocked, it calls
 the donation function. If the lock holding thread has a lower
 priority than this thread, it's prior_don gets updated.
@@ -149,6 +196,10 @@ a thread that is blocked gets an donation it does the same and so on.
 
 >> B5: Describe the sequence of events when lock_release() is called
 >> on a lock that a higher-priority thread is waiting for.
+ყველა მომლოდინე თავისუფლდება, განმთავისუფლებლის პრიორიტეტი თავიდან
+ითვლება lock_acquire() რუტინით და შედულერიც თავის საქმეს აკეთებს,
+სწორ სრედს უშვებს.
+
 Every waiter gets released, the priority of the releaser is recalculated
 inside the lock_acquire() routine of the previously blocked threads
 and scheduler does its job, as it should.
@@ -160,6 +211,12 @@ and scheduler does its job, as it should.
 >> B6: Describe a potential race in thread_set_priority() and explain
 >> how your implementation avoids it.  Can you use a lock to avoid
 >> this race?
+პრიორიტეტის დონაციამ შეიძლება შედულერის გამო ხელის შეშლა შეძლოს
+და პრობლემები გამოიწვიოს. ანუ მიმდევრობას მნიშვნელობა ექნება
+და შედეგი მოსალოდნელს შეიძლება არ დაემთხვეს. ჩვენს იმპლემენტაციაში
+ეს გადაწყვეტილია ინტერაპტების გამორთვით. რადგან ამ მომენტში აქტიური სრედის
+პრიორიტეტი უნდა შეიცვალოს, ხოლო ეს შეცვლა ინტერაპტ ჰენდლერში ხდება, რომელიც
+ლოქს ვერ აიღებს, ეს პრობლემა ლოქებით ვერ გადაწყდება. 
 Priority donation might interfere because of scheduler and
 cause problems. That is, the order will determine the outcome
 and it might be different than expected. 
@@ -173,6 +230,12 @@ this can't be solved with a lock.
 
 >> B7: Why did you choose this design?  In what ways is it superior to
 >> another design you considered?
+ეს დიზაინი იმიტომ ავირჩიეთ, რომ პირველი იყო რაც მოვიფიქრეთ. რადგან
+ან ჩამატება ან ამოღება ნელი იქნებოდა და რთული დატა სტრუქტურის დაწერა
+არ გვინდოდა(გროვა გაგვირთულებდა ისედაც რთული პროექტის წერას) და თანაც
+მოთხოვნაც არ იყო მისი დაწერა, ეს საკმაოდ ოპტიმალური ამოხსნაა. ჩამატება
+O(1)-ია, ამოღება კი O(n), რაც საკმაოდ კარგი დროა.
+
 We chose this desing because it came to our minds first.
 Since either inserting or removing will be slow and we really
 didn't want to write a costumized heap, and it was not a requirement,
@@ -226,6 +289,12 @@ ticks   A   B   C   A   B   C   to run
 >> C3: Did any ambiguities in the scheduler specification make values
 >> in the table uncertain?  If so, what rule did you use to resolve
 >> them?  Does this match the behavior of your scheduler?
+გაურკვეველი იყო თანაბარ პრიორიტეტიანი სრედები რა მიმდევრობით უნდა 
+გაგვეშვა. ჩვენ ეს ისევე გავაკეთეთ როგორც ჩვენი შედულერი აკეთებს:
+რაუნდ რობინით. რადგან სრედი ქმედების შემდეგ ბოლოში ემატება
+იგივე პრიორიტეტის სრედების სიას, სრედი იგივე პრიორიტეტიანი
+სრედის გამო არ იშიმშილებს. 
+
 Yes, it's ambiguous how to schedule equal priority 
 threads. We and our scheduler do the same here: round robin.
 Since we insert in the end of priority cell-list after it is
@@ -234,6 +303,11 @@ rescheduled, no thread will starve because of same priority thread.
 
 >> C4: How is the way you divided the cost of scheduling between code
 >> inside and outside interrupt context likely to affect performance?
+რადგან უმეტესობა გამოთვლა საჭირო იყო რომ ინტერაპტ ჰენდლერში დაწერილიყო
+ყოველ 4 ტიკში და ზოგი ყოველ წამში ერთხელ, ეს შედულერი ძალიან ცუდია
+ბევრი სრედითვის. ერთადერთი ნაისი არის გატანილი ჰენდლერიდან, თუმცა
+სამწუხაროდ მისი დათვლაც ინტერაპტების გამოთვლას საჭიროებს.
+
 Since most of computation has to be done inside the interrupt handler
 every 4 ticks and some every second, this scheduler from assignment
 is very bad for many threads. Only nice gets changed out of that,
@@ -247,6 +321,11 @@ for it.
 >> disadvantages in your design choices.  If you were to have extra
 >> time to work on this part of the project, how might you choose to
 >> refine or improve your design?
+
+თითოეული პრიორიტეტისთვის თითო ლისტის ქონა, ანუ ჯამში 64-ის
+არის ძალიან სწრაფი მეთოდი, რადგან არც დალაგებაა საჭირო და ჩამატება 
+-ამოღება ორივე O(1) დროს მოითხოვს. 
+
 Implementing 64 lists, each for each priority is a very quick
 solution, since no sorting is necessary, inserting is O(1), removal
 is O(1).
@@ -259,6 +338,8 @@ is O(1).
 >> abstraction layer for fixed-point math, that is, an abstract data
 >> type and/or a set of functions or macros to manipulate fixed-point
 >> numbers, why did you do so?  If not, why not?
+მაკროებით გავაკეთეთ, რადგან გაცილებით უფრო სწრაფი და ადვილია
+ვიდრე ინლაინ ფუნქციები.
 We did macros, since it's way faster and easier than
 inlined functions.
 
