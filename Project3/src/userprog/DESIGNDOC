@@ -166,6 +166,12 @@ we check all sizeof(struct) bytes to ensure, the pointer is not on a buondary.
 >> (e.g. calls to pagedir_get_page()) that might result?  What about
 >> for a system call that only copies 2 bytes of data?  Is there room
 >> for improvement in these numbers, and how much?
+ჩვენი ამოხსნა ძალიან მარტივია. მიუხედავად იმისა რამდენი ბაიტი გადმოგვეცემა,
+ყველა მოწმდება. ანუ არ არსებობს მინიმუმი და მაქსიმუმი რაოდენობები. მინიმუმი
+მხოლოდ მაშინ ხდება თუ პირველივე არასწორი ბაიტია, რაც სტატისტიკურად ნაკლებად
+მოსალოდნელია. ცხადია არის გაუმჯობესების შესაძლებლობა. შეიძლება მიმდევრობითი
+ბაიტები შემოწმდეს მხოლოდ თავსა და ბოლოში, რაც ცხადია ააჩქარებდა პროცესს.
+თუმცა ეს სავალდებულო არ იყო და არ დავწერეთ.
 
 Our solution is very simple. No matter what bytes are passed,
 ALL of them are checked. So, there is no minimum and maximum
@@ -177,6 +183,18 @@ not required and we didn't write it.
 
 >> B5: Briefly describe your implementation of the "wait" system call
 >> and how it interacts with process termination.
+
+ჯერ ჩვენ ვამოწმებთ რომ pid შვილი პროცესის არის ნამდვილად
+pid ამ სრედის შვილი პროცესის. შემდგომ ვიღებთ wait_lock-ს
+რისი საშუალებაც მხოლოდ მაშინ მოგვეცემა როცა შვილი პროცესი
+მართლა მოკვდება. ამის შემდეგ ჩვენ ვიღებთ exit value-ს, რომელიც
+დეფოლტად -1ია, რომ თუ რამე ცუდად წავიდა და სრედი მოულოდნელად 
+მოკვდა, სწორი exit value გვექნება. შვილი პროცესი შემდეგ 
+ამოიღება შვილთა ლისტიდან. zombie_lock განთავისუფლდება შვილი 
+პროცესისთვის რათა მან საკუთარი რესურსების დეალოკაცია შეძლოს.
+(შვილი პროცესი ცდილობს რომ აიღოს ეს ლოქი სიკვდილის წინ,
+ხოლო ყველა სრედი უშვებს ყველა თავისი შვილის ზომბი ლოქს
+საკუთარი სიკვდილისას.) 
 
 First we check that the pid of child process is actually
 a pid of this thread's child process. We try to take the 
