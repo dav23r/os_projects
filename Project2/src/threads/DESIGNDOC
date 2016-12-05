@@ -143,6 +143,21 @@ struct lock *locked_on;             /* The lock, the thread is locked on */
 
 >> B2: Explain the data structure used to track priority donation.
 
+პრიორიტეტის დონაციებს ვაკონტროლებთ ლოქების მეშვეობით.
+ყველა ლოქს აქვს მომლოდინეთა სია და ყველა სრედს აქვს
+იმ ლოქთა სია რომელთაც ფლობს და ის ლოქი რომლის
+განთავისუფლებასაც უცდის, თუ არსებობს ასეთი. prior_don
+არის დონირებული პრიორიტეტი, რომელიც იცვლება თუ სრედი
+დაიბლოკა როცა ლოქის აღებას ცდილობდა. დაბლოკვის შემდეგ,
+იგი ცდილობს დონაციის გაკეთებას იმ სრედისთვის რომელიც
+ფლობს ლოქს ამ მომენტში. განბლოკვის შემდეგაც ყველა
+შესაბამისი დონაცია აფდეითდება. ჩვენ ეს მარტივი იდეით
+განვახორციელეთ. ყოველი ასეთი განახლების შემდეგ, ლოქის
+მფლობელ სრედს უნდა ქონდეს მაქსიმალური პრიორიტეტი
+საკუთარსა და მის მომლოდინე სრედებს შორის მაქსიმალურ
+პრიორიტეტს შორის.
+
+
 Priority donation is tracked via locks. Every lock
 has a waiter's list and every thread has a list of
 every lock it owns and a lock which it is locked on,
@@ -154,7 +169,7 @@ gets unblocked donations get updated as well.
 We wrote it with easy idea in mind, after such update,
 lock holder's donated priority should be the maximum
 of all the threads that are waiting on all the locks
-it holds. 
+it holds and its own. 
 
 
 ---- ALGORITHMS ----
