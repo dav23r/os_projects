@@ -1,7 +1,8 @@
 #include "file_mapping.h"
+#include "threads/malloc.h"
 
 static void file_mapping_unused(struct file_mapping *f) {
-	return ((f->fl == NULL) && (f->start_vaddr == NULL));
+	return ((f == NULL) || ((f->fl == NULL) && (f->start_vaddr == NULL)));
 }
 
 void file_mapping_init(struct file_mapping *f) {
@@ -9,6 +10,7 @@ void file_mapping_init(struct file_mapping *f) {
 	f->start_vaddr = NULL;
 }
 void file_mapping_dispose(struct file_mapping *f) {
+	if (file_mapping_unused(f)) return;
 	// ETC...
 	file_mapping_init(f);
 }
@@ -54,10 +56,26 @@ static int file_mappings_seek_free_id(struct file_mappings *m) {
 	}
 }
 
-int file_mappings_map(struct thread *t, struct file *fl, void *vaddr) {
+static bool file_mappable(struct thread *t, struct file *fl, void *vaddr) {
+	return false;
+}
 
+static bool file_map(struct thread *t, struct file *fl, void *vaddr, struct file_mapping *mapping) {
+	return false;
+}
+
+int file_mappings_map(struct thread *t, struct file *fl, void *vaddr) {
+	if (!file_mappable(t, fl, vaddr)) return (-1);
+	struct file_mappings *mappings = &t->mem_mappings;
+	int free_id = file_mappings_seek_free_id(mappings);
+	if (free_id >= 0)
+		if (!file_map(t, fl, vaddr, mappings.mappings + free_id))
+			free_id = (-1);
+	return free_id;
 }
 int file_mappings_unmap(struct thread *t, int mapping_id) {
-
+	struct file_mappings *mappings = &t->mem_mappings;
+	if (mapping_id >= 0 && mapping_id < mappings->pool_size)
+		file_mapping_dispose(mappings->mappings + mapping_id);
 }
 

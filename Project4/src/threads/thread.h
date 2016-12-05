@@ -8,6 +8,7 @@
 #include "filesys/file.h"
 #ifdef VM
 #include "vm/supplemental_page.h"
+#include "vm/file_mapping.h"
 #endif
 
 /* States in a thread's life cycle. */
@@ -121,6 +122,7 @@ struct thread
 
 #ifdef VM
 	struct suppl_pt *suppl_page_table;
+	struct file_mappings mem_mappings;
 #endif
 
     /* Owned by thread.c. */
