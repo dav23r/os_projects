@@ -211,6 +211,12 @@ and scheduler does its job, as it should.
 >> B6: Describe a potential race in thread_set_priority() and explain
 >> how your implementation avoids it.  Can you use a lock to avoid
 >> this race?
+პრიორიტეტის დონაციამ შეიძლება შედულერის გამო ხელის შეშლა შეძლოს
+და პრობლემები გამოიწვიოს. ანუ მიმდევრობას მნიშვნელობა ექნება
+და შედეგი მოსალოდნელს შეიძლება არ დაემთხვეს. ჩვენს იმპლემენტაციაში
+ეს გადაწყვეტილია ინტერაპტების გამორთვით. რადგან ამ მომენტში აქტიური სრედის
+პრიორიტეტი უნდა შეიცვალოს, ხოლო ეს შეცვლა ინტერაპტ ჰენდლერში ხდება, რომელიც
+ლოქს ვერ აიღებს, ეს პრობლემა ლოქებით ვერ გადაწყდება. 
 Priority donation might interfere because of scheduler and
 cause problems. That is, the order will determine the outcome
 and it might be different than expected. 
@@ -224,6 +230,12 @@ this can't be solved with a lock.
 
 >> B7: Why did you choose this design?  In what ways is it superior to
 >> another design you considered?
+ეს დიზაინი იმიტომ ავირჩიეთ, რომ პირველი იყო რაც მოვიფიქრეთ. რადგან
+ან ჩამატება ან ამოღება ნელი იქნებოდა და რთული დატა სტრუქტურის დაწერა
+არ გვინდოდა(გროვა გაგვირთულებდა ისედაც რთული პროექტის წერას) და თანაც
+მოთხოვნაც არ იყო მისი დაწერა, ეს საკმაოდ ოპტიმალური ამოხსნაა. ჩამატება
+O(1)-ია, ამოღება კი O(n), რაც საკმაოდ კარგი დროა.
+
 We chose this desing because it came to our minds first.
 Since either inserting or removing will be slow and we really
 didn't want to write a costumized heap, and it was not a requirement,
