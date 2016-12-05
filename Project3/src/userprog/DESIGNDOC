@@ -32,6 +32,8 @@ Davit Akopov dakop14@freeuni.edu.ge
 >> `struct' member, global or static variable, `typedef', or
 >> enumeration.  Identify the purpose of each in 25 words or less.
 
+არაფერი.
+
 Nothing.
 
 ---- ALGORITHMS ----
@@ -39,6 +41,18 @@ Nothing.
 >> A2: Briefly describe how you implemented argument parsing.  How do
 >> you arrange for the elements of argv[] to be in the right order?
 >> How do you avoid overflowing the stack page?
+ჩვენ ვშლით ბრძანებას strtok_r()-ით და ვავსებთ სტეკს
+ამ დაშლილი ბრძანებით, თუმცა შეტრიალებული მიმდევრობით, რომ სტეკი
+სწორად შეივსოს. setup_stack()-ის დასაწყისში ჩვენ ორი სტრინგი
+გვაქვს: პროგრამის სახელი და არგუმენტები. შემდეგ, ჩვენ ვაკოპირებთ
+ამ სტრინგებს სტეკში. შემდეგ ორი იტერაციით, პირველი ჩაანაცვლებს სფეისებს
+სი-სტრინგის null ტერმინაციით('\0') და შემდეგ მეორე ჩააგდებს თითოეული
+არგუმენტის პოინტერებს სტეკში შეტრიალებული მიმდევრობით. შემდეგ, როგორც 
+პინტოსის პირობაში წერია, სახელს, argv, argc და დასაბრუნებელ მისამართს 
+ვდებთ მათ შემდეგ(ქვემოთ). ჩვენ გადავწყვიტეთ რომ სტეკ პოინტერი არ შევამოწმოთ
+მანამ სანამ წარუმატებელი ქმედება არ მოხდება. esp პოინტერის ვალიდურობის
+ყოველ ჯერზე შემოწმების ნაცვლად, ვაცდით გაფეილებას და ფეიჯ ფოლტებს ვაცდით
+ჰენდლინგს.(უბრალოდ კლავს მიმდინარე სრედს)
 
 We disassemble the command with strtok_r() and fill the stack 
 with it, but in reverse order, to fill the stack in correct order.
@@ -61,6 +75,12 @@ exits the current thread.
 
 >> A3: Why does Pintos implement strtok_r() but not strtok()?
 
+მიზეზი არის მრავალსრედიანი გარემო. strtok() არაა უსაფრთხო
+მრავალსრედიან გარემოში, რადგან გლობალურ სტატიკურ ინფორმაციას
+იყენებს, ამიტომ სრედების გადაკვეთა დიდი ალბათობით გააფუჭებს საქმეს.
+strtok_r() არ იყენებს არაფერ გლობალურს და შესაბამისად კარგი 
+ამოხსნაა(thread-safe).
+
 The reason is multithreaded environment. strtok() is not 
 thread-safe, since it uses a global static information holding
 mechanism, so thread interleaving will most probably ruin it.
@@ -70,6 +90,10 @@ has no global usage of variables.
 >> A4: In Pintos, the kernel separates commands into a executable name
 >> and arguments.  In Unix-like systems, the shell does this
 >> separation.  Identify at least two advantages of the Unix approach.
+
+ნაკლები დრო იხარჯება კერნელში და შელს შეუძლია მეტი საქმე
+გააკეთოს ვიდრე უბრალო დაცილებაა, შეუძლია პრეპროცესინგი გააკეთოს
+და ზედმეტად არ გამოიძახოს სისტემ ქოლები.(მაგალითად არასწორი ინფუთისას).
 
 Less time spent in kernel and shell can do more than just
 separate, it can preprocess stuff and not have to call
@@ -102,9 +126,17 @@ typedef int file_descriptor; /*number which is a file descriptor*/
 >> B2: Describe how file descriptors are associated with open files.
 >> Are file descriptors unique within the entire OS or just within a
 >> single process?
+ფაილ დესკრიპტორები არიან თითოეული სრედისთვის ცალ-ცალკე. ჩვენი ინტერფეისი
+საშუალებას იძლევა, რომ სრედს ვკითხოთ ფაილზე fd-თი და file * გვიბრუნდება.
+(struct file* ჩვენი დაწერილი არაა, სისტემურია). სრედმა უბრალოდ იცის
+მეპინგი ფაილ დესკრიპტორსა და ნამდვილ ფაილებს შორის. ახლა სრედს აქვს ფიქსირებული
+ზომის ფაილ დესკრიპტორის მასივი/ ჩვენ გვაქვს ინტერფეისი, რომელიც არ აჩვენებს
+მომხმარებელს რომ ზომა ფიქსირებულია და შემდგომი პროექტებისთვის ეს აბსტრაქციის
+დონე გამოსდეგი იქნება. 
+
 
 File descriptors are per-thread. Our interface allows us to ask
-about file to thread bay fd and file * is returned, (struct file* wasn't
+about file to thread by fd and file * is returned, (struct file* wasn't
 written by us(default file system structure)). The thread simply knows
 the mapping between its file descriptors and real files.
 Now thread has a fixed size file descriptor array. Below we have
@@ -116,6 +148,12 @@ so for future projects this abstraction layer will be useful.
 
 >> B3: Describe your code for reading and writing user data from the
 >> kernel.
+ჩვენ გვაქვს მარტივი ვალიდაცია. ვამოწმებთ აბსოლუტურად ყველა ბაიტს
+რომ კორექტული იყოს, სტრინგის ნალ ტერმინატორსაც კი ('\0').
+შემოწმება ასე ხდება: ვნახულობთ რომ ნალი არაა,  PHYS_BASE-ის ქვემოთაა
+და ასევე დამეპილია რამეზე. ნებისმიერი სტრაქტისთვის 
+ჩვენ ვამოწმებთ ყველა sizeof(struct) ბაიტს რომ დავრწმუნდეთ კორექტულობაში. 
+
 We have simple validation of user data. We check every single byte 
 pointed by the user poiner to be in user space, even '\0' of a string.
 Note: Check happens in this way: we make sure, the pointer is not null,
@@ -128,6 +166,12 @@ we check all sizeof(struct) bytes to ensure, the pointer is not on a buondary.
 >> (e.g. calls to pagedir_get_page()) that might result?  What about
 >> for a system call that only copies 2 bytes of data?  Is there room
 >> for improvement in these numbers, and how much?
+ჩვენი ამოხსნა ძალიან მარტივია. მიუხედავად იმისა რამდენი ბაიტი გადმოგვეცემა,
+ყველა მოწმდება. ანუ არ არსებობს მინიმუმი და მაქსიმუმი რაოდენობები. მინიმუმი
+მხოლოდ მაშინ ხდება თუ პირველივე არასწორი ბაიტია, რაც სტატისტიკურად ნაკლებად
+მოსალოდნელია. ცხადია არის გაუმჯობესების შესაძლებლობა. შეიძლება მიმდევრობითი
+ბაიტები შემოწმდეს მხოლოდ თავსა და ბოლოში, რაც ცხადია ააჩქარებდა პროცესს.
+თუმცა ეს სავალდებულო არ იყო და არ დავწერეთ.
 
 Our solution is very simple. No matter what bytes are passed,
 ALL of them are checked. So, there is no minimum and maximum
@@ -139,6 +183,18 @@ not required and we didn't write it.
 
 >> B5: Briefly describe your implementation of the "wait" system call
 >> and how it interacts with process termination.
+
+ჯერ ჩვენ ვამოწმებთ რომ pid შვილი პროცესის არის ნამდვილად
+pid ამ სრედის შვილი პროცესის. შემდგომ ვიღებთ wait_lock-ს
+რისი საშუალებაც მხოლოდ მაშინ მოგვეცემა როცა შვილი პროცესი
+მართლა მოკვდება. ამის შემდეგ ჩვენ ვიღებთ exit value-ს, რომელიც
+დეფოლტად -1ია, რომ თუ რამე ცუდად წავიდა და სრედი მოულოდნელად 
+მოკვდა, სწორი exit value გვექნება. შვილი პროცესი შემდეგ 
+ამოიღება შვილთა ლისტიდან. zombie_lock განთავისუფლდება შვილი 
+პროცესისთვის რათა მან საკუთარი რესურსების დეალოკაცია შეძლოს.
+(შვილი პროცესი ცდილობს რომ აიღოს ეს ლოქი სიკვდილის წინ,
+ხოლო ყველა სრედი უშვებს ყველა თავისი შვილის ზომბი ლოქს
+საკუთარი სიკვდილისას.) 
 
 First we check that the pid of child process is actually
 a pid of this thread's child process. We try to take the 
@@ -165,7 +221,10 @@ thread releases the zombie lock of every child upon its death.)
 >> allocated resources (locks, buffers, etc.) are freed?  In a few
 >> paragraphs, describe the strategy or strategies you adopted for
 >> managing these issues.  Give an example.
-
+ჩვენ ბაიტ-ბაიტად ვამოწმებთ. სისწორე გარანტირებულია მანამ,
+სანამ კერნელი ცდის მომხმარებლის ბრძანებების შესრულებას.
+თუ არავალიდური პოინტერი მოგვცეს exit(-1)-ს ვიძახებთ პროცესზე
+და მთელი გასუფთავება/დეალოკაცია ხდება. სულ ესაა. 
 We check every user byte one by one. Validity is ensured
 before kernel tries to do what user asked it. If it's an invalid
 pointer, then we call exit(-1) on the process which does all of
@@ -177,6 +236,10 @@ the cleanup. As simple as that.
 >> fails, so it cannot return before the new executable has completed
 >> loading.  How does your code ensure this?  How is the load
 >> success/failure status passed back to the thread that calls "exec"?
+ჩვენ ამის გარანტია გვაქვს load_lock-ით. გამომძახებელი პროცესი ცდილობს
+მის აღებას და არ შეუძლია ამისი გაკეთება მანამ სანამ ჩატვირთვა არ მორჩება.
+ლოქი ცხადია თავისუფლდება მიუხედავად იმისა წარმატებულად ჩაიტვირთა თუ არა 
+პროცესი, მთავარია რომ მორჩა ჩატვირთვა.
 
 We ensure this with load_lock. The calling process tries to
 acquire the lock and can't do that before the loading 
@@ -189,6 +252,15 @@ of load fail or success).
 >> that all resources are freed in each case?  How about when P
 >> terminates without waiting, before C exits?  After C exits?  Are
 >> there any special cases?
+
+ჩვენთვის ეს ყველა შემთხვევა ჩვეულებრივი შემთხვევაა. ზომბი ლოქი
+და wait_lock ხსნის ამ ყველა პრობლემას. როცა პროცესი ცდილობს რომ 
+მოკვდეს მას საშუალება არ ეძლევა ამის გაკეთების, მანამ სანამ მშობელი
+არ მისცემს ნებას(მკვდარი სრედებიდან რომ არ ცადოს მერე მშობელმა 
+ინფორმაციის მიღება). თუ სრედი კვდება, ყველა ზომბი ლოქს ანთავისუფლებს.
+wait_lock არის ლოქი, რომელიც თავიდან აღებულია და როცა სრედი ცდილობს 
+რომ ამ სრედს დაუცადოს(wait) ამ ლოქის აღებას ცდილობს. ნებისმიერი სრედი
+სიკვდილის წინ ამ ლოქს ანთავისუფლებს და ცდილობს ზომბის აღებას. 
 
 As mentioned before, all of these cases are regular cases
 and get solved with zombie_lock and wait_lock. When a process
@@ -203,17 +275,20 @@ process to die.
 
 >> B9: Why did you choose to implement access to user memory from the
 >> kernel in the way that you did?
- 
+
+მარტივია, ეფექტური და მოგვწონს.
 Because it's simple, it's effective and we liked it.
 
 >> B10: What advantages or disadvantages can you see to your design
 >> for file descriptors?
-
+უპირატესობა - ადვილი იყო დასაწერად, მუშაა.
+უარყოფითი მხარე - სნობებს არ მოეწონებათ.
 Advantages - simple and easy to implement. Also works.
 Disadvntages - pretentious people won't like them.
 
 >> B11: The default tid_t to pid_t mapping is the identity mapping.
 >> If you changed it, what advantages are there to your approach?
+არ შეგვიცვლია, რადგან ასე კოდი უფრო ადვილი საწერი იყო.
 We didn't change it since it made code much easier.
 
 
