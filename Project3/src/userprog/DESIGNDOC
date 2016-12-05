@@ -91,6 +91,10 @@ has no global usage of variables.
 >> and arguments.  In Unix-like systems, the shell does this
 >> separation.  Identify at least two advantages of the Unix approach.
 
+ნაკლები დრო იხარჯება კერნელში და შელს შეუძლია მეტი საქმე
+გააკეთოს ვიდრე უბრალო დაცილებაა, შეუძლია პრეპროცესინგი გააკეთოს
+და ზედმეტად არ გამოიძახოს სისტემ ქოლები.(მაგალითად არასწორი ინფუთისას).
+
 Less time spent in kernel and shell can do more than just
 separate, it can preprocess stuff and not have to call
 system calls unnecessarily.
@@ -122,9 +126,17 @@ typedef int file_descriptor; /*number which is a file descriptor*/
 >> B2: Describe how file descriptors are associated with open files.
 >> Are file descriptors unique within the entire OS or just within a
 >> single process?
+ფაილ დესკრიპტორები არიან თითოეული სრედისთვის ცალ-ცალკე. ჩვენი ინტერფეისი
+საშუალებას იძლევა, რომ სრედს ვკითხოთ ფაილზე fd-თი და file * გვიბრუნდება.
+(struct file* ჩვენი დაწერილი არაა, სისტემურია). სრედმა უბრალოდ იცის
+მეპინგი ფაილ დესკრიპტორსა და ნამდვილ ფაილებს შორის. ახლა სრედს აქვს ფიქსირებული
+ზომის ფაილ დესკრიპტორის მასივი/ ჩვენ გვაქვს ინტერფეისი, რომელიც არ აჩვენებს
+მომხმარებელს რომ ზომა ფიქსირებულია და შემდგომი პროექტებისთვის ეს აბსტრაქციის
+დონე გამოსდეგი იქნება. 
+
 
 File descriptors are per-thread. Our interface allows us to ask
-about file to thread bay fd and file * is returned, (struct file* wasn't
+about file to thread by fd and file * is returned, (struct file* wasn't
 written by us(default file system structure)). The thread simply knows
 the mapping between its file descriptors and real files.
 Now thread has a fixed size file descriptor array. Below we have
@@ -136,6 +148,12 @@ so for future projects this abstraction layer will be useful.
 
 >> B3: Describe your code for reading and writing user data from the
 >> kernel.
+ჩვენ გვაქვს მარტივი ვალიდაცია. ვამოწმებთ აბსოლუტურად ყველა ბაიტს
+რომ კორექტული იყოს, სტრინგის ნალ ტერმინატორსაც კი ('\0').
+შემოწმება ასე ხდება: ვნახულობთ რომ ნალი არაა,  PHYS_BASE-ის ქვემოთაა
+და ასევე დამეპილია რამეზე. ნებისმიერი სტრაქტისთვის 
+ჩვენ ვამოწმებთ ყველა sizeof(struct) ბაიტს რომ დავრწმუნდეთ კორექტულობაში. 
+
 We have simple validation of user data. We check every single byte 
 pointed by the user poiner to be in user space, even '\0' of a string.
 Note: Check happens in this way: we make sure, the pointer is not null,
