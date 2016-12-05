@@ -196,6 +196,10 @@ a thread that is blocked gets an donation it does the same and so on.
 
 >> B5: Describe the sequence of events when lock_release() is called
 >> on a lock that a higher-priority thread is waiting for.
+ყველა მომლოდინე თავისუფლდება, განმთავისუფლებლის პრიორიტეტი თავიდან
+ითვლება lock_acquire() რუტინით და შედულერიც თავის საქმეს აკეთებს,
+სწორ სრედს უშვებს.
+
 Every waiter gets released, the priority of the releaser is recalculated
 inside the lock_acquire() routine of the previously blocked threads
 and scheduler does its job, as it should.
