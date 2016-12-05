@@ -1,5 +1,7 @@
 #include "file_mapping.h"
 #include "threads/malloc.h"
+#include "threads/vaddr.h"
+#include "userprog/pagedir.h"
 
 static bool file_mapping_unused(struct file_mapping *f) {
 	return ((f == NULL) || ((f->fl == NULL) && (f->start_vaddr == NULL)));
@@ -20,6 +22,7 @@ void file_mappings_init(struct file_mappings *m) {
 	m->mappings = NULL;
 	m->pool_size = 0;
 }
+
 void file_mappings_dispose(struct file_mappings *m) {
 	int i;
 	for (i = 0; i < m->pool_size; i++)
@@ -56,11 +59,22 @@ static int file_mappings_seek_free_id(struct file_mappings *m) {
 	}
 }
 
+#define PAGE_SIZE 1024 * 4
+
 static bool file_mappable(struct thread *t, struct file *fl, void *vaddr) {
 	if (t == NULL || fl == NULL || vaddr == NULL) return false;
+    if (pg_ofs(vaddr) != 0) return false;
+
 	int file_sz = file_length(fl);
-	// ETC...
-	return false;
+    char *cur_page = vaddr;
+    int i; 
+    for (i = 0; i < file_sz / PAGE_SIZE; i++){
+        if (pagedir_get_page(t->pagedir, cur_page) != NULL) 
+            return false;
+        cur_page += PAGE_SIZE;	
+    }
+
+	return true;
 }
 
 static bool file_map(struct thread *t, struct file *fl, void *vaddr, struct file_mapping *mapping) {
@@ -73,7 +87,9 @@ static bool file_map(struct thread *t, struct file *fl, void *vaddr, struct file
 		return false;
 	}
 	bool success = true;
-	// ETC...
+    
+   
+    
 	if (success) {
 		mapping->fl = new_file;
 		mapping->start_vaddr = vaddr;
