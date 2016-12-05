@@ -321,6 +321,11 @@ for it.
 >> disadvantages in your design choices.  If you were to have extra
 >> time to work on this part of the project, how might you choose to
 >> refine or improve your design?
+
+თითოეული პრიორიტეტისთვის თითო ლისტის ქონა, ანუ ჯამში 64-ის
+არის ძალიან სწრაფი მეთოდი, რადგან არც დალაგებაა საჭირო და ჩამატება 
+-ამოღება ორივე O(1) დროს მოითხოვს. 
+
 Implementing 64 lists, each for each priority is a very quick
 solution, since no sorting is necessary, inserting is O(1), removal
 is O(1).
@@ -333,6 +338,8 @@ is O(1).
 >> abstraction layer for fixed-point math, that is, an abstract data
 >> type and/or a set of functions or macros to manipulate fixed-point
 >> numbers, why did you do so?  If not, why not?
+მაკროებით გავაკეთეთ, რადგან გაცილებით უფრო სწრაფი და ადვილია
+ვიდრე ინლაინ ფუნქციები.
 We did macros, since it's way faster and easier than
 inlined functions.
 
