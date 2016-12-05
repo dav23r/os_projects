@@ -131,6 +131,11 @@ process_exit (void)
   thread_free_all_children(cur);
   thread_close_all_files(cur);
 
+#ifdef VM
+  if (cur->suppl_page_table)
+	  suppl_pt_delete(cur->suppl_page_table);
+#endif
+
   /* Destroy the current process's page directory and switch back
      to the kernel-only page directory. */
   pd = cur->pagedir;
@@ -147,11 +152,6 @@ process_exit (void)
       pagedir_activate (NULL);
       pagedir_destroy (pd);
     }
-
-#ifdef VM
-    if (cur->suppl_page_table)
-        suppl_pt_delete(cur->suppl_page_table);
-#endif
 }
 
 /* Sets up the CPU for running user code in the current
@@ -593,7 +593,7 @@ install_page (void *upage, void *kpage, bool writable)
      address, then map our page there. */
   return (pagedir_get_page (t->pagedir, upage) == NULL
 #ifdef VM
-          && suppl_table_set_page(t->pagedir, upage, kpage, writable)
+          && suppl_table_set_page(t, upage, kpage, writable)
 #else
 	  && pagedir_set_page(t->pagedir, upage, kpage, writable)
 #endif

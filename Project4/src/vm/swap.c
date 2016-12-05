@@ -17,10 +17,7 @@ static struct lock allocation_lock;
 
 #define START 0
 
-// Prototypes of static functions 
-static void swap_init(void);
-
-static void swap_init() {
+void swap_init(void) {
 	if (!swap_initialized) {
         alloc_map = bitmap_create(BITMAP_SIZE);
         swap_block = block_get_role(BLOCK_SWAP);
