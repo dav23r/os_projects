@@ -11,6 +11,9 @@
 #include "filesys/filesys.h"
 #include "filesys/file.h"
 #include "devices/input.h"
+#ifdef VM
+#include "vm/file_mapping.h"
+#endif
 
 
 #define max(a, b) (((a) > (b)) ? (a) : (b))
@@ -361,15 +364,13 @@ static int mmap(int fd, void *vaddr) {
 	struct thread *t = thread_current();
 	struct file *fl = thread_get_file(t, fd);
 	if (fl == NULL) return (-1);
-	PANIC("################################# MMAP called ############################################\n");
-	return ((int)vaddr);
+	return file_mappings_map(t, fl, vaddr);
 }
 /**
 Unmaps given file mapping
 */
 static int munmap(int map_id) {
-	PANIC("################################# MUNMAP called ############################################\n");
-	return map_id;
+	return file_mappings_unmap(thread_current(), map_id);
 }
 #endif
 
