@@ -96,6 +96,9 @@ to be awoken right now, not complete amount of sleepers.
 
 >> A4: How are race conditions avoided when multiple threads call
 >> timer_sleep() simultaneously?
+საჭირო ოპერაციები რომლებიც ლისტზე უნდა ჩატარდეს ხდება მაშინ,
+როცა ინტერაპტები გამორთულია.
+
 Operations that are necessary on the list happen when interrupts are 
 disabled.
 
@@ -103,6 +106,7 @@ disabled.
 
 >> A5: How are race conditions avoided when a timer interrupt occurs
 >> during a call to timer_sleep()?
+გამორთული ინტერაპტების მეშვეობით.
 Interrupts are disabled, so that helps.
 
 
@@ -110,6 +114,9 @@ Interrupts are disabled, so that helps.
 
 >> A6: Why did you choose this design?  In what ways is it superior to
 >> another design you considered?
+სხვა დიზაინი არ განგვიხილავს რადგან ეს დიზაინი 
+საკმაოდ სწრაფად და სწორად ავამუშავეთ როცა დავწერეთ.
+კარგად მუშაობს დალაგებული სიების გამო.
 We didn't consider other design as it worked pretty quickly
 and pretty well the first time we wrote it.
 It works very well because of sorted list.
