@@ -30,6 +30,16 @@ void filesys_lock_release(void) {
 	lock_release(&filesys_lock);
 }
 
+// Checks, if the user address is mappable
+static int user_address_mappable(void *addr, unsigned int size) {
+	char *ptr = ((char*)addr);
+	while (size > 0) {
+		if (ptr == NULL || (!is_user_vaddr((uint32_t*)ptr))) return false;
+		size--;
+		ptr++;
+	}
+	return true;
+}
 
 // Checks, if the user address is valid (by making sure, it's below PHYS_BASE and it's already mapped/allocated)
 static int user_address_valid(void *addr) {
@@ -364,7 +374,7 @@ static int mmap(int fd, void *vaddr) {
 	struct thread *t = thread_current();
 	struct file *fl = thread_get_file(t, fd);
 	if (fl == NULL) return (-1);
-	if (!pointers_valid(vaddr, filesize(fd))) return (-1);
+	if (!user_address_mappable(vaddr, filesize(fd))) return (-1);
 	return file_mappings_map(t, fl, vaddr);
 }
 /**

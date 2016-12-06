@@ -18,7 +18,7 @@ enum suppl_page_location {
 struct suppl_page {
     uint32_t vaddr;
     uint32_t kaddr;
-    void *mapping;
+    struct file_mapping *mapping;
 	enum suppl_page_location location;
     struct hash_elem hash_elem;
 };
@@ -38,6 +38,8 @@ void suppl_page_init(struct suppl_page *page);
 struct suppl_page * suppl_page_new(void);
 void suppl_page_dispose(struct suppl_page *page);
 void suppl_page_delete(struct suppl_page *page);
+
+bool suppl_page_load_from_file(struct thread *t, struct suppl_page *page);
 
 void suppl_pt_init(struct suppl_pt *pt);
 struct suppl_pt * suppl_pt_new(void);

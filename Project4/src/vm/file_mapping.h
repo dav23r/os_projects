@@ -1,6 +1,7 @@
 #ifndef FILE_MAPPING_H
 #define FILE_MAPPING_H
 #include "filesys/file.h"
+#define PAGE_SIZE 1024 * 4
 
 struct file_mapping {
 	struct file *fl;

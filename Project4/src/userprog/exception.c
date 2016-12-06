@@ -155,10 +155,13 @@ page_fault (struct intr_frame *f)
 	  struct suppl_page *page = suppl_pt_lookup(cur->suppl_page_table, fault_addr);
 	  if (page != NULL) {
 		  if (page->location == PG_LOCATION_SWAP) {
-
+			  PANIC("################################## VADDR ON SWAP ################################\n");
 		  } else if (page->location == PG_LOCATION_FILE) {
-
+			  //PANIC("################################ PAGE ON FILE ###############################\n");
+			  if (!suppl_page_load_from_file(cur, page))
+				PANIC("################################## ERROR READING MAPPED MEMORY ################################\n");
 		  }
+		  //PANIC("################################### INTERNAL ERROR (page_location: %d) ##################################\nPG_LOCATION_UNKNOWN: %d, PG_LOCATION_RAM: %d, PG_LOCATION_SWAP: %d, PG_LOCATION_FILE: %d\n", (int)page->location, (int)PG_LOCATION_UNKNOWN, (int)PG_LOCATION_RAM, (int)PG_LOCATION_SWAP, (int)PG_LOCATION_FILE);
 	  } else if (stack_grow_needed(fault_addr, f->esp)) {
 		  //printf("############################### SHOULD GROW STACK ##################################\n");
 		  if (!suppl_table_alloc_user_page(cur, fault_addr, true)) {

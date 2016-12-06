@@ -63,8 +63,6 @@ static int file_mappings_seek_free_id(struct file_mappings *m) {
 	}
 }
 
-#define PAGE_SIZE 1024 * 4
-
 static bool file_mappable(struct thread *t, struct file *fl, void *vaddr) {
 	if (t == NULL || fl == NULL || vaddr == NULL) return false;
     if (pg_ofs(vaddr) != 0) return false;
@@ -112,7 +110,11 @@ static bool file_map(struct thread *t, struct file *fl, void *vaddr, struct file
 }
 
 int file_mappings_map(struct thread *t, struct file *fl, void *vaddr) {
-	if (!file_mappable(t, fl, vaddr)) return (-1);
+	if (!file_mappable(t, fl, vaddr)) {
+		//PANIC("############################################# NOT MAPPABLE ###################################################\n");
+		return (-1);
+	}
+	//PANIC("############################################# ATTEMPTING TO MAP ###################################################\n");
 	struct file_mappings *mappings = &t->mem_mappings;
 	int free_id = file_mappings_seek_free_id(mappings);
 	if (free_id >= 0)

@@ -49,6 +49,35 @@ void suppl_page_delete(struct suppl_page *page) {
 	if (page != NULL) free(page);
 }
 
+bool suppl_page_load_from_file(struct thread *t, struct suppl_page *page) {
+	ASSERT(page->location == PG_LOCATION_FILE && page->mapping != NULL);
+	void* kpage = ((void*)page->kaddr);
+	if (kpage == NULL) kpage = palloc_get_page(PAL_USER | PAL_ZERO);
+	if (kpage == NULL) {
+		// ETC...
+		return false;
+	}
+	void *vaddr = ((void*)page->vaddr);
+	if (!pagedir_set_page(t->pagedir, vaddr, kpage, 1)) return false;
+	page->kaddr = ((uint32_t)kpage);
+	char *start = ((char*)vaddr);
+	char *buff = start;
+	char *end = (start + PAGE_SIZE);
+	bool file_r = false;
+	while (buff < end) {
+		(*buff) = 0;
+		if ((!file_r) && ((char*)buff >= ((char*)page->mapping->start_vaddr))) {
+			file_seek(page->mapping->fl, ((char*)buff) - ((char*)page->mapping->start_vaddr));
+			buff += file_read(page->mapping->fl, buff, PAGE_SIZE - (buff - start));
+			file_r = true;
+		}
+		else buff++;
+	}
+	//PANIC("################################ READING KINDA SEEMS SUCCESSFUL ###############################\n");
+	return true;
+}
+
+
 void suppl_pt_init(struct suppl_pt *pt) {
 	if (pt == NULL) return;
 	if (!hash_init(&pt->pages_map, pages_map_hash, pages_map_less, NULL))
@@ -103,7 +132,10 @@ bool suppl_table_set_file_mapping(struct thread *t, void* upage, struct file_map
 	page->location = PG_LOCATION_FILE;
     
     hash_insert(&spt->pages_map, &page->hash_elem);
-    return true;
+    
+	//PANIC("####################################### MAPPED #########################################\n");
+
+	return true;
 }
 
 bool suppl_table_alloc_user_page(struct thread *t, void *upage, bool writeable) {
