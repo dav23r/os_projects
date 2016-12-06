@@ -17,8 +17,8 @@ enum suppl_page_location {
 
 struct suppl_page {
     uint32_t vaddr;
-    long long data_pointer;
-    // TODO Add other members
+    uint32_t kaddr;
+    void *mapping;
 	enum suppl_page_location location;
     struct hash_elem hash_elem;
 };
@@ -49,4 +49,4 @@ bool suppl_table_set_file_mapping(struct thread *t, void *upage, struct file_map
 bool suppl_table_alloc_user_page(struct thread *t, void *upage, bool writeable);
 struct suppl_page *suppl_pt_lookup(struct suppl_pt *pt, void *vaddr);
 
-#endif //PROJECT4_SUPPLEMENTAL_PAGE_H
+#endif 

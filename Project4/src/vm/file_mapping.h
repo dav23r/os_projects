@@ -4,6 +4,7 @@
 
 struct file_mapping {
 	struct file *fl;
+    // int file_size;
 	void *start_vaddr;
 };
 

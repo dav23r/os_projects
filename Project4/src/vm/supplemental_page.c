@@ -26,8 +26,9 @@ static void suppl_page_hash_dispose(struct hash_elem *e, void *aux UNUSED) {
 
 void suppl_page_init(struct suppl_page *page) {
 	if (page == NULL) return;
-    page->data_pointer = NULL;
-	// TODO maybe add other vars
+    page->vaddr = 0;
+    page->kaddr = 0;
+    page->mapping = NULL;
 	page->location = PG_LOCATION_UNKNOWN;
 }
 
@@ -39,7 +40,8 @@ struct suppl_page * suppl_page_new(void) {
 
 void suppl_page_dispose(struct suppl_page *page) {
 	if (page == NULL) return;
-	// TODO maybe some vars need deallocation
+    file_mapping_dispose(page->mapping);
+    suppl_page_init(page);
 }
 
 void suppl_page_delete(struct suppl_page *page) {
@@ -49,7 +51,6 @@ void suppl_page_delete(struct suppl_page *page) {
 
 void suppl_pt_init(struct suppl_pt *pt) {
 	if (pt == NULL) return;
-	// ETC...
 	if (!hash_init(&pt->pages_map, pages_map_hash, pages_map_less, NULL))
 		PANIC("HASH INITIALISATION FAILED");
 	pt->owner_thread = NULL;
@@ -63,7 +64,6 @@ struct suppl_pt * suppl_pt_new(void) {
 
 void suppl_pt_dispose(struct suppl_pt *pt) {
 	if (pt == NULL) return;
-	// ETC...
 	hash_destroy(&pt->pages_map, suppl_page_hash_dispose);
 }
 
@@ -95,10 +95,10 @@ bool suppl_table_set_file_mapping(struct thread *t, void* upage, struct file_map
     struct suppl_pt *spt = t->suppl_page_table;
     struct suppl_page *page = suppl_page_new();
     if (page == NULL) return false;
-    page->vaddr = upage;
-    page->data_pointer = mapping;
+    page->vaddr = (uint32_t) upage;
+    page->mapping = mapping;
     
-	hash_insert(spt->pages_map, &page->hash_elem);
+    hash_insert(&spt->pages_map, &page->hash_elem);
     return true;
 }
 
