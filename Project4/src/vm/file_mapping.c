@@ -1,7 +1,9 @@
 #include "file_mapping.h"
 #include "threads/malloc.h"
 #include "threads/vaddr.h"
+#include "vm/supplemental_page.h"
 #include "userprog/pagedir.h"
+#include "lib/kernel/hash.h"
 
 static bool file_mapping_unused(struct file_mapping *f) {
 	return ((f == NULL) || ((f->fl == NULL) && (f->start_vaddr == NULL)));
@@ -11,12 +13,12 @@ void file_mapping_init(struct file_mapping *f) {
 	f->fl = NULL;
 	f->start_vaddr = NULL;
 }
+
 void file_mapping_dispose(struct file_mapping *f) {
 	if (file_mapping_unused(f)) return;
 	// ETC...
 	file_mapping_init(f);
 }
-
 
 void file_mappings_init(struct file_mappings *m) {
 	m->mappings = NULL;
@@ -71,6 +73,9 @@ static bool file_mappable(struct thread *t, struct file *fl, void *vaddr) {
     for (i = 0; i < file_sz / PAGE_SIZE; i++){
         if (pagedir_get_page(t->pagedir, cur_page) != NULL) 
             return false;
+        suppl_page *page = suppl_pt_lookup(t->suppl_page_table);
+        // TODO Ensure either page is NULL or if it's allowed to be
+        // by design then it is marked as 'free'
         cur_page += PAGE_SIZE;	
     }
 
@@ -88,8 +93,21 @@ static bool file_map(struct thread *t, struct file *fl, void *vaddr, struct file
 	}
 	bool success = true;
     
-   
-    
+    struct file_mappings *mem_mappings = &(t->mem_mappings); 
+    // Initialize mapping on first free index in mappings array
+    int free_id = file_mappings_seek_free_id(mem_mappings);
+    file_mapping *new_mapping = mem_mappings->mappings + free_id;
+    file_mapping_init(new_mapping);
+
+    // Iterate over pages and put them in suppl pt with new file mapping
+    struct suppl_pt *spt = t->suppl_page_table;
+    char *cur_page = vaddr;
+    int i;
+    for (i = 0; i < file_sz / PAGE_SIZE; i++){
+        suppl_table_set_file_mapping(t, cur_page, new_mapping);
+        cur_page += PAGE_SIZE; 
+    }
+
 	if (success) {
 		mapping->fl = new_file;
 		mapping->start_vaddr = vaddr;
@@ -107,6 +125,7 @@ int file_mappings_map(struct thread *t, struct file *fl, void *vaddr) {
 			free_id = (-1);
 	return free_id;
 }
+
 int file_mappings_unmap(struct thread *t, int mapping_id) {
 	struct file_mappings *mappings = &t->mem_mappings;
 	if (mapping_id >= 0 && mapping_id < mappings->pool_size)
