@@ -6,6 +6,7 @@
 
 #include "lib/kernel/hash.h"
 #include "threads/thread.h"
+#include "vm/file_mapping.h"
 
 enum suppl_page_location {
 	PG_LOCATION_UNKNOWN,
@@ -16,7 +17,8 @@ enum suppl_page_location {
 
 struct suppl_page {
     uint32_t vaddr;
-    // DATA
+    long long data_pointer;
+    // TODO Add other members
 	enum suppl_page_location location;
     struct hash_elem hash_elem;
 };
@@ -24,7 +26,7 @@ struct suppl_page {
 struct suppl_pt {
 	struct thread *owner_thread;
 	struct hash pages_map;
-} ;
+};
 
 unsigned pages_map_hash(const struct hash_elem *e, void *aux);
 
@@ -42,9 +44,9 @@ struct suppl_pt * suppl_pt_new(void);
 void suppl_pt_dispose(struct suppl_pt *pt);
 void suppl_pt_delete(struct suppl_pt *pt);
 
-bool suppl_table_set_page(struct thread *t, void *upage, void *kpage, bool rw); // line 1: call - pagedir_set_page (t->pagedir, upage, kpage, writable)
+bool suppl_table_set_page(struct thread *t, void *upage, void *kpage, bool rw); 
+bool suppl_table_set_file_mapping(struct thread *t, void *upage, struct file_mapping *mapping);
 bool suppl_table_alloc_user_page(struct thread *t, void *upage, bool writeable);
-
 struct suppl_page *suppl_pt_lookup(struct suppl_pt *pt, void *vaddr);
 
 #endif //PROJECT4_SUPPLEMENTAL_PAGE_H

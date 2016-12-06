@@ -12,6 +12,7 @@ unsigned pages_map_hash(const struct hash_elem *e, void *aux UNUSED) {
 	struct suppl_page *page = hash_entry(e, struct suppl_page, hash_elem);
 	return (page->vaddr);
 }
+
 bool pages_map_less(const struct hash_elem *a, const struct hash_elem *b, void *aux UNUSED) {
 	struct suppl_page *page_a = hash_entry(a, struct suppl_page, hash_elem);
 	struct suppl_page *page_b = hash_entry(b, struct suppl_page, hash_elem);
@@ -25,18 +26,22 @@ static void suppl_page_hash_dispose(struct hash_elem *e, void *aux UNUSED) {
 
 void suppl_page_init(struct suppl_page *page) {
 	if (page == NULL) return;
-	// ETC...
+    page->data_pointer = NULL;
+	// TODO maybe add other vars
 	page->location = PG_LOCATION_UNKNOWN;
 }
+
 struct suppl_page * suppl_page_new(void) {
 	struct suppl_page * page = malloc(sizeof(struct suppl_page));
 	suppl_page_init(page);
 	return page;
 }
+
 void suppl_page_dispose(struct suppl_page *page) {
 	if (page == NULL) return;
-	// ETC...
+	// TODO maybe some vars need deallocation
 }
+
 void suppl_page_delete(struct suppl_page *page) {
 	suppl_page_dispose(page);
 	if (page != NULL) free(page);
@@ -49,16 +54,19 @@ void suppl_pt_init(struct suppl_pt *pt) {
 		PANIC("HASH INITIALISATION FAILED");
 	pt->owner_thread = NULL;
 }
+
 struct suppl_pt * suppl_pt_new(void) {
 	struct suppl_pt *pt = malloc(sizeof(struct suppl_pt));
 	suppl_pt_init(pt);
 	return pt;
 }
+
 void suppl_pt_dispose(struct suppl_pt *pt) {
 	if (pt == NULL) return;
 	// ETC...
 	hash_destroy(&pt->pages_map, suppl_page_hash_dispose);
 }
+
 void suppl_pt_delete(struct suppl_pt *pt) {
 	suppl_pt_dispose(pt);
 	if(pt != NULL) free(pt);
@@ -68,6 +76,7 @@ bool suppl_table_set_page(struct thread *t, void *upage, void *kpage, bool rw) {
 	upage = pg_round_down(upage);
 	struct suppl_page * page = suppl_page_new();
 	if (page == NULL) return false;
+    // TODO check below line (unsure about negation)
 	if (!pagedir_set_page(t->pagedir, upage, kpage, rw)) {
 		suppl_page_delete(page);
 		return false;
@@ -77,6 +86,22 @@ bool suppl_table_set_page(struct thread *t, void *upage, void *kpage, bool rw) {
 	// ETC...
 	return true;
 }
+
+bool suppl_table_set_file_mapping(struct thread *t, void* upage, struct file_mapping *mapping){
+
+    ASSERT(pg_ofs(upage) == 0);
+    ASSERT(mapping != NULL);
+
+    struct suppl_pt *spt = t->suppl_page_table;
+    struct suppl_page *page = suppl_page_new();
+    if (page == NULL) return false;
+    page->vaddr = upage;
+    page->data_pointer = mapping;
+    
+	hash_insert(spt->pages_map, &page->hash_elem);
+    return true;
+}
+
 bool suppl_table_alloc_user_page(struct thread *t, void *upage, bool writeable) {
 	void* kpage = palloc_get_page(PAL_USER | PAL_ZERO);
 	if(kpage != NULL)
@@ -86,7 +111,6 @@ bool suppl_table_alloc_user_page(struct thread *t, void *upage, bool writeable) 
 		return false;
 	}
 }
-
 
 struct suppl_page *suppl_pt_lookup(struct suppl_pt *pt, void *vaddr) {
 	struct suppl_page tmp;
