@@ -4,6 +4,7 @@
 #include "vm/supplemental_page.h"
 #include "userprog/pagedir.h"
 #include "lib/kernel/hash.h"
+#include "userprog/syscall.h"
 
 static bool file_mapping_unused(struct file_mapping *f) {
 	return ((f == NULL) || ((f->fl == NULL) && (f->start_vaddr == NULL)));
@@ -18,7 +19,9 @@ void file_mapping_init(struct file_mapping *f) {
 void file_mapping_dispose(struct file_mapping *f) {
 	if (file_mapping_unused(f)) return;
 	// ETC...
+	filesys_lock_acquire();
 	file_close(f->fl);
+	filesys_lock_release();
 	file_mapping_init(f);
 }
 
@@ -66,8 +69,9 @@ static int file_mappings_seek_free_id(struct file_mappings *m) {
 static bool file_mappable(struct thread *t, struct file *fl, void *vaddr) {
 	if (t == NULL || fl == NULL || vaddr == NULL) return false;
     if (pg_ofs(vaddr) != 0) return false;
-
+	filesys_lock_acquire();
 	int file_sz = file_length(fl);
+	filesys_lock_release();
     char *cur_page = vaddr;
 	char *end = (((char*)vaddr) + file_sz);
     while (cur_page < end){
@@ -83,13 +87,19 @@ static bool file_mappable(struct thread *t, struct file *fl, void *vaddr) {
 
 static bool file_map(struct thread *t, struct file *fl, void *vaddr, struct file_mapping *mapping) {
 	if (t == NULL || fl == NULL || vaddr == NULL || mapping == NULL) return false;
+	filesys_lock_acquire();
 	struct file *new_file = file_reopen(fl);
-	if (new_file == NULL) return false;
+	if (new_file == NULL) {
+		filesys_lock_release();
+		return false;
+	}
 	int file_sz = file_length(new_file);
 	if (file_sz < 0) {
 		file_close(new_file);
+		filesys_lock_release();
 		return false;
 	}
+	filesys_lock_release();
 	bool success = true;
 
     // Iterate over pages and put them in suppl pt with new file mapping
@@ -105,7 +115,11 @@ static bool file_map(struct thread *t, struct file *fl, void *vaddr, struct file
 		mapping->start_vaddr = vaddr;
 		mapping->file_size = file_sz;
 	}
-	else file_close(new_file);
+	else {
+		filesys_lock_acquire();
+		file_close(new_file);
+		filesys_lock_release();
+	}
 	return success;
 }
 

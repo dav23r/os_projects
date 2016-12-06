@@ -7,6 +7,8 @@
 #include "userprog/pagedir.h"
 #include "threads/palloc.h"
 #include "threads/vaddr.h"
+#include "userprog/syscall.h"
+
 
 unsigned pages_map_hash(const struct hash_elem *e, void *aux UNUSED) {
 	struct suppl_page *page = hash_entry(e, struct suppl_page, hash_elem);
@@ -67,13 +69,16 @@ bool suppl_page_load_from_file(struct thread *t, struct suppl_page *page) {
 	while (buff < end) {
 		(*buff) = 0;
 		if ((!file_r) && ((char*)buff >= ((char*)page->mapping->start_vaddr))) {
+			if (page->mapping->fl == NULL) PANIC("\n############################ SOMEONE DECIDED IT WAS A GOOD IDEA TO MMAP TO NULL ###################################\n");
+			filesys_lock_acquire();
 			file_seek(page->mapping->fl, ((char*)buff) - ((char*)page->mapping->start_vaddr));
 			buff += file_read(page->mapping->fl, buff, PAGE_SIZE - (buff - start));
+			filesys_lock_release();
 			file_r = true;
 		}
 		else buff++;
 	}
-	//PANIC("################################ READING KINDA SEEMS SUCCESSFUL ###############################\n");
+	// PANIC("################################ READING KINDA SEEMS SUCCESSFUL ###############################\n");
 	return true;
 }
 
