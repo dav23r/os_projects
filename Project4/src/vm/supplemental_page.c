@@ -42,7 +42,7 @@ struct suppl_page * suppl_page_new(void) {
 
 void suppl_page_dispose(struct suppl_page *page) {
 	if (page == NULL) return;
-    file_mapping_dispose(page->mapping);
+    //file_mapping_dispose(page->mapping);
     suppl_page_init(page);
 }
 

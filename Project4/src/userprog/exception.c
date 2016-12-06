@@ -162,16 +162,17 @@ page_fault (struct intr_frame *f)
 				PANIC("################################## ERROR READING MAPPED MEMORY ################################\n");
 			  else {
 				  /*
-				  printf("\n\n####################### READ: \n");
+				  char *fault_ad = (char*)(((int)fault_addr) - (((int)fault_addr) % PAGE_SIZE));
+				  printf("\n\n####################### READ: %u\n", fault_ad);
 				  int i;
 				  for (i = 0; i < PAGE_SIZE; i++)
-					  printf("%c", (*(((char*)fault_addr) + i)));
+					  printf("%c", (*(((char*)fault_ad) + i)));
 				  printf("\n");
 				  for (i = 0; i < PAGE_SIZE; i++)
-					  printf("%d ", (int)(*(((char*)fault_addr) + i)));
+					  printf("%d ", (int)(*(((char*)fault_ad) + i)));
 				  printf("\n");
-				  PANIC("################ NO IDEA.....................\n");
-				  */
+				  //PANIC("################ NO IDEA.....................\n");
+				  //*/
 				  return;
 			  }
 		  }
@@ -185,7 +186,8 @@ page_fault (struct intr_frame *f)
 	  }
 	  else {
 		  /*
-		  printf("\n############ NOT_PRESENT: %d\n", (int)not_present);
+		  printf("\nVADDR: %u\n", (int)fault_addr);
+		  printf("############ NOT_PRESENT: %d\n", (int)not_present);
 		  printf("############ WRITE: %d\n", (int)write);
 		  printf("############ USER: %d\n", (int)user);
 		  PANIC("ERROR\n");
