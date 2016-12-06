@@ -160,14 +160,36 @@ page_fault (struct intr_frame *f)
 			  //PANIC("################################ PAGE ON FILE ###############################\n");
 			  if (!suppl_page_load_from_file(cur, page))
 				PANIC("################################## ERROR READING MAPPED MEMORY ################################\n");
+			  else {
+				  /*
+				  printf("\n\n####################### READ: \n");
+				  int i;
+				  for (i = 0; i < PAGE_SIZE; i++)
+					  printf("%c", (*(((char*)fault_addr) + i)));
+				  printf("\n");
+				  for (i = 0; i < PAGE_SIZE; i++)
+					  printf("%d ", (int)(*(((char*)fault_addr) + i)));
+				  printf("\n");
+				  PANIC("################ NO IDEA.....................\n");
+				  */
+				  return;
+			  }
 		  }
-		  //PANIC("################################### INTERNAL ERROR (page_location: %d) ##################################\nPG_LOCATION_UNKNOWN: %d, PG_LOCATION_RAM: %d, PG_LOCATION_SWAP: %d, PG_LOCATION_FILE: %d\n", (int)page->location, (int)PG_LOCATION_UNKNOWN, (int)PG_LOCATION_RAM, (int)PG_LOCATION_SWAP, (int)PG_LOCATION_FILE);
+		  //else PANIC("################################### INTERNAL ERROR (page_location: %d) ##################################\nPG_LOCATION_UNKNOWN: %d, PG_LOCATION_RAM: %d, PG_LOCATION_SWAP: %d, PG_LOCATION_FILE: %d\n", (int)page->location, (int)PG_LOCATION_UNKNOWN, (int)PG_LOCATION_RAM, (int)PG_LOCATION_SWAP, (int)PG_LOCATION_FILE);
 	  } else if (stack_grow_needed(fault_addr, f->esp)) {
 		  //printf("############################### SHOULD GROW STACK ##################################\n");
 		  if (!suppl_table_alloc_user_page(cur, fault_addr, true)) {
 			  PANIC("################################## UNABLE TO GROW STACK ################################\n");
 		  }
 		  else return;
+	  }
+	  else {
+		  /*
+		  printf("\n############ NOT_PRESENT: %d\n", (int)not_present);
+		  printf("############ WRITE: %d\n", (int)write);
+		  printf("############ USER: %d\n", (int)user);
+		  PANIC("ERROR\n");
+		  //*/
 	  }
   }
 
