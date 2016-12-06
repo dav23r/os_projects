@@ -12,12 +12,13 @@ static bool file_mapping_unused(struct file_mapping *f) {
 void file_mapping_init(struct file_mapping *f) {
 	f->fl = NULL;
 	f->start_vaddr = NULL;
-    // f->file_size = 0;
+    f->file_size = 0;
 }
 
 void file_mapping_dispose(struct file_mapping *f) {
 	if (file_mapping_unused(f)) return;
 	// ETC...
+	file_close(f->fl);
 	file_mapping_init(f);
 }
 
@@ -70,17 +71,13 @@ static bool file_mappable(struct thread *t, struct file *fl, void *vaddr) {
 
 	int file_sz = file_length(fl);
     char *cur_page = vaddr;
-    int i; 
-    for (i = 0; i < file_sz / PAGE_SIZE; i++){
+	char *end = (((char*)vaddr) + file_sz);
+    while (cur_page < end){
         if (pagedir_get_page(t->pagedir, cur_page) != NULL) 
             return false;
-        
-	    struct suppl_page tmp;
-        tmp.vaddr = (uint32_t) vaddr;
-        struct suppl_page *page UNUSED = suppl_pt_lookup(t->suppl_page_table, &(tmp.hash_elem));
-        // TODO Ensure either page is NULL or if it's allowed to be
-        // by design then it is marked as 'free'
-        cur_page += PAGE_SIZE;	
+        struct suppl_page *page = suppl_pt_lookup(t->suppl_page_table, cur_page);
+		if (page != NULL) return false;
+		cur_page += PAGE_SIZE;	
     }
 
 	return true;
@@ -96,24 +93,19 @@ static bool file_map(struct thread *t, struct file *fl, void *vaddr, struct file
 		return false;
 	}
 	bool success = true;
-    
-    struct file_mappings *mem_mappings = &(t->mem_mappings); 
-    // Initialize mapping on first free index in mappings array
-    int free_id = file_mappings_seek_free_id(mem_mappings);
-    struct file_mapping *new_mapping = mem_mappings->mappings + free_id;
-    file_mapping_init(new_mapping);
 
     // Iterate over pages and put them in suppl pt with new file mapping
     char *cur_page = vaddr;
-    int i;
-    for (i = 0; i < file_sz / PAGE_SIZE; i++){
-        suppl_table_set_file_mapping(t, cur_page, new_mapping);
+	char *end = (((char*)vaddr) + file_sz);
+	while (cur_page < end) {
+        suppl_table_set_file_mapping(t, cur_page, mapping);
         cur_page += PAGE_SIZE; 
     }
 
 	if (success) {
 		mapping->fl = new_file;
 		mapping->start_vaddr = vaddr;
+		mapping->file_size = file_sz;
 	}
 	else file_close(new_file);
 	return success;

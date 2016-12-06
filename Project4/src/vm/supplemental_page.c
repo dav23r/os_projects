@@ -82,6 +82,9 @@ bool suppl_table_set_page(struct thread *t, void *upage, void *kpage, bool rw) {
 		return false;
 	}
 	page->vaddr = ((uint32_t)upage);
+	page->kaddr = ((uint32_t)kpage);
+	page->location = PG_LOCATION_RAM;
+
 	hash_insert(&t->suppl_page_table->pages_map, &page->hash_elem);
 	// ETC...
 	return true;
@@ -97,6 +100,7 @@ bool suppl_table_set_file_mapping(struct thread *t, void* upage, struct file_map
     if (page == NULL) return false;
     page->vaddr = (uint32_t) upage;
     page->mapping = mapping;
+	page->location = PG_LOCATION_FILE;
     
     hash_insert(&spt->pages_map, &page->hash_elem);
     return true;

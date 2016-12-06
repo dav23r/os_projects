@@ -364,6 +364,7 @@ static int mmap(int fd, void *vaddr) {
 	struct thread *t = thread_current();
 	struct file *fl = thread_get_file(t, fd);
 	if (fl == NULL) return (-1);
+	if (!pointers_valid(vaddr, filesize(fd))) return (-1);
 	return file_mappings_map(t, fl, vaddr);
 }
 /**
