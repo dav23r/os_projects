@@ -32,6 +32,7 @@ void suppl_page_init(struct suppl_page *page) {
     page->kaddr = 0;
     page->mapping = NULL;
 	page->location = PG_LOCATION_UNKNOWN;
+	page->dirty = false;
 }
 
 struct suppl_page * suppl_page_new(void) {
@@ -51,25 +52,43 @@ void suppl_page_delete(struct suppl_page *page) {
 	if (page != NULL) free(page);
 }
 
-bool suppl_page_load_from_file(struct thread *t, struct suppl_page *page) {
-	ASSERT(page->location == PG_LOCATION_FILE && page->mapping != NULL);
+bool suppl_page_dirty(struct thread *t, struct suppl_page *page) {
+	if (page->dirty) return true;
+	else if (page->kaddr != 0) {
+		page->dirty = pagedir_is_dirty(t->pagedir, ((const void*)page->vaddr));
+		return (page->dirty);
+	}
+	else return false;
+}
+static bool set_kpage_if_needed(struct thread *t, struct suppl_page *page) {
 	void* kpage = ((void*)page->kaddr);
-	if (kpage == NULL) kpage = palloc_get_page(PAL_USER | PAL_ZERO);
+	bool kpage_new = (kpage == NULL);
+	if (kpage_new && (!suppl_page_dirty(t, page)))
+		kpage = palloc_get_page(PAL_USER | PAL_ZERO);
 	if (kpage == NULL) {
 		// ETC...
 		return false;
 	}
 	void *vaddr = ((void*)page->vaddr);
-	if (!pagedir_set_page(t->pagedir, vaddr, kpage, 1)) return false;
-	page->kaddr = ((uint32_t)kpage);
-	char *start = ((char*)vaddr);
+	if (kpage_new) {
+		if (!pagedir_set_page(t->pagedir, vaddr, kpage, 1)) return false;
+		page->kaddr = ((uint32_t)kpage);
+	}
+	return true;
+}
+bool suppl_page_load_from_file(struct thread *t, struct suppl_page *page) {
+	ASSERT(page->location == PG_LOCATION_FILE && page->mapping != NULL);
+	if (page->mapping->fl == NULL) return false;
+	if (!set_kpage_if_needed(t, page)) return false;
+	char *start = ((char*)page->vaddr);
 	char *buff = start;
 	char *end = (start + PAGE_SIZE);
 	bool file_r = false;
 	while (buff < end) {
 		(*buff) = 0;
-		if ((!file_r) && ((char*)buff >= ((char*)page->mapping->start_vaddr))) {
-			if (page->mapping->fl == NULL) PANIC("\n############################ SOMEONE DECIDED IT WAS A GOOD IDEA TO MMAP TO NULL ###################################\n");
+		if ((!file_r) && ((uint32_t)buff >= ((uint32_t)page->mapping->start_vaddr))) {
+			//if (page->mapping == NULL || page->mapping->fl == NULL)
+				//PANIC("\n############################ SOMEONE DECIDED IT WAS A GOOD IDEA TO MMAP TO NULL ###################################\n");
 			filesys_lock_acquire();
 			file_seek(page->mapping->fl, ((char*)buff) - ((char*)page->mapping->start_vaddr));
 			buff += file_read(page->mapping->fl, buff, PAGE_SIZE - (buff - start));
@@ -78,8 +97,34 @@ bool suppl_page_load_from_file(struct thread *t, struct suppl_page *page) {
 		}
 		else buff++;
 	}
+	pagedir_set_dirty(t->pagedir, (const void*)page->vaddr, false);
+	page->location = PG_LOCATION_RAM;
 	// PANIC("################################ READING KINDA SEEMS SUCCESSFUL ###############################\n");
 	return true;
+}
+bool suppl_page_load_to_file(struct thread *t, struct suppl_page *page) {
+	if (page == NULL || page->mapping == NULL || page->mapping->fl == NULL) return false;
+	else if (!suppl_page_dirty(t, page)) return true;
+	else {
+		if (!set_kpage_if_needed(t, page)) return false;
+		char *start = ((char*)page->vaddr);
+		char *end = (start + PAGE_SIZE);
+		char *file_start = ((char*)page->mapping->start_vaddr);
+		if (((uint32_t)start) < ((uint32_t)file_start))
+			start = file_start;
+		char *file_end = (((char*)page->mapping->start_vaddr) + page->mapping->file_size);
+		if (((uint32_t)end) > ((uint32_t)file_end))
+			end = file_end;
+		if (start < end) {
+			filesys_lock_acquire();
+			file_seek(page->mapping->fl, (start - file_start));
+			int buffer_size = (end - start);
+			bool rv = (file_write(page->mapping->fl, start, buffer_size) == buffer_size);
+			filesys_lock_release();
+			return rv;
+		}
+		else return true;
+	}
 }
 
 

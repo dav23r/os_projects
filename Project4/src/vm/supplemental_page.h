@@ -20,6 +20,7 @@ struct suppl_page {
     uint32_t kaddr;
     struct file_mapping *mapping;
 	enum suppl_page_location location;
+	bool dirty;
     struct hash_elem hash_elem;
 };
 
@@ -39,7 +40,9 @@ struct suppl_page * suppl_page_new(void);
 void suppl_page_dispose(struct suppl_page *page);
 void suppl_page_delete(struct suppl_page *page);
 
+bool suppl_page_dirty(struct thread *t, struct suppl_page *page);
 bool suppl_page_load_from_file(struct thread *t, struct suppl_page *page);
+bool suppl_page_load_to_file(struct thread *t, struct suppl_page *page);
 
 void suppl_pt_init(struct suppl_pt *pt);
 struct suppl_pt * suppl_pt_new(void);
