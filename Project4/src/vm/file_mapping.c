@@ -16,9 +16,16 @@ void file_mapping_init(struct file_mapping *f) {
     f->file_size = 0;
 }
 
-void file_mapping_dispose(struct file_mapping *f) {
+void file_mapping_dispose(struct thread *t, struct file_mapping *f) {
 	if (file_mapping_unused(f)) return;
-	// ETC...
+	char *cur_page = f->start_vaddr;
+	char *end = (cur_page + f->file_size);
+	while (cur_page < end) {
+		struct suppl_page *page = suppl_pt_lookup(t->suppl_page_table, cur_page);
+		if (!suppl_page_load_to_file(t, page))
+			PANIC("\n############################### ERROR LOADING CHANGES TO THE FILE ##############################\n");
+		cur_page += PAGE_SIZE;
+	}
 	filesys_lock_acquire();
 	file_close(f->fl);
 	filesys_lock_release();
@@ -30,11 +37,11 @@ void file_mappings_init(struct file_mappings *m) {
 	m->pool_size = 0;
 }
 
-void file_mappings_dispose(struct file_mappings *m) {
+void file_mappings_dispose(struct thread *t, struct file_mappings *m) {
 	int i;
 	for (i = 0; i < m->pool_size; i++)
-		file_mapping_dispose(m->mappings + i);
-	free(m->mappings);
+		file_mapping_dispose(t, m->mappings + i);
+	if (m->mappings != NULL) free(m->mappings);
 	file_mappings_init(m);
 }
 
@@ -140,7 +147,7 @@ int file_mappings_map(struct thread *t, struct file *fl, void *vaddr) {
 int file_mappings_unmap(struct thread *t, int mapping_id) {
 	struct file_mappings *mappings = &t->mem_mappings;
 	if (mapping_id >= 0 && mapping_id < mappings->pool_size)
-		file_mapping_dispose(mappings->mappings + mapping_id);
+		file_mapping_dispose(t, mappings->mappings + mapping_id);
 	return 0;
 }
 
