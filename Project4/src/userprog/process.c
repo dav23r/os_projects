@@ -132,7 +132,7 @@ process_exit (void)
   thread_close_all_files(cur);
 
 #ifdef VM
-  file_mappings_dispose(&cur->mem_mappings);
+  file_mappings_dispose(cur, &cur->mem_mappings);
   if (cur->suppl_page_table)
 	  suppl_pt_delete(cur->suppl_page_table);
 #endif
