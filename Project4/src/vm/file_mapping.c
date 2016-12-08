@@ -22,8 +22,9 @@ void file_mapping_dispose(struct thread *t, struct file_mapping *f) {
 	char *end = (cur_page + f->file_size);
 	while (cur_page < end) {
 		struct suppl_page *page = suppl_pt_lookup(t->suppl_page_table, cur_page);
-		if (!suppl_page_load_to_file(t, page))
+		if (!suppl_page_load_to_file(page))
 			PANIC("\n############################### ERROR LOADING CHANGES TO THE FILE ##############################\n");
+		suppl_page_dispose(page);
 		cur_page += PAGE_SIZE;
 	}
 	filesys_lock_acquire();
