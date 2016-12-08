@@ -4,6 +4,7 @@
 #include "devices/block.h"
 #include "lib/debug.h"
 #include "threads/synch.h"
+#include "vm_util.h"
 
 static bool swap_initialized = false;
 static struct bitmap *alloc_map = NULL;
@@ -23,6 +24,7 @@ void swap_init(void) {
         swap_block = block_get_role(BLOCK_SWAP);
         lock_init(&allocation_lock);
         ASSERT(alloc_map != NULL && swap_block != NULL);
+		vm_itil_init();
 		swap_initialized = true;
 	}
 }
