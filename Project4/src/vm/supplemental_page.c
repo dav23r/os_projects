@@ -29,8 +29,9 @@ static void suppl_page_hash_dispose(struct hash_elem *e, void *aux UNUSED) {
 
 void suppl_page_init(uint32_t *pagedir, struct suppl_page *page) {
 	if (page == NULL) return;
-    page->vaddr = 0;
+    //page->vaddr = 0;
     page->kaddr = 0;
+	page->saddr = SWAP_NO_PAGE;
 	page->pagedir = pagedir;
     page->mapping = NULL;
 	page->location = PG_LOCATION_UNKNOWN;
@@ -52,6 +53,8 @@ void suppl_page_dispose(struct suppl_page *page) {
 		pagedir_clear_page(page->pagedir, (void*)page->vaddr);
 		palloc_free_page((void*)page->kaddr);
 	}
+	if (page->saddr != SWAP_NO_PAGE)
+		swap_free_page(page->saddr);
     //file_mapping_dispose(page->mapping);
     suppl_page_init(page->pagedir, page);
 }

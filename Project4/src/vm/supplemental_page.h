@@ -7,6 +7,7 @@
 #include "lib/kernel/hash.h"
 #include "threads/thread.h"
 #include "vm/file_mapping.h"
+#include "swap.h"
 #include <list.h>
 
 enum suppl_page_location {
@@ -19,6 +20,7 @@ enum suppl_page_location {
 struct suppl_page {
     uint32_t vaddr;
     uint32_t kaddr;
+	swap_page saddr;
 	uint32_t *pagedir;
     struct file_mapping *mapping;
 	enum suppl_page_location location;

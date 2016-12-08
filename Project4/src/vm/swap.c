@@ -45,12 +45,13 @@ swap_page swap_get_page(void) {
 }
 
 void swap_free_page(swap_page page) {
-
+	lock_acquire(&allocation_lock);
     // Ensure all needed sectors are marked in bitmap
     if (bitmap_contains(alloc_map, page * SECTORS_PER_PAGE, SECTORS_PER_PAGE, false))
         PANIC("Attempting to free non-allocated swap sector %d", (int) page);
 
     bitmap_set_multiple(alloc_map, page, SECTORS_PER_PAGE, false); 
+	lock_release(&allocation_lock);
 }
 
 void swap_load_page_to_ram(swap_page page, void *addr) {
