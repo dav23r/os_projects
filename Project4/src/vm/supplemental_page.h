@@ -7,6 +7,7 @@
 #include "lib/kernel/hash.h"
 #include "threads/thread.h"
 #include "vm/file_mapping.h"
+#include <list.h>
 
 enum suppl_page_location {
 	PG_LOCATION_UNKNOWN,
@@ -18,10 +19,13 @@ enum suppl_page_location {
 struct suppl_page {
     uint32_t vaddr;
     uint32_t kaddr;
+	uint32_t *pagedir;
     struct file_mapping *mapping;
 	enum suppl_page_location location;
 	bool dirty;
+	bool accessed;
     struct hash_elem hash_elem;
+	struct list_elem list_elem;
 };
 
 struct suppl_pt {
@@ -35,14 +39,16 @@ bool pages_map_less(const struct hash_elem *a,
                     const struct hash_elem *b,
                     void *aux);
 
-void suppl_page_init(struct suppl_page *page);
-struct suppl_page * suppl_page_new(void);
+void suppl_page_init(uint32_t *pagedir, struct suppl_page *page);
+struct suppl_page * suppl_page_new(uint32_t *pagedir);
 void suppl_page_dispose(struct suppl_page *page);
 void suppl_page_delete(struct suppl_page *page);
 
-bool suppl_page_dirty(struct thread *t, struct suppl_page *page);
-bool suppl_page_load_from_file(struct thread *t, struct suppl_page *page);
-bool suppl_page_load_to_file(struct thread *t, struct suppl_page *page);
+bool suppl_page_dirty(struct suppl_page *page);
+bool suppl_page_accessed(struct suppl_page *page);
+
+bool suppl_page_load_from_file(struct suppl_page *page);
+bool suppl_page_load_to_file(struct suppl_page *page);
 
 void suppl_pt_init(struct suppl_pt *pt);
 struct suppl_pt * suppl_pt_new(void);

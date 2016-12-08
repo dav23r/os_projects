@@ -151,14 +151,16 @@ page_fault (struct intr_frame *f)
   user = (f->error_code & PF_U) != 0;
 
   struct thread *cur = thread_current();
+  //PANIC("########################### EXCEPTION ###########################\n");
   if (cur != NULL && cur->suppl_page_table != NULL) {
 	  struct suppl_page *page = suppl_pt_lookup(cur->suppl_page_table, fault_addr);
+	  //PANIC("########################### PAGE LOOKUP ###########################\n");
 	  if (page != NULL) {
 		  if (page->location == PG_LOCATION_SWAP) {
-			  PANIC("################################## VADDR ON SWAP ################################\n");
+			  //PANIC("################################## VADDR ON SWAP ################################\n");
 		  } else if (page->location == PG_LOCATION_FILE) {
 			  //PANIC("################################ PAGE ON FILE ###############################\n");
-			  if (suppl_page_load_from_file(cur, page)) {
+			  if (suppl_page_load_from_file(page)) {
 				  /*
 				  char *fault_ad = (char*)(((int)fault_addr) - (((int)fault_addr) % PAGE_SIZE));
 				  printf("\n\n####################### READ: %u\n", fault_ad);
@@ -184,6 +186,7 @@ page_fault (struct intr_frame *f)
 		  else return;
 	  }
 	  else {
+		  //PANIC("################## UNDETERMINED ERROR #################\n");
 		  /*
 		  printf("\nVADDR: %u\n", (int)fault_addr);
 		  printf("############ NOT_PRESENT: %d\n", (int)not_present);
