@@ -56,6 +56,7 @@ bool stack_grow_needed(const void *addr, const void *esp) {
 
 static bool evict_page(void) {
 	if (list_empty(&page_list)) return false;
+	//PANIC("########################## WILLING TO EVICT ###################################\n");
 	if (page_elem == NULL || page_elem == list_end(&page_list))
 		page_elem = list_begin(&page_list);
 	struct list_elem *terminal = page_elem;
@@ -99,4 +100,24 @@ void *evict_and_get_kaddr(void) {
 	if (!evict_page()) return NULL;
 	void* kpage = palloc_get_page(PAL_USER | PAL_ZERO);
 	return kpage;
+}
+
+
+
+bool restore_page_from_swap(struct suppl_page *page) {
+	ASSERT(page->location == PG_LOCATION_SWAP && page->saddr != SWAP_NO_PAGE);
+	void* kpage = palloc_get_page(PAL_USER | PAL_ZERO);
+	if (kpage == NULL) {
+		kpage = evict_and_get_kaddr();
+		if (kpage == NULL) return false;
+	}
+	if (!pagedir_set_page(page->pagedir, page->vaddr, kpage, true)) {
+		palloc_free_page(kpage);
+		return false;
+	}
+	swap_load_page_to_ram(page->saddr, (void*)page->vaddr);
+	swap_free_page(page->saddr);
+	page->saddr = SWAP_NO_PAGE;
+	page->kaddr = ((uint32_t)kpage);
+	return true;
 }

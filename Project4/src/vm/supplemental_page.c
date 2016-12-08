@@ -97,7 +97,10 @@ static bool set_kpage_if_needed(struct suppl_page *page) {
 	}
 	void *vaddr = ((void*)page->vaddr);
 	if (kpage_new) {
-		if (!pagedir_set_page(page->pagedir, vaddr, kpage, 1)) return false;
+		if (!pagedir_set_page(page->pagedir, vaddr, kpage, 1)) {
+			palloc_free_page(kpage);
+			return false;
+		}
 		page->kaddr = ((uint32_t)kpage);
 		register_suppl_page(page);
 	}
@@ -223,7 +226,11 @@ bool suppl_table_alloc_user_page(struct thread *t, void *upage, bool writeable) 
 		// ETC... ?
 		if(kpage == NULL) return false;
 	}
-	return suppl_table_set_page(t, upage, kpage, writeable);
+	if (!suppl_table_set_page(t, upage, kpage, writeable)) {
+		palloc_free_page(kpage);
+		return false;
+	}
+	else return true;
 }
 
 struct suppl_page *suppl_pt_lookup(struct suppl_pt *pt, void *vaddr) {
