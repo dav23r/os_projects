@@ -4,6 +4,8 @@
 #include "supplemental_page.h"
 
 void vm_itil_init(void);
+
+void undo_suppl_page_registration(struct suppl_page *page);
 void register_suppl_page(struct suppl_page *page);
 
 bool stack_grow_needed(const void *addr, const void *esp);
