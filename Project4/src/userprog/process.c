@@ -257,19 +257,19 @@ load (const char *file_name, void (**eip) (void), void **esp)
   bool success = false;
   int i;
 
-#ifdef VM
-    t->suppl_page_table = suppl_pt_new();
-    if (t->suppl_page_table == NULL)
-        goto done;
-	else t->suppl_page_table->owner_thread = t;
-	file_mappings_init(&t->mem_mappings);
-#endif
-
   /* Allocate and activate page directory. */
   t->pagedir = pagedir_create ();
   if (t->pagedir == NULL)
     goto done;
   process_activate ();
+
+#ifdef VM
+  t->suppl_page_table = suppl_pt_new();
+  if (t->suppl_page_table == NULL)
+	  goto done;
+  else t->suppl_page_table->owner_thread = t;
+  file_mappings_init(&t->mem_mappings);
+#endif
 
   /* Open executable file. */
   char saved_char;
@@ -282,7 +282,7 @@ load (const char *file_name, void (**eip) (void), void **esp)
 	  }
 	  i++;
   }
-  filesys_lock_acquire();
+  //filesys_lock_acquire();
   file = filesys_open(file_name);
   ((char*)file_name)[i] = saved_char;
   if (file == NULL) 
@@ -387,7 +387,7 @@ load (const char *file_name, void (**eip) (void), void **esp)
 	  palloc_free_page((void*)t->executable_name);
 	  t->executable_name = NULL;
   }
-  filesys_lock_release();
+  //filesys_lock_release();
   return success;
 }
 
@@ -462,6 +462,48 @@ load_segment (struct file *file, off_t ofs, uint8_t *upage,
   ASSERT (pg_ofs (upage) == 0);
   ASSERT (ofs % PGSIZE == 0);
 
+#ifdef VM
+  struct thread *t = thread_current();
+
+  /*
+  printf("######################### MAPPING:\n");
+  printf("                                  UPAGE:       %d\n", (int)upage);
+  printf("                                  OFFSET:      %d\n", (int)ofs);
+  printf("                                  READ_BYTES:  %d\n", (int)read_bytes);
+  printf("                                  ZERO_BYTES:  %d\n", (int)zero_bytes);
+  printf("                                  WRITEABLE:   %d\n", (int)upage);
+  printf("                                  ZEROS_START: %d\n", ((int)upage) + ((int)read_bytes));
+  printf("                                  ZEROS_END:   %d\n", ((int)upage) + ((int)read_bytes) + ((int)zero_bytes));
+  printf("                                  REM:         %d\n", ((int)(upage + read_bytes + zero_bytes)) % PGSIZE);
+  //*/
+  //filesys_lock_release();
+  //zero_bytes = ((read_bytes + zero_bytes + PGSIZE - 1) / PGSIZE) * PGSIZE - read_bytes;
+  bool mapped = (file_mappings_map(t, file, upage, ofs, read_bytes + ofs, zero_bytes, writable, false) != (-1));
+  //*
+  int j;
+  for (j = 0; j < 2; j++) {
+	  int i;
+	  for (i = 0; i < read_bytes + zero_bytes; i++) {
+		  void* cc = (void*)(*(((char*)upage) + i));
+		  int c = (int)cc;
+		  ASSERT(c < 1024);
+		  if ((c >= 'a' && c <= 'z') || (c >= 'A' && c <= 'Z') || c == ' ' || c == '\n' || c == '\t')
+			  asm volatile("");//printf("%c", c);
+	  }
+  }
+  //printf("############## LOAD SEGMENT DONE (%d) ##########\n", (int)mapped);
+  //*/
+  //ASSERT(suppl_pt_lookup(t->suppl_page_table, (upage)+((int)read_bytes) + ((int)zero_bytes)) == NULL);
+  //filesys_lock_acquire();
+  if (mapped) {
+	  //printf("######################### MAPPED...\n");
+	  return true;
+  }
+  else {
+	  //printf("######################### NOT MAPPED...\n");
+	  return false;
+  }
+#else
   file_seek (file, ofs);
   while (read_bytes > 0 || zero_bytes > 0) 
     {
@@ -495,6 +537,29 @@ load_segment (struct file *file, off_t ofs, uint8_t *upage,
           palloc_free_page (kpage);
           return false; 
         }
+#ifdef VM
+	  struct suppl_page *spage = suppl_pt_lookup(thread_current()->suppl_page_table, upage);
+	  ASSERT(spage != NULL);
+	  spage->dirty = true;
+	  spage->accessed = true;
+	  if (read_bytes > 0)
+		  list_remove(&spage->list_elem);
+#endif
+	  //*
+	  printf("\n\n\n########################!!!!!!!!!!!!!!!!!!!!!!!!#########################\n");
+	  int i;
+	  printf("vaddr:       %u\n", (uint32_t)upage);
+	  printf("buffer:      %u\n", (uint32_t)page_read_bytes);
+	  printf("zeros:       %u\n", (uint32_t)page_zero_bytes);
+	  printf("---------------\n");
+	  for (i = 0; i < PGSIZE; i++) {
+		  char c = ((char*)upage)[i];
+		  if ((c >= 'a' && c <= 'z') || (c >= 'A' && c <= 'Z') || c == ' ' || c == '\n' || c == '\t')
+			  printf("%c", c);
+		  //else printf("<%d>", (int)c);
+	  }
+	  printf("\n########################\n");
+	  //*/
 
       /* Advance. */
       read_bytes -= page_read_bytes;
@@ -502,6 +567,7 @@ load_segment (struct file *file, off_t ofs, uint8_t *upage,
       upage += PGSIZE;
     }
   return true;
+#endif
 }
 
 /* Create a minimal stack by mapping a zeroed page at the top of
@@ -513,6 +579,7 @@ setup_stack (void **esp, const char *file_name)
 	bool success = false;
 
 	kpage = palloc_get_page(PAL_USER | PAL_ZERO);
+	if (kpage == NULL) kpage = evict_and_get_kaddr();
 	if (kpage != NULL)
 	{
 		success = install_page(((uint8_t *)PHYS_BASE) - PGSIZE, kpage, true);
