@@ -374,8 +374,10 @@ static int mmap(int fd, void *vaddr) {
 	struct thread *t = thread_current();
 	struct file *fl = thread_get_file(t, fd);
 	if (fl == NULL) return (-1);
-	if (!user_address_mappable(vaddr, filesize(fd))) return (-1);
-	return file_mappings_map(t, fl, vaddr);
+	uint32_t file_sz = (uint32_t)filesize(fd);
+	//printf("File size: %d\n", file_sz);
+	if (!user_address_mappable(vaddr, (int)file_sz)) return (-1);
+	return file_mappings_map(t, fl, vaddr, 0, file_sz, 0, true, true);
 }
 /**
 Unmaps given file mapping
