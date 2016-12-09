@@ -145,6 +145,10 @@ SPT არი ყველა სრედისთვის თავისი.
 >> B4: Explain your heuristic for deciding whether a page fault for an
 >> invalid virtual address should cause the stack to be extended into
 >> the page that faulted.
+უფლებას ვაძლევთ, რომ დაქრეშილი მისამართი(page_fault რა მისამართზეც 
+ამოვარდა ის მისამართი) იყოს SP-ზე მაქსიმუმ 32 ბაიტით ქვემოთ და PHYS_BASE-ზე
+მაქსიმუმ 8 მეგაბაიტით ქვემოთ. თუ ამ პირობებს აკმაყოფილებს სტეკს ვზრდით,
+წინააღმდეგ შემთხვევაში კი პროგრამას ვკლავთ.
 
 ---- SYNCHRONIZATION ----
 
@@ -152,22 +156,33 @@ SPT არი ყველა სრედისთვის თავისი.
 >> particular, explain how it prevents deadlock.  (Refer to the
 >> textbook for an explanation of the necessary conditions for
 >> deadlock.)
-
+ჩადგმული ლოქების აღება არ გვაქვს, შესაბამისად არც მოხდება დედლოქი.
+(ერთ სრედს ერთ მომენტში მაქსიმუმ ერთი ლოქი უჭირავს და მაქსიმუმ 
+ერთი ლოქის აღება უნდა.)
 >> B6: A page fault in process P can cause another process Q's frame
 >> to be evicted.  How do you ensure that Q cannot access or modify
 >> the page during the eviction process?  How do you avoid a race
 >> between P evicting Q's frame and Q faulting the page back in?
+ევიქშენი არის მთლიანად სერიალიზირებული, რადგან წინააღმდეგ 
+შემთხვევაში უბრალოდ შეუშლიდნენ ერთმანეთს ხელს, ერთსა და იმავე
+ობიექტებში ძებნით.
+
 
 >> B7: Suppose a page fault in process P causes a page to be read from
 >> the file system or swap.  How do you ensure that a second process Q
 >> cannot interfere by e.g. attempting to evict the frame while it is
 >> still being read in?
+ჯერ წაიკითხება ეს ფეიჯი და შემდგომ დარეგისტრირდება როგორც evictable
+(ანუ შესაბამის ლისტში ჩავაგდებთ.)
 
 >> B8: Explain how you handle access to paged-out pages that occur
 >> during system calls.  Do you use page faults to bring in pages (as
 >> in user programs), or do you have a mechanism for "locking" frames
 >> into physical memory, or do you use some other design?  How do you
 >> gracefully handle attempted accesses to invalid virtual addresses?
+თუ paged-out არის, ან ფაილში იქნება ჩაწერილი და ხელახლა წავიკითხავთ,
+ანუ უბრალოდ სვაპში წავიკითხავთ. არ ხდება ჩვენთან მასეთი რაღაცები.
+
 
 ---- RATIONALE ----
 
