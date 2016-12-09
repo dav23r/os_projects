@@ -178,8 +178,6 @@ page_fault (struct intr_frame *f)
 				  //*/
 				  return;
 			  }
-			  //else if (page->location == PG_LOCATION_UNKNOWN)
-			  //PANIC("JUNK PAGE ACCESSED.....");
 			  //else PANIC("################################## ERROR READING MAPPED MEMORY ################################\n");
 		  }
 		  // else PANIC("################################### INTERNAL ERROR (page_location: %d) ##################################\nPG_LOCATION_UNKNOWN: %d, PG_LOCATION_RAM: %d, PG_LOCATION_SWAP: %d, PG_LOCATION_FILE: %d\n", (int)page->location, (int)PG_LOCATION_UNKNOWN, (int)PG_LOCATION_RAM, (int)PG_LOCATION_SWAP, (int)PG_LOCATION_FILE);
