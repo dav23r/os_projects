@@ -192,6 +192,12 @@ SPT არი ყველა სრედისთვის თავისი.
 >> possibility for deadlock but allows for high parallelism.  Explain
 >> where your design falls along this continuum and why you chose to
 >> design it this way.
+მძიმე(გლობალური) ლოქები გვჭირდება მხოლოდ eviction-ზე და ცხადია 
+ფაილურ სისტემაზეც. დანარჩენ შემთხვევაში, რადგან SPT per-thread ლოგიკით
+გვაქვს იმპლემენტირებული,  სინქრონიზაციის საჭიროება ქრება(გამონაკლისი 
+შემთხვევების გარდა).
+
+
 
 			 MEMORY MAPPED FILES
 			 ===================
@@ -227,8 +233,17 @@ struct file_mappings {
 >> memory subsystem.  Explain how the page fault and eviction
 >> processes differ between swap pages and other pages.
 
+კონკრეტული ვირტუალური მისამართი არის თუ არა ფაილზე დამეპილი
+ვიცით. შესაბამისად, ევიქშენის დროს ვითვალისწინებთ ამას და თუ ფაილია
+შესაცვლელი ვცვლით ფაილს და არ ვაგდებთ სვაპში. თუ dirty არ არის, 
+საერთოდ შეგვიძლია გადავაგდოთ და ისე მოვნიშნოთ, რომ exception შემთხვევაში
+ისევ ფაილიდან წაიკითხოს.
+
 >> C3: Explain how you determine whether a new file mapping overlaps
 >> any existing segment.
+
+SP-ებს ვეძებთ სადაც უნდა მოინიშნოს და თუ რომელიმე უკვე არსებობს(გამოყოფილია),
+ვაბრუნებთ ერორ კოდს.
 
 ---- RATIONALE ----
 
@@ -238,6 +253,10 @@ struct file_mappings {
 >> that much of their implementation can be shared.  Explain why your
 >> implementation either does or does not share much of the code for
 >> the two situations.
+
+კოდის  სეგმენტის წაკითხვა გახდა ერთი mmap, უბრალოდ კოდის სეგმენტს დაემატა
+ბულეან პარამეტრები, რომლებიც ეუბნებიან რომ ფაილში ჩაწერა(შეცვლა)
+არ შეიძლება. 
 
 			   SURVEY QUESTIONS
 			   ================
