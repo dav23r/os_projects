@@ -39,9 +39,10 @@ bool stack_grow_needed(const void *addr, const void *esp) {
 #define EVICTION_GET_PAGE struct suppl_page *page = list_entry(page_elem, struct suppl_page, list_elem); ASSERT(page != NULL)
 #define EVICTION_GET_PAGE_TYPE bool modified = suppl_page_dirty(page); bool referenced = suppl_page_accessed(page)
 #define EVICTION_EVICT_PAGE \
-	pagedir_clear_page(page->pagedir, (void*)page->vaddr); \
-	palloc_free_page((void*)page->kaddr); \
+	void *page_kaddr = (void*)page->kaddr; \
 	page->kaddr = 0; \
+	pagedir_clear_page(page->pagedir, (void*)page->vaddr); \
+	palloc_free_page(page_kaddr); \
 	page_elem = list_next(page_elem); \
 	if (page_elem == list_end(&page_list)) \
 		page_elem = NULL; \
@@ -170,4 +171,16 @@ bool restore_page_from_swap(struct suppl_page *page) {
 	register_suppl_page(page);
 	//printf("done...\n");
 	return true;
+}
+
+bool pagedir_set_page_synch(uint32_t *pd, void *upage, void *kpage, bool rw) {
+	sema_down(&eviction_lock);
+	bool rv = pagedir_set_page(pd, upage, kpage, rw);
+	sema_up(&eviction_lock);
+	return rv;
+}
+void pagedir_clear_page_synch(uint32_t *pd, void *upage) {
+	sema_down(&eviction_lock);
+	pagedir_clear_page(pd, upage);
+	sema_up(&eviction_lock);
 }

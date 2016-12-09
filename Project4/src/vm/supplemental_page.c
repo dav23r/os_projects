@@ -50,7 +50,7 @@ void suppl_page_dispose(struct suppl_page *page) {
 	if (page->pagedir == NULL) PANIC("\n########################## PAGE MISSING PAGEDIR ############################\n");
 	if (page->kaddr != 0) {
 		undo_suppl_page_registration(page);
-		pagedir_clear_page(page->pagedir, (void*)page->vaddr);
+		pagedir_clear_page_synch(page->pagedir, (void*)page->vaddr);
 		palloc_free_page((void*)page->kaddr);
 	}
 	if (page->saddr != SWAP_NO_PAGE)
@@ -98,7 +98,7 @@ static bool set_kpage_if_needed(struct suppl_page *page) {
 	}
 	void *vaddr = ((void*)page->vaddr);
 	if (kpage_new) {
-		if (!pagedir_set_page(page->pagedir, vaddr, kpage, 1)) {
+		if (!pagedir_set_page_synch(page->pagedir, vaddr, kpage, 1)) {
 			palloc_free_page(kpage);
 			return false;
 		}
@@ -161,12 +161,13 @@ bool suppl_page_load_from_file(struct suppl_page *page) {
 
 	pagedir_set_dirty(page->pagedir, (const void*)page->vaddr, false);
 	if (!page->mapping->writable) {
-		pagedir_clear_page(page->pagedir, (void*)page->vaddr);
-		if (!pagedir_set_page(page->pagedir, (void*)page->vaddr, (void*)page->kaddr, false)) {
+		undo_suppl_page_registration(page);
+		pagedir_clear_page_synch(page->pagedir, (void*)page->vaddr);
+		if (!pagedir_set_page_synch(page->pagedir, (void*)page->vaddr, (void*)page->kaddr, false)) {
 			palloc_free_page((void*)page->kaddr);
-			undo_suppl_page_registration(page);
 			return false;
 		}
+		register_suppl_page(page);
 	}
 	page->location = PG_LOCATION_RAM;
 	// PANIC("################################ READING KINDA SEEMS SUCCESSFUL ###############################\n");
@@ -228,7 +229,7 @@ bool suppl_table_set_page(struct thread *t, void *upage, void *kpage, bool rw) {
 	struct suppl_page * page = suppl_page_new(t->pagedir);
 	if (page == NULL) return false;
     // TODO check below line (unsure about negation)
-	if (!pagedir_set_page(t->pagedir, upage, kpage, rw)) {
+	if (!pagedir_set_page_synch(t->pagedir, upage, kpage, rw)) {
 		suppl_page_delete(page);
 		return false;
 	}

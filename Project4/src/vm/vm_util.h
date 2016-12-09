@@ -13,4 +13,7 @@ bool stack_grow_needed(const void *addr, const void *esp);
 void *evict_and_get_kaddr(void);
 bool restore_page_from_swap(struct suppl_page *page);
 
+bool pagedir_set_page_synch(uint32_t *pd, void *upage, void *kpage, bool rw);
+void pagedir_clear_page_synch(uint32_t *pd, void *upage);
+
 #endif
