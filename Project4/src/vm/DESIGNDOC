@@ -125,9 +125,22 @@ SPT არის SP ჰეშმეპი, სადაც ვირტუალ
 >> B2: When a frame is required but none is free, some frame must be
 >> evicted.  Describe your code for choosing a frame to evict.
 
+გვიწერია clock ალგორითმი. ანუ, ვაგდებთ შემდეგი თანმიმდევრობით:
+სამჯერ გადავუყვებით წრიულად ფეიჯთა ლისტს(ბოლოს სად ვიდექით ცხადია
+ვინახავთ) თუ ვიპოვეთ ფეიჯი რომელიც არც referenced არის და არც modified
+პირდაპირ ვაგდებთ. თუ ასეთი ვერ ვიპოვეთ მეორე გადაყოლაზე ვეძებთ ისეთს,
+რომელიც referenced არაა, მაგრამ modified არის. თუ ფაილზე იყო დამეპილი
+და ფაილის განახლება შეიძლებოდა, ვანახლებთ ფაილს, თუ არა ვაგდებთ სვაპში.
+მესამე გადაყოლაზე კი ვეძებთ ფეიჯს რომელიც referenced იყო და modified არა.
+თუ ვიპოვეთ გადავაგდებთ. ბოლოს კი თუ ვერც ერთი ვერ ვიპოვეთ, პირველივე ფეიჯს
+მოვექცევით ისე, თითქოს მეორე გადაყოლაზე ვიპოვეთ.
+
 >> B3: When a process P obtains a frame that was previously used by a
 >> process Q, how do you adjust the page table (and any other data
 >> structures) to reflect the frame Q no longer has?
+SPT არი ყველა სრედისთვის თავისი. სვაპის ფეიჯები კი უნიკალური
+იდენთიფიკატორებითაა შექმნილი და თუ ვინმემ გაათავისუფლა ბიტმეპში
+მოინიშნება.
 
 >> B4: Explain your heuristic for deciding whether a page fault for an
 >> invalid virtual address should cause the stack to be extended into
