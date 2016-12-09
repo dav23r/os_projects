@@ -22,6 +22,7 @@ Davit Akopov dakop14@freeuni.edu.ge
 >> preparing your submission, other than the Pintos documentation, course
 >> text, lecture notes, and course staff.
 We watched this very cool explanation on 'Virtual Memory'
+ჩვენ ვუყურეთ ამ ძალიან კარგ ახსნას ვირტუალური მეხსიერების უკეთ გასაგებად:
 https://www.youtube.com/watch?v=qcBIvnQt0Bw&list=PLiwt1iVUib9s2Uo5BeYmwkDFUh70fJPxX
 by David Black-Schaffer
 
@@ -36,6 +37,7 @@ by David Black-Schaffer
 
 Following three structures are used as part of implementation of 
 supplemental page table
+
 
 Signifies location of the data mapped. 
 RAM means that it is loaded in physical memory and placed in page directory.
@@ -77,6 +79,11 @@ struct suppl_pt {
 
 >> A2: In a few paragraphs, describe your code for accessing the data
 >> stored in the SPT about a given page.
+SPT არის SP ჰეშმეპი, სადაც ვირტუალური მისამართით ხდება ელემენტზე 
+მიმართვა. დანარჩენი ინფორმაცია მთლიანად წერია SP-ში, ზემოთ
+აღწერილი სტრუქტურების და ენამების მიხედვით. ანუ თავიდან, ვამრგვალებთ
+მისამართს (რომ სწორ ფეიჯზე მიუთითოს) ვეძებთ ჰეშმეპით SP-ს და ნაპოვნ
+ფეიჯში წერია ყველა საჭირო ინფორმაცია. (SPT გვაქვს per-thread ლოგიკით).
 
 
 >> A3: How does your code coordinate accessed and dirty bits between
