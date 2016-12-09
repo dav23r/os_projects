@@ -49,7 +49,7 @@ void suppl_page_dispose(struct suppl_page *page) {
 	if (page == NULL) return;
 	if (page->pagedir == NULL) PANIC("\n########################## PAGE MISSING PAGEDIR ############################\n");
 	if (page->kaddr != 0) {
-		list_remove(&page->list_elem);
+		undo_suppl_page_registration(page);
 		pagedir_clear_page(page->pagedir, (void*)page->vaddr);
 		palloc_free_page((void*)page->kaddr);
 	}
@@ -86,9 +86,10 @@ static bool set_kpage_if_needed(struct suppl_page *page) {
 		kpage = palloc_get_page(PAL_USER | PAL_ZERO);
 	if (kpage == NULL) {
 		if (page->location == PG_LOCATION_SWAP) {
-			// ETC... 
+			return restore_page_from_swap(page);
 		}
 		else {
+			//printf("EVICTING to read addr: %d\n", (int)page->vaddr);
 			kpage = evict_and_get_kaddr();
 		}
 		if (kpage == NULL) return false;
@@ -114,27 +115,68 @@ bool suppl_page_load_from_file(struct suppl_page *page) {
 	char *buff = start;
 	char *end = (start + PAGE_SIZE);
 	bool file_r = false;
+	//printf("\n########################\n");
 	while (buff < end) {
 		(*buff) = 0;
 		if ((!file_r) && ((uint32_t)buff >= ((uint32_t)page->mapping->start_vaddr))) {
 			//if (page->mapping == NULL || page->mapping->fl == NULL)
 				//PANIC("\n############################ SOMEONE DECIDED IT WAS A GOOD IDEA TO MMAP TO NULL ###################################\n");
 			filesys_lock_acquire();
-			file_seek(page->mapping->fl, ((char*)buff) - ((char*)page->mapping->start_vaddr));
-			buff += file_read(page->mapping->fl, buff, PAGE_SIZE - (buff - start));
+			file_seek(page->mapping->fl, ((char*)buff) - ((char*)page->mapping->start_vaddr) + page->mapping->offset);
+			char *fl_end = ((char*)page->mapping->start_vaddr) + ((long long)page->mapping->file_size - (long long)page->mapping->offset);
+			long long buf_sz = (long long)(PAGE_SIZE - (buff - start));
+			long long till_fl_end = ((long long)(fl_end - buff));
+			/*
+			printf("buffer:      %d\n", (int)buf_sz);
+			printf("till end:    %d\n", (int)till_fl_end);
+			printf("buff:        %d\n", (int)buff);
+			*/
+			if (till_fl_end < buf_sz) buf_sz = till_fl_end;
+			if (buf_sz > 0)
+				buff += file_read(page->mapping->fl, buff, buf_sz);
 			filesys_lock_release();
 			file_r = true;
 		}
 		else buff++;
 	}
+	/*
+	printf("########################\n");
+	int i;
+	printf("Map ADDRESS: %u\n", (uint32_t)page->mapping);
+	printf("writable:    %u\n", (uint32_t)page->mapping->writable);
+	printf("fl_writable: %u\n", (uint32_t)page->mapping->fl_writable);
+	printf("vaddr:       %u\n", (uint32_t)page->vaddr);
+	printf("map vaddr:   %u\n", (uint32_t)page->mapping->start_vaddr);
+	printf("file_size:   %u\n", (uint32_t)page->mapping->file_size);
+	printf("offset:      %u\n", (uint32_t)page->mapping->offset);
+	printf("---------------\n");
+	for (i = 0; i < PAGE_SIZE; i++) {
+		char c = ((char*)page->vaddr)[i];
+		if ((c >= 'a' && c <= 'z') || (c >= 'A' && c <= 'Z') || c == ' ' || c == '\n' || c == '\t')
+			printf("%c", c);
+		//else printf("<%d>", (int)c);
+	}
+	printf("\n########################\n");
+	//*/
+
 	pagedir_set_dirty(page->pagedir, (const void*)page->vaddr, false);
+	if (!page->mapping->writable) {
+		pagedir_clear_page(page->pagedir, (void*)page->vaddr);
+		if (!pagedir_set_page(page->pagedir, (void*)page->vaddr, (void*)page->kaddr, false)) {
+			palloc_free_page((void*)page->kaddr);
+			undo_suppl_page_registration(page);
+			return false;
+		}
+	}
 	page->location = PG_LOCATION_RAM;
 	// PANIC("################################ READING KINDA SEEMS SUCCESSFUL ###############################\n");
+
 	return true;
 }
 bool suppl_page_load_to_file(struct suppl_page *page) {
 	if (page == NULL || page->mapping == NULL || page->mapping->fl == NULL) return false;
 	else if (!suppl_page_dirty(page)) return true;
+	else if (!page->mapping->fl_writable) return true;
 	else {
 		if (!set_kpage_if_needed(page)) return false;
 		char *start = ((char*)page->vaddr);
@@ -142,7 +184,7 @@ bool suppl_page_load_to_file(struct suppl_page *page) {
 		char *file_start = ((char*)page->mapping->start_vaddr);
 		if (((uint32_t)start) < ((uint32_t)file_start))
 			start = file_start;
-		char *file_end = (((char*)page->mapping->start_vaddr) + page->mapping->file_size);
+		char *file_end = (((char*)page->mapping->start_vaddr) + page->mapping->file_size - page->mapping->offset);
 		if (((uint32_t)end) > ((uint32_t)file_end))
 			end = file_end;
 		if (start < end) {
@@ -193,6 +235,9 @@ bool suppl_table_set_page(struct thread *t, void *upage, void *kpage, bool rw) {
 	page->vaddr = ((uint32_t)upage);
 	page->kaddr = ((uint32_t)kpage);
 	page->location = PG_LOCATION_RAM;
+	page->dirty = true;
+	page->accessed = true;
+	pagedir_set_dirty(page->pagedir, (const void*)page->vaddr, true);
 	register_suppl_page(page);
 
 	hash_insert(&t->suppl_page_table->pages_map, &page->hash_elem);
@@ -201,7 +246,7 @@ bool suppl_table_set_page(struct thread *t, void *upage, void *kpage, bool rw) {
 }
 
 bool suppl_table_set_file_mapping(struct thread *t, void* upage, struct file_mapping *mapping){
-
+	upage = pg_round_down(upage);
     ASSERT(pg_ofs(upage) == 0);
     ASSERT(mapping != NULL);
 
@@ -209,7 +254,8 @@ bool suppl_table_set_file_mapping(struct thread *t, void* upage, struct file_map
     struct suppl_page *page = suppl_page_new(t->pagedir);
     if (page == NULL) return false;
     page->vaddr = (uint32_t) upage;
-    page->mapping = mapping;
+	//page->map_cln = *mapping;
+	page->mapping = mapping;//&page->map_cln;
 	page->location = PG_LOCATION_FILE;
     
     hash_insert(&spt->pages_map, &page->hash_elem);

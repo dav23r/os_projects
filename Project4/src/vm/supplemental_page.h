@@ -22,7 +22,8 @@ struct suppl_page {
     uint32_t kaddr;
 	swap_page saddr;
 	uint32_t *pagedir;
-    struct file_mapping *mapping;
+	//struct file_mapping map_cln;
+    const struct file_mapping *mapping;
 	enum suppl_page_location location;
 	bool dirty;
 	bool accessed;
