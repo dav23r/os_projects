@@ -152,6 +152,7 @@ page_fault (struct intr_frame *f)
 
   struct thread *cur = thread_current();
   //PANIC("########################### EXCEPTION ###########################\n");
+  //printf("Exception.........\n");
   if (cur != NULL && cur->suppl_page_table != NULL) {
 	  struct suppl_page *page = suppl_pt_lookup(cur->suppl_page_table, fault_addr);
 	  //PANIC("########################### PAGE LOOKUP ###########################\n");
@@ -164,7 +165,8 @@ page_fault (struct intr_frame *f)
 			  if (suppl_page_load_from_file(page)) {
 				  /*
 				  char *fault_ad = (char*)(((int)fault_addr) - (((int)fault_addr) % PAGE_SIZE));
-				  printf("\n\n####################### READ: %u\n", fault_ad);
+				  printf("\n\n####################### READ: %u\n", (uint32_t)fault_ad);
+				  //
 				  int i;
 				  for (i = 0; i < PAGE_SIZE; i++)
 				  printf("%c", (*(((char*)fault_ad) + i)));
@@ -176,9 +178,11 @@ page_fault (struct intr_frame *f)
 				  //*/
 				  return;
 			  }
+			  //else if (page->location == PG_LOCATION_UNKNOWN)
+			  //PANIC("JUNK PAGE ACCESSED.....");
 			  //else PANIC("################################## ERROR READING MAPPED MEMORY ################################\n");
 		  }
-		  //else PANIC("################################### INTERNAL ERROR (page_location: %d) ##################################\nPG_LOCATION_UNKNOWN: %d, PG_LOCATION_RAM: %d, PG_LOCATION_SWAP: %d, PG_LOCATION_FILE: %d\n", (int)page->location, (int)PG_LOCATION_UNKNOWN, (int)PG_LOCATION_RAM, (int)PG_LOCATION_SWAP, (int)PG_LOCATION_FILE);
+		  // else PANIC("################################### INTERNAL ERROR (page_location: %d) ##################################\nPG_LOCATION_UNKNOWN: %d, PG_LOCATION_RAM: %d, PG_LOCATION_SWAP: %d, PG_LOCATION_FILE: %d\n", (int)page->location, (int)PG_LOCATION_UNKNOWN, (int)PG_LOCATION_RAM, (int)PG_LOCATION_SWAP, (int)PG_LOCATION_FILE);
 	  } else if (stack_grow_needed(fault_addr, f->esp)) {
 		  //printf("############################### SHOULD GROW STACK ##################################\n");
 		  if (!suppl_table_alloc_user_page(cur, fault_addr, true)) {
@@ -197,6 +201,7 @@ page_fault (struct intr_frame *f)
 		  //*/
 	  }
   }
+  //else PANIC("################## UNDETERMINED ERROR #################\n");
 
 
   /* To implement virtual memory, delete the rest of the function
