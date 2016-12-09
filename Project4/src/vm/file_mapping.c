@@ -13,19 +13,26 @@ static bool file_mapping_unused(struct file_mapping *f) {
 void file_mapping_init(struct file_mapping *f) {
 	f->fl = NULL;
 	f->start_vaddr = NULL;
-    f->file_size = 0;
+	f->offset = 0;
+	f->file_size = 0;
+	f->writable = false;
+	f->fl_writable = false;
 }
 
 void file_mapping_dispose(struct thread *t, struct file_mapping *f) {
 	if (file_mapping_unused(f)) return;
-	char *cur_page = f->start_vaddr;
-	char *end = (cur_page + f->file_size);
-	while (cur_page < end) {
-		struct suppl_page *page = suppl_pt_lookup(t->suppl_page_table, cur_page);
-		if (!suppl_page_load_to_file(page))
-			PANIC("\n############################### ERROR LOADING CHANGES TO THE FILE ##############################\n");
-		suppl_page_dispose(page);
-		cur_page += PAGE_SIZE;
+	if (f->fl_writable) {
+		char *cur_page = f->start_vaddr;
+		char *end = (cur_page + f->file_size - f->offset);
+		while (cur_page < end) {
+			struct suppl_page *page = suppl_pt_lookup(t->suppl_page_table, cur_page);
+			if (!suppl_page_load_to_file(page))
+				PANIC("\n############################### ERROR LOADING CHANGES TO THE FILE ##############################\n");
+			suppl_page_dispose(page);
+			hash_delete(&t->suppl_page_table->pages_map, &page->hash_elem);
+			free(page);
+			cur_page += PAGE_SIZE;
+		}
 	}
 	filesys_lock_acquire();
 	file_close(f->fl);
@@ -74,14 +81,11 @@ static int file_mappings_seek_free_id(struct file_mappings *m) {
 	}
 }
 
-static bool file_mappable(struct thread *t, struct file *fl, void *vaddr) {
+static bool file_mappable(struct thread *t, struct file *fl, void *vaddr, uint32_t offset, uint32_t file_size, uint32_t overshoot) {
 	if (t == NULL || fl == NULL || vaddr == NULL) return false;
     if (pg_ofs(vaddr) != 0) return false;
-	filesys_lock_acquire();
-	int file_sz = file_length(fl);
-	filesys_lock_release();
     char *cur_page = vaddr;
-	char *end = (((char*)vaddr) + file_sz);
+	char *end = ((((char*)vaddr) + file_size + overshoot) - offset);
     while (cur_page < end){
         if (pagedir_get_page(t->pagedir, cur_page) != NULL) 
             return false;
@@ -93,7 +97,7 @@ static bool file_mappable(struct thread *t, struct file *fl, void *vaddr) {
 	return true;
 }
 
-static bool file_map(struct thread *t, struct file *fl, void *vaddr, struct file_mapping *mapping) {
+static bool file_map(struct thread *t, struct file *fl, void *vaddr, struct file_mapping *mapping, uint32_t offset, uint32_t file_size, uint32_t overshoot, bool writable, bool fl_writable) {
 	if (t == NULL || fl == NULL || vaddr == NULL || mapping == NULL) return false;
 	filesys_lock_acquire();
 	struct file *new_file = file_reopen(fl);
@@ -101,38 +105,27 @@ static bool file_map(struct thread *t, struct file *fl, void *vaddr, struct file
 		filesys_lock_release();
 		return false;
 	}
-	int file_sz = file_length(new_file);
-	if (file_sz < 0) {
-		file_close(new_file);
-		filesys_lock_release();
-		return false;
-	}
 	filesys_lock_release();
-	bool success = true;
+
+	mapping->fl = new_file;
+	mapping->start_vaddr = vaddr;
+	mapping->offset = offset;
+	mapping->file_size = file_size;
+	mapping->writable = writable;
+	mapping->fl_writable = fl_writable;
 
     // Iterate over pages and put them in suppl pt with new file mapping
     char *cur_page = vaddr;
-	char *end = (((char*)vaddr) + file_sz);
+	char *end = (((char*)vaddr) + (file_size + overshoot - offset));
 	while (cur_page < end) {
         suppl_table_set_file_mapping(t, cur_page, mapping);
         cur_page += PAGE_SIZE; 
     }
-
-	if (success) {
-		mapping->fl = new_file;
-		mapping->start_vaddr = vaddr;
-		mapping->file_size = file_sz;
-	}
-	else {
-		filesys_lock_acquire();
-		file_close(new_file);
-		filesys_lock_release();
-	}
-	return success;
+	return true;
 }
 
-int file_mappings_map(struct thread *t, struct file *fl, void *vaddr) {
-	if (!file_mappable(t, fl, vaddr)) {
+int file_mappings_map(struct thread *t, struct file *fl, void *vaddr, uint32_t offset, uint32_t file_size, uint32_t overshoot, bool writable, bool fl_writable) {
+	if (!file_mappable(t, fl, vaddr, offset, file_size, overshoot)) {
 		//PANIC("############################################# NOT MAPPABLE ###################################################\n");
 		return (-1);
 	}
@@ -140,7 +133,7 @@ int file_mappings_map(struct thread *t, struct file *fl, void *vaddr) {
 	struct file_mappings *mappings = &t->mem_mappings;
 	int free_id = file_mappings_seek_free_id(mappings);
 	if (free_id >= 0)
-		if (!file_map(t, fl, vaddr, mappings->mappings + free_id))
+		if (!file_map(t, fl, vaddr, mappings->mappings + free_id, offset, file_size, overshoot, writable, fl_writable))
 			free_id = (-1);
 	return free_id;
 }
