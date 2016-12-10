@@ -51,7 +51,7 @@ bool suppl_page_dirty(struct suppl_page *page);
 bool suppl_page_accessed(struct suppl_page *page);
 
 bool suppl_page_load_from_file(struct suppl_page *page);
-bool suppl_page_load_to_file(struct suppl_page *page);
+bool suppl_page_load_to_file(struct suppl_page *page, bool eviction_call);
 
 void suppl_pt_init(struct suppl_pt *pt);
 struct suppl_pt * suppl_pt_new(void);

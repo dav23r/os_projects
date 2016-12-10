@@ -17,7 +17,7 @@ bool stack_grow_needed(const void *addr, const void *esp);
 // Evicts and allocates a kernel page.
 void *evict_and_get_kaddr(void);
 // Restores given page from swap.
-bool restore_page_from_swap(struct suppl_page *page);
+bool restore_page_from_swap(struct suppl_page *page, bool reg_page);
 
 // Synchronised version of pagedir_set_page
 bool pagedir_set_page_synch(uint32_t *pd, void *upage, void *kpage, bool rw);

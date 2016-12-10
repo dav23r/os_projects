@@ -32,7 +32,8 @@ void undo_suppl_page_registration(struct suppl_page *page) {
 		if (page_elem == list_end(&page_list))
 			page_elem = NULL;
 	}
-	list_remove(&page->list_elem);
+	if (page->kaddr != 0)
+		list_remove(&page->list_elem);
 	sema_up(&eviction_lock);
 }
 // Adds given page to evictables.
@@ -84,11 +85,11 @@ bool stack_grow_needed(const void *addr, const void *esp) {
 	swap_load_page_to_swap(spage, (void*)page->vaddr); \
 	page->saddr = spage; \
 	page->location = PG_LOCATION_SWAP; \
-	/*printf("page->saddr = %d; page->vaddr = %d\n", (int)page->saddr, (int)page->vaddr); /* */
+	/*printf("page->saddr = %d; page->vaddr = %d\n", (int)page->saddr, (int)page->vaddr); */
 
 // Evicts unmodified page.
 #define EVICTION_EVICT_NOT_MODIFIED \
-	/*printf("NOT MODIFIED....\n"); /* */\
+	/*printf("NOT MODIFIED....\n"); */\
 	if (page->mapping != NULL && page->mapping->fl_writable) \
 		page->location = PG_LOCATION_FILE; \
 	else{ \
@@ -98,9 +99,9 @@ bool stack_grow_needed(const void *addr, const void *esp) {
 
 // Evicts a modified page.
 #define EVICTION_EVICT_MODIFIED \
-	/*printf("MODIFIED....\n"); /* */\
+	/*printf("MODIFIED....\n"); */\
 	if (page->mapping != NULL && page->mapping->fl_writable) { \
-		suppl_page_load_to_file(page); \
+		suppl_page_load_to_file(page, true); \
 		page->location = PG_LOCATION_FILE; \
 	} \
 	else { \
@@ -176,7 +177,7 @@ void *evict_and_get_kaddr(void) {
 
 
 // Restores given page from swap.
-bool restore_page_from_swap(struct suppl_page *page) {
+bool restore_page_from_swap(struct suppl_page *page, bool reg_page) {
 	//PANIC("################### RESTORING ######################\n");
 	sema_down(&eviction_lock);
 	//printf("Restoring...\n");
@@ -202,7 +203,8 @@ bool restore_page_from_swap(struct suppl_page *page) {
 	page->kaddr = ((uint32_t)kpage);
 	page->location = PG_LOCATION_RAM;
 	sema_up(&eviction_lock);
-	register_suppl_page(page);
+	if(reg_page)
+		register_suppl_page(page);
 	//printf("done...\n");
 	return true;
 }

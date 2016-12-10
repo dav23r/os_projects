@@ -26,7 +26,7 @@ void file_mapping_dispose(struct thread *t, struct file_mapping *f) {
 		char *end = (cur_page + f->file_size - f->offset);
 		while (cur_page < end) {
 			struct suppl_page *page = suppl_pt_lookup(t->suppl_page_table, cur_page);
-			if (!suppl_page_load_to_file(page))
+			if (!suppl_page_load_to_file(page, false))
 				PANIC("\n############################### ERROR LOADING CHANGES TO THE FILE ##############################\n");
 			suppl_page_dispose(page);
 			hash_delete(&t->suppl_page_table->pages_map, &page->hash_elem);

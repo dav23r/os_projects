@@ -79,14 +79,16 @@ bool suppl_page_accessed(struct suppl_page *page) {
 #undef BIT_CHECK_FN
 
 
-static bool set_kpage_if_needed(struct suppl_page *page) {
-	void* kpage = ((void*)page->kaddr);
+static bool set_kpage_if_needed(struct suppl_page *page, bool eviction_call) {
+	if (eviction_call) return (page->kaddr != 0);
+	void *kpage = ((void*)page->kaddr);
+	undo_suppl_page_registration(page);
 	bool kpage_new = (kpage == NULL);
 	if (kpage_new && (!suppl_page_dirty(page)))
 		kpage = palloc_get_page(PAL_USER | PAL_ZERO);
 	if (kpage == NULL) {
 		if (page->location == PG_LOCATION_SWAP) {
-			return restore_page_from_swap(page);
+			return restore_page_from_swap(page, false);
 		}
 		else {
 			//printf("EVICTING to read addr: %d\n", (int)page->vaddr);
@@ -103,14 +105,14 @@ static bool set_kpage_if_needed(struct suppl_page *page) {
 			return false;
 		}
 		page->kaddr = ((uint32_t)kpage);
-		register_suppl_page(page);
+		//register_suppl_page(page);
 	}
 	return true;
 }
 bool suppl_page_load_from_file(struct suppl_page *page) {
 	ASSERT(page->location == PG_LOCATION_FILE && page->mapping != NULL);
 	if (page->mapping->fl == NULL) return false;
-	if (!set_kpage_if_needed(page)) return false;
+	if (!set_kpage_if_needed(page, false)) return false;
 	char *start = ((char*)page->vaddr);
 	char *buff = start;
 	char *end = (start + PAGE_SIZE);
@@ -133,7 +135,7 @@ bool suppl_page_load_from_file(struct suppl_page *page) {
 			*/
 			if (till_fl_end < buf_sz) buf_sz = till_fl_end;
 			if (buf_sz > 0)
-				buff += file_read(page->mapping->fl, buff, buf_sz);
+				buff += file_read(page->mapping->fl, (((char*)page->kaddr) + (buff - start)), buf_sz);
 			filesys_lock_release();
 			file_r = true;
 		}
@@ -161,25 +163,24 @@ bool suppl_page_load_from_file(struct suppl_page *page) {
 
 	pagedir_set_dirty(page->pagedir, (const void*)page->vaddr, false);
 	if (!page->mapping->writable) {
-		undo_suppl_page_registration(page);
 		pagedir_clear_page_synch(page->pagedir, (void*)page->vaddr);
 		if (!pagedir_set_page_synch(page->pagedir, (void*)page->vaddr, (void*)page->kaddr, false)) {
 			palloc_free_page((void*)page->kaddr);
 			return false;
 		}
-		register_suppl_page(page);
 	}
+	register_suppl_page(page);
 	page->location = PG_LOCATION_RAM;
 	// PANIC("################################ READING KINDA SEEMS SUCCESSFUL ###############################\n");
 
 	return true;
 }
-bool suppl_page_load_to_file(struct suppl_page *page) {
+bool suppl_page_load_to_file(struct suppl_page *page, bool eviction_call) {
 	if (page == NULL || page->mapping == NULL || page->mapping->fl == NULL) return false;
 	else if (!suppl_page_dirty(page)) return true;
 	else if (!page->mapping->fl_writable) return true;
 	else {
-		if (!set_kpage_if_needed(page)) return false;
+		if (!set_kpage_if_needed(page, eviction_call)) return false;
 		char *start = ((char*)page->vaddr);
 		char *end = (start + PAGE_SIZE);
 		char *file_start = ((char*)page->mapping->start_vaddr);
@@ -192,11 +193,15 @@ bool suppl_page_load_to_file(struct suppl_page *page) {
 			filesys_lock_acquire();
 			file_seek(page->mapping->fl, (start - file_start));
 			int buffer_size = (end - start);
-			bool rv = (file_write(page->mapping->fl, start, buffer_size) == buffer_size);
+			bool rv = (file_write(page->mapping->fl, ((char*)page->kaddr) + (start - ((char*)page->vaddr)), buffer_size) == buffer_size);
 			filesys_lock_release();
+			if (!eviction_call) register_suppl_page(page);
 			return rv;
 		}
-		else return true;
+		else {
+			if (!eviction_call) register_suppl_page(page);
+			return true;
+		}
 	}
 }
 
