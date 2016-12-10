@@ -484,9 +484,7 @@ load_segment (struct file *file, off_t ofs, uint8_t *upage,
   for (j = 0; j < 2; j++) {
 	  uint32_t i;
 	  for (i = 0; i < read_bytes + zero_bytes; i++) {
-		  void* cc = (void*)(*(((char*)upage) + i));
-		  int c = (int)cc;
-		  ASSERT(c < 1024);
+		  char c = (*(((char*)upage) + i));
 		  if ((c >= 'a' && c <= 'z') || (c >= 'A' && c <= 'Z') || c == ' ' || c == '\n' || c == '\t')
 			  asm volatile("");//printf("%c", c);
 	  }

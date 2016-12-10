@@ -100,7 +100,7 @@ bool stack_grow_needed(const void *addr, const void *esp) {
 // Evicts a modified page.
 #define EVICTION_EVICT_MODIFIED \
 	/*printf("MODIFIED....\n");  */\
-	if (page->mapping != NULL && page->mapping->fl_writable) { \
+	if (page->mapping != NULL && page->mapping->fl_writable && page->mapping->writable) { \
 		suppl_page_load_to_file(page, true); \
 		page->location = PG_LOCATION_FILE; \
 	} \
