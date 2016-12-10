@@ -482,7 +482,7 @@ load_segment (struct file *file, off_t ofs, uint8_t *upage,
   //*
   int j;
   for (j = 0; j < 2; j++) {
-	  int i;
+	  uint32_t i;
 	  for (i = 0; i < read_bytes + zero_bytes; i++) {
 		  void* cc = (void*)(*(((char*)upage) + i));
 		  int c = (int)cc;

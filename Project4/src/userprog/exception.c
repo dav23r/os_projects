@@ -158,7 +158,7 @@ page_fault (struct intr_frame *f)
 	  //PANIC("########################### PAGE LOOKUP ###########################\n");
 	  if (page != NULL) {
 		  if (page->location == PG_LOCATION_SWAP) {
-			  if (restore_page_from_swap(page)) return;
+			  if (restore_page_from_swap(page, true)) return;
 			  //PANIC("################################## VADDR ON SWAP ################################\n");
 		  } else if (page->location == PG_LOCATION_FILE) {
 			  //PANIC("################################ PAGE ON FILE ###############################\n");
