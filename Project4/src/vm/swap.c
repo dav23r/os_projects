@@ -23,7 +23,7 @@ static struct block *swap_block = NULL;
 void swap_init(void) {
 	if (!swap_initialized) {
 		swap_block = block_get_role(BLOCK_SWAP);
-        alloc_map = bitmap_create(block_size(swap_block));
+        alloc_map = bitmap_create(block_size(swap_block) / SECTORS_PER_PAGE);
         //lock_init(&allocation_lock);
 		//allocation_lock.name = lock_name;
         ASSERT(alloc_map != NULL && swap_block != NULL);
