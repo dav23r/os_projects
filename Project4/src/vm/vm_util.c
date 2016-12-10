@@ -82,7 +82,7 @@ bool stack_grow_needed(const void *addr, const void *esp) {
 		sema_up(&eviction_lock); \
 		return false; \
 	} \
-	swap_load_page_to_swap(spage, (void*)page->vaddr); \
+	swap_load_page_to_swap(spage, (void*)page->kaddr); \
 	page->saddr = spage; \
 	page->location = PG_LOCATION_SWAP; \
 	/*printf("page->saddr = %d; page->vaddr = %d\n", (int)page->saddr, (int)page->vaddr); */
@@ -90,7 +90,7 @@ bool stack_grow_needed(const void *addr, const void *esp) {
 // Evicts unmodified page.
 #define EVICTION_EVICT_NOT_MODIFIED \
 	/*printf("NOT MODIFIED....\n"); */\
-	if (page->mapping != NULL && page->mapping->fl_writable) \
+	if (page->mapping != NULL && page->mapping->writable) \
 		page->location = PG_LOCATION_FILE; \
 	else{ \
 		EVICTION_MOVE_TO_SWAP; \
@@ -99,7 +99,7 @@ bool stack_grow_needed(const void *addr, const void *esp) {
 
 // Evicts a modified page.
 #define EVICTION_EVICT_MODIFIED \
-	/*printf("MODIFIED....\n"); */\
+	/*printf("MODIFIED....\n");  */\
 	if (page->mapping != NULL && page->mapping->fl_writable) { \
 		suppl_page_load_to_file(page, true); \
 		page->location = PG_LOCATION_FILE; \
@@ -179,6 +179,7 @@ void *evict_and_get_kaddr(void) {
 // Restores given page from swap.
 bool restore_page_from_swap(struct suppl_page *page, bool reg_page) {
 	//PANIC("################### RESTORING ######################\n");
+	//printf("Restoring...\n");
 	sema_down(&eviction_lock);
 	//printf("Restoring...\n");
 	ASSERT(page->location == PG_LOCATION_SWAP && page->saddr != SWAP_NO_PAGE);

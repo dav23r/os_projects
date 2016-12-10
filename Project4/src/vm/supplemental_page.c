@@ -117,26 +117,19 @@ bool suppl_page_load_from_file(struct suppl_page *page) {
 	char *buff = start;
 	char *end = (start + PAGE_SIZE);
 	bool file_r = false;
-	//printf("\n########################\n");
 	while (buff < end) {
 		(*buff) = 0;
 		if ((!file_r) && ((uint32_t)buff >= ((uint32_t)page->mapping->start_vaddr))) {
-			//if (page->mapping == NULL || page->mapping->fl == NULL)
-				//PANIC("\n############################ SOMEONE DECIDED IT WAS A GOOD IDEA TO MMAP TO NULL ###################################\n");
-			filesys_lock_acquire();
-			file_seek(page->mapping->fl, ((char*)buff) - ((char*)page->mapping->start_vaddr) + page->mapping->offset);
-			char *fl_end = ((char*)page->mapping->start_vaddr) + ((long long)page->mapping->file_size - (long long)page->mapping->offset);
-			long long buf_sz = (long long)(PAGE_SIZE - (buff - start));
-			long long till_fl_end = ((long long)(fl_end - buff));
-			/*
-			printf("buffer:      %d\n", (int)buf_sz);
-			printf("till end:    %d\n", (int)till_fl_end);
-			printf("buff:        %d\n", (int)buff);
-			*/
-			if (till_fl_end < buf_sz) buf_sz = till_fl_end;
-			if (buf_sz > 0)
-				buff += file_read(page->mapping->fl, (((char*)page->kaddr) + (buff - start)), buf_sz);
-			filesys_lock_release();
+			char *fl_end = ((char*)page->mapping->start_vaddr) + (page->mapping->file_size - page->mapping->offset);
+			if ((uint32_t)fl_end >(uint32_t)buff) {
+				uint32_t buf_sz = (PAGE_SIZE - (buff - start));
+				uint32_t till_fl_end = (fl_end - buff);
+				if (till_fl_end < buf_sz) buf_sz = till_fl_end;
+				filesys_lock_acquire();
+				file_seek(page->mapping->fl, ((char*)buff) - ((char*)page->mapping->start_vaddr) + page->mapping->offset);
+				buff += file_read(page->mapping->fl, (((char*)pg_round_down((void*)page->kaddr)) + (buff - start)), buf_sz);
+				filesys_lock_release();
+			}
 			file_r = true;
 		}
 		else buff++;
@@ -166,6 +159,7 @@ bool suppl_page_load_from_file(struct suppl_page *page) {
 		pagedir_clear_page_synch(page->pagedir, (void*)page->vaddr);
 		if (!pagedir_set_page_synch(page->pagedir, (void*)page->vaddr, (void*)page->kaddr, false)) {
 			palloc_free_page((void*)page->kaddr);
+			PANIC("MAPPING ERROR.....\n"); // This is not supposed to ever happen...
 			return false;
 		}
 	}
@@ -193,7 +187,9 @@ bool suppl_page_load_to_file(struct suppl_page *page, bool eviction_call) {
 			filesys_lock_acquire();
 			file_seek(page->mapping->fl, (start - file_start));
 			int buffer_size = (end - start);
-			bool rv = (file_write(page->mapping->fl, ((char*)page->kaddr) + (start - ((char*)page->vaddr)), buffer_size) == buffer_size);
+			//printf("Writing...\n");
+			bool rv = (file_write(page->mapping->fl, ((char*)pg_round_down((void*)page->kaddr)) + (start - ((char*)page->vaddr)), buffer_size) == buffer_size);
+			//printf("Done......\n");
 			filesys_lock_release();
 			if (!eviction_call) register_suppl_page(page);
 			return rv;
