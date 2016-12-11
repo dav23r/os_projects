@@ -9,12 +9,9 @@
 static bool swap_initialized = false;
 static struct bitmap *alloc_map = NULL;
 static struct block *swap_block = NULL;
-//static struct lock allocation_lock;
 
 // pgsize - 4kb, block_size - 512b
-#define SECTORS_PER_PAGE (PAGE_SIZE / BLOCK_SECTOR_SIZE)     
-#define BITMAP_SIZE (1024 * 1024)
-#define MAX_SECTORS_IN_SWAP (BITMAP_SIZE / PAGE_SIZE * BLOCK_SECTOR_SIZE)
+#define SECTORS_PER_PAGE (PAGE_SIZE / BLOCK_SECTOR_SIZE)
 
 #define START 0
 
