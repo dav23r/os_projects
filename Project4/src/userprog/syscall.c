@@ -52,8 +52,9 @@ static int user_address_valid(void *addr) {
 	else if (pagedir_get_page(cur->pagedir, (uint32_t *)addr) != NULL) return true;
 	else {
 #ifdef VM
-		if (stack_grow_needed((const void*)addr, (const void*)(cur->intr_stack)))
-			if (suppl_table_alloc_user_page(cur, addr, true)) return true;
+		if (suppl_pt_lookup(cur->suppl_page_table, addr) == NULL)
+			if (stack_grow_needed((const void*)addr, (const void*)(cur->intr_stack)))
+				if (suppl_table_alloc_user_page(cur, addr, true)) return true;
 #endif
 		return false;
 	}
