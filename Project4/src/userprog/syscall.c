@@ -72,6 +72,8 @@ static int pointers_valid(const void *address, uint32_t count) {
 #ifdef VM
 // Checks, if pointers are all writable
 static bool pointers_writable(const void *address, uint32_t count) {
+	if (count % PAGE_SIZE != 0)
+		count += PAGE_SIZE - (count % PAGE_SIZE);
 	struct thread *cur = thread_current();
 	const char *addr = (const char*)address;
 	uint32_t i;
