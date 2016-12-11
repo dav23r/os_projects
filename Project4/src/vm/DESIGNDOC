@@ -67,22 +67,6 @@ struct suppl_pt {
 	struct hash pages_map;			// Hash map PS-ისთვის
 };
 
-// სტრუქტურა ფაილზე დამეპვისთვის:
-struct file_mapping {
-	struct file *fl;		// ფაილი
-	uint32_t offset;		// დამეპვის offset
-	uint32_t file_size;		// ფაილის წაკითხვადი სეგმენტის ზომა + offset
-	void *start_vaddr;		// დამეპვის პირველი ვირტუალური მისამართი
-	bool writable;			// True, თუ ვირტუალურ მისამართზე ჩაწერა შეიძლება
-	bool fl_writable;		// True, თუ ფაილის შიგთავსის განახლება შეიძლება
-};
-
-// file mappings-ების სია ერთი კონკრეტული ნაკადისთვის:
-struct file_mappings {
-	struct file_mapping *mappings;	// File mapping-ების pool
-	int pool_size;					// mapping pool-ის მიმდინარე ზომა
-};
-
 #define VM_UTIL_MAX_STACK_OFFSET 128 					// მაქსიმალური დასაშვები "გადაცდომა" სტეკ პოინტერიდან, იმისთვის, რომ სტეკი გაიზარდოს
 #define VM_MAX_STACK_SIZE (1024 * 1024 * 8)				// სტეკის მაქსიმალური ზომა
 #define VM_STACK_END (PHYS_BASE - VM_MAX_STACK_SIZE)	// სტეკის "ქვედა ზღვარი"
@@ -97,7 +81,7 @@ struct thread
 
 #ifdef VM
 	struct suppl_pt *suppl_page_table;	// SPT
-	struct file_mappings mem_mappings;	// memory mapping-ები
+	...
 #endif
 
 	... რაც იყო ...
@@ -253,24 +237,33 @@ SPT არი ყველა სრედისთვის თავისი.
 >> `struct' member, global or static variable, `typedef', or
 >> enumeration.  Identify the purpose of each in 25 words or less.
 
-Following two structures ares used as part of 'mmap' implementation.
-
-This unit alongside with pointer to file structure and it's size stores
-the lowest virtual address that is mapped to this file (it's first byte).
-The pages in supplemental page table points to this structure, and the byte
-to be read in RAM can be determined by offset (vaddr - start_vaddr) 
+// სტრუქტურა ფაილზე დამეპვისთვის:
 struct file_mapping {
-	struct file *fl;
-    	int file_size;
-	void *start_vaddr;
+	struct file *fl;		// ფაილი
+	uint32_t offset;		// დამეპვის offset
+	uint32_t file_size;		// ფაილის წაკითხვადი სეგმენტის ზომა + offset
+	void *start_vaddr;		// დამეპვის პირველი ვირტუალური მისამართი
+	bool writable;			// True, თუ ვირტუალურ მისამართზე ჩაწერა შეიძლება
+	bool fl_writable;		// True, თუ ფაილის შიგთავსის განახლება შეიძლება
 };
 
-Stores array of all mapping structures, and pool_size in order to be able
-to grow this container dynamically as number of mappings exceed pool size.
+// file mappings-ების სია ერთი კონკრეტული ნაკადისთვის:
 struct file_mappings {
-	struct file_mapping *mappings;
-	int pool_size;
+	struct file_mapping *mappings;	// File mapping-ების pool
+	int pool_size;					// mapping pool-ის მიმდინარე ზომა
 };
+
+struct thread
+  {
+    ... რაც იყო ...
+
+#ifdef VM
+	...
+	struct file_mappings mem_mappings;	// memory mapping-ები
+#endif
+
+	... რაც იყო ...
+  };
 
 ---- ALGORITHMS ----
 
