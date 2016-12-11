@@ -153,7 +153,7 @@ page_fault (struct intr_frame *f)
   struct thread *cur = thread_current();
   //PANIC("########################### EXCEPTION ###########################\n");
   //printf("Exception.........\n");
-  if (cur != NULL && cur->suppl_page_table != NULL) {
+  if (not_present && cur != NULL && cur->suppl_page_table != NULL) {
 	  struct suppl_page *page = suppl_pt_lookup(cur->suppl_page_table, fault_addr);
 	  //PANIC("########################### PAGE LOOKUP ###########################\n");
 	  if (page != NULL) {

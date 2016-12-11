@@ -68,6 +68,22 @@ static int pointers_valid(const void *address, uint32_t count) {
 	return 1;
 }
 
+#ifdef VM
+// Checks, if pointers are all writable
+static bool pointers_writable(const void *address, uint32_t count) {
+	struct thread *cur = thread_current();
+	const char *addr = (const char*)address;
+	uint32_t i;
+	for (i = 0; i < count; i += PAGE_SIZE) {
+		void *dst = (void*)(addr + i);
+		struct suppl_page *page = suppl_pt_lookup(cur->suppl_page_table, dst);
+		if (page == NULL) continue;
+		if (page->mapping != NULL && (!page->mapping->writable)) return false;
+	}
+	return true;
+}
+#endif
+
 // Checks, if the given string is valid, by moving along it and verifying every single byte, stopping at '\0'.
 static bool string_valid(const char *address) {
 	while (true) {
@@ -266,6 +282,9 @@ other than end of file). Fd 0 reads from the keyboard using input_getc().
 */
 static int read(int fd, void *buffer, unsigned size) {
 	if (!pointers_valid(buffer, size)) exit(-1);
+#ifdef VM
+	if (!pointers_writable(buffer, size)) exit(-1);
+#endif
 	else if (fd == STDIN_FILENO) {
 		// Read from standard input
 		unsigned int i;
