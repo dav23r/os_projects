@@ -151,55 +151,18 @@ page_fault (struct intr_frame *f)
   user = (f->error_code & PF_U) != 0;
 
   struct thread *cur = thread_current();
-  //PANIC("########################### EXCEPTION ###########################\n");
-  //printf("Exception.........\n");
   if (not_present && cur != NULL && cur->suppl_page_table != NULL) {
 	  struct suppl_page *page = suppl_pt_lookup(cur->suppl_page_table, fault_addr);
-	  //PANIC("########################### PAGE LOOKUP ###########################\n");
 	  if (page != NULL) {
 		  if (page->location == PG_LOCATION_SWAP) {
 			  if (restore_page_from_swap(page, true)) return;
-			  //PANIC("################################## VADDR ON SWAP ################################\n");
 		  } else if (page->location == PG_LOCATION_FILE) {
-			  //PANIC("################################ PAGE ON FILE ###############################\n");
-			  if (suppl_page_load_from_file(page)) {
-				  /*
-				  char *fault_ad = (char*)(((int)fault_addr) - (((int)fault_addr) % PAGE_SIZE));
-				  printf("\n\n####################### READ: %u\n", (uint32_t)fault_ad);
-				  //
-				  int i;
-				  for (i = 0; i < PAGE_SIZE; i++)
-				  printf("%c", (*(((char*)fault_ad) + i)));
-				  printf("\n");
-				  for (i = 0; i < PAGE_SIZE; i++)
-				  printf("%d ", (int)(*(((char*)fault_ad) + i)));
-				  printf("\n");
-				  //PANIC("################ NO IDEA.....................\n");
-				  //*/
-				  return;
-			  }
-			  //else PANIC("################################## ERROR READING MAPPED MEMORY ################################\n");
+			  if (suppl_page_load_from_file(page)) return;
 		  }
-		  // else PANIC("################################### INTERNAL ERROR (page_location: %d) ##################################\nPG_LOCATION_UNKNOWN: %d, PG_LOCATION_RAM: %d, PG_LOCATION_SWAP: %d, PG_LOCATION_FILE: %d\n", (int)page->location, (int)PG_LOCATION_UNKNOWN, (int)PG_LOCATION_RAM, (int)PG_LOCATION_SWAP, (int)PG_LOCATION_FILE);
 	  } else if (stack_grow_needed(fault_addr, f->esp)) {
-		  //printf("############################### SHOULD GROW STACK ##################################\n");
-		  if (!suppl_table_alloc_user_page(cur, fault_addr, true)) {
-			  //PANIC("################################## UNABLE TO GROW STACK ################################\n");
-		  }
-		  else return;
-	  }
-	  else {
-		  //PANIC("################## UNDETERMINED ERROR #################\n");
-		  /*
-		  printf("\nVADDR: %u\n", (int)fault_addr);
-		  printf("############ NOT_PRESENT: %d\n", (int)not_present);
-		  printf("############ WRITE: %d\n", (int)write);
-		  printf("############ USER: %d\n", (int)user);
-		  PANIC("ERROR\n");
-		  //*/
+		  if (suppl_table_alloc_user_page(cur, fault_addr, true)) return;
 	  }
   }
-  //else PANIC("################## UNDETERMINED ERROR #################\n");
 
 
   /* To implement virtual memory, delete the rest of the function

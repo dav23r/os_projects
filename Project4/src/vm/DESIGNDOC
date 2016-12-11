@@ -39,41 +39,53 @@ Following three structures are used as part of implementation of
 supplemental page table
 
 
-Signifies location of the data mapped. 
-RAM means that it is loaded in physical memory and placed in page directory.
-SWAP and FILE correspondingly mean that data is currently located in swap
-block and data is mapped to a file.
+// ენუმერაცია ფეიჯის მიმდინარე მდებარეობისთვის:
 enum suppl_page_location {
-	PG_LOCATION_UNKNOWN,
-	PG_LOCATION_RAM,
-	PG_LOCATION_SWAP,
-	PG_LOCATION_FILE
+	PG_LOCATION_UNKNOWN,	// უცნობი (ეს ნებისმიერი ფეიჯისთის ძირითადად ნიშნავს შეცდომას)
+	PG_LOCATION_RAM,		// ფიზიკურ მეხსიერებაში
+	PG_LOCATION_SWAP,		// სვაპში
+	PG_LOCATION_FILE		// ფაილში
 };
 
-Represents page of SPT. vaddr is the process virtual address,
-kaddr is physical frame (identified by kernel virual address),
-mapping pointer points to file mapping described above,
-dirty bit has it's conventional meaning and tells if data has
-been changed and consequently should be written back to file
-Only neccessarry variales are initialized depending on the
-'location', the rest are set to default. 
+// SP-ს სტრუქტურა:
 struct suppl_page {
-    uint32_t vaddr;
-    uint32_t kaddr;
-    struct file_mapping *mapping;
-    enum suppl_page_location location;
-    bool dirty;
-    struct hash_elem hash_elem;
+    uint32_t vaddr;			// ვირტუალური მისამართი
+    uint32_t kaddr;			// კერნელის მისამართი (NULL თუ არაა დამეპილი)
+	swap_page saddr;		// სვაპის ბლოკის იდენთიფიკატორი (SWAP_NO_PAGE თუ სვაპში არაა)
+	uint32_t *pagedir;		// მფლობელი ნაკადის PD
+    const struct file_mapping *mapping;	// ფაილზე მეპინგი (NULL თუ დამეპილი არაა)
+	enum suppl_page_location location;	// ფეიჯის მიმდინარე მდებარეობა
+	bool dirty;			// True, თუ ფეიჯი არის dirty
+	bool accessed;		// True, თუ ფეიჯი არის accessed
+    struct hash_elem hash_elem;	// hash map-ის ელემენტი
+	struct list_elem list_elem;	// list_elem, evictable-ების ლისტში ჩასაგდებად
 };
 
-SPT structure. Supplemental page table is per-process data structures.
-owner_thread is pointer to the thread it belongs to,
-pages_map is hash table that stores pages of SPT.
+// SPT-ს ტრუქტურა:
 struct suppl_pt {
-	struct thread *owner_thread;
-	struct hash pages_map;
+	struct thread *owner_thread;	// მფლობელი ნაკადი
+	struct hash pages_map;			// Hash map PS-ისთვის
 };
 
+#define VM_UTIL_MAX_STACK_OFFSET 128 					// მაქსიმალური დასაშვები "გადაცდომა" სტეკ პოინტერიდან, იმისთვის, რომ სტეკი გაიზარდოს
+#define VM_MAX_STACK_SIZE (1024 * 1024 * 8)				// სტეკის მაქსიმალური ზომა
+#define VM_STACK_END (PHYS_BASE - VM_MAX_STACK_SIZE)	// სტეკის "ქვედა ზღვარი"
+
+static struct list page_list;	// evictable-ების ლისტი
+static struct list_elem *page_elem; // Clock ალგორითმის "ისარი"
+static struct semaphore eviction_lock; // ლოქი eviction-ის სინქრონიზირებისთვის
+
+struct thread
+  {
+    ... რაც იყო ...
+
+#ifdef VM
+	struct suppl_pt *suppl_page_table;	// SPT
+	...
+#endif
+
+	... რაც იყო ...
+  };
 
 ---- ALGORITHMS ----
 
@@ -100,15 +112,14 @@ SPT არის SP ჰეშმეპი, სადაც ვირტუალ
 >> A4: When two user processes both need a new frame at the same time,
 >> how are races avoided?
 
-ბიტმეპის ატომურობის ხარჯზეა გაკეთებული. რადგან პროცესორის დონეზე
-გვაქვს ატომურობის გარანტია.
+ნებისმიერი ოპერაცია სვაპზე სინქრონიზირებულია.
 
 ---- RATIONALE ----
 
 >> A5: Why did you choose the data structure(s) that you did for
 >> representing virtual-to-physical mappings?
 
-ლისტზე გაცილებით სწრაფია და დამატებითი ბევრი წვალებაც არ იყო საჭირო
+გამოვიყენეთ ჰეშმეპი, რადგან ლისტზე გაცილებით სწრაფია და დამატებითი ბევრი წვალებაც არ იყო საჭირო
 იმპლემენტაციისთვის.
 
 		       PAGING TO AND FROM DISK
@@ -119,6 +130,23 @@ SPT არის SP ჰეშმეპი, სადაც ვირტუალ
 >> B1: Copy here the declaration of each new or changed `struct' or
 >> `struct' member, global or static variable, `typedef', or
 >> enumeration.  Identify the purpose of each in 25 words or less.
+
+static struct bitmap *alloc_map;	// სვაპის ბითმეფი
+static struct block *swap_block;	// სვაპის ბლოკი
+
+#define SECTORS_PER_PAGE (PAGE_SIZE / BLOCK_SECTOR_SIZE) // სექტორების რაოდენობა ერთ ბლოკზე
+
+მომხმარებელი ხედავს ფუნქციებს:
+// ინიციალიზაცია.
+void swap_init(void);
+// ფრეიმის ძებნა.
+swap_page swap_get_page(void);
+// ფრეიმის გათავისუფლება.
+void swap_free_page(swap_page page);
+// ფრეიმიდან ფეიჯში გადაწერა.
+void swap_load_page_to_ram(swap_page page, void *addr);
+// ფეიჯის სვაპში გადაწერა.
+void swap_load_page_to_swap(swap_page page, void *addr);
 
 ---- ALGORITHMS ----
 
@@ -146,7 +174,7 @@ SPT არი ყველა სრედისთვის თავისი.
 >> invalid virtual address should cause the stack to be extended into
 >> the page that faulted.
 უფლებას ვაძლევთ, რომ დაქრეშილი მისამართი(page_fault რა მისამართზეც 
-ამოვარდა ის მისამართი) იყოს SP-ზე მაქსიმუმ 32 ბაიტით ქვემოთ და PHYS_BASE-ზე
+ამოვარდა ის მისამართი) იყოს SP-ზე მაქსიმუმ 128 ბაიტით ქვემოთ და PHYS_BASE-ზე
 მაქსიმუმ 8 მეგაბაიტით ქვემოთ. თუ ამ პირობებს აკმაყოფილებს სტეკს ვზრდით,
 წინააღმდეგ შემთხვევაში კი პროგრამას ვკლავთ.
 
@@ -156,9 +184,10 @@ SPT არი ყველა სრედისთვის თავისი.
 >> particular, explain how it prevents deadlock.  (Refer to the
 >> textbook for an explanation of the necessary conditions for
 >> deadlock.)
-ჩადგმული ლოქების აღება არ გვაქვს, შესაბამისად არც მოხდება დედლოქი.
-(ერთ სრედს ერთ მომენტში მაქსიმუმ ერთი ლოქი უჭირავს და მაქსიმუმ 
-ერთი ლოქის აღება უნდა.)
+სულ არის ორი ლოქი: სვაპის და ფაილური სისტემის. არასდროს არ ხდება ისე, 
+რომ რომელიმე ნაკადმა აიღოს ჯერ ფაილური სისტემის და შემდეგ სვაპის ლოქი.
+(რადგან ვიღებთ ყოველთვის ფიქსირებული მიმდევრობით, deadlock შეუძლებელია მოხდეს)
+
 >> B6: A page fault in process P can cause another process Q's frame
 >> to be evicted.  How do you ensure that Q cannot access or modify
 >> the page during the eviction process?  How do you avoid a race
@@ -208,24 +237,33 @@ SPT არი ყველა სრედისთვის თავისი.
 >> `struct' member, global or static variable, `typedef', or
 >> enumeration.  Identify the purpose of each in 25 words or less.
 
-Following two structures ares used as part of 'mmap' implementation.
-
-This unit alongside with pointer to file structure and it's size stores
-the lowest virtual address that is mapped to this file (it's first byte).
-The pages in supplemental page table points to this structure, and the byte
-to be read in RAM can be determined by offset (vaddr - start_vaddr) 
+// სტრუქტურა ფაილზე დამეპვისთვის:
 struct file_mapping {
-	struct file *fl;
-    	int file_size;
-	void *start_vaddr;
+	struct file *fl;		// ფაილი
+	uint32_t offset;		// დამეპვის offset
+	uint32_t file_size;		// ფაილის წაკითხვადი სეგმენტის ზომა + offset
+	void *start_vaddr;		// დამეპვის პირველი ვირტუალური მისამართი
+	bool writable;			// True, თუ ვირტუალურ მისამართზე ჩაწერა შეიძლება
+	bool fl_writable;		// True, თუ ფაილის შიგთავსის განახლება შეიძლება
 };
 
-Stores array of all mapping structures, and pool_size in order to be able
-to grow this container dynamically as number of mappings exceed pool size.
+// file mappings-ების სია ერთი კონკრეტული ნაკადისთვის:
 struct file_mappings {
-	struct file_mapping *mappings;
-	int pool_size;
+	struct file_mapping *mappings;	// File mapping-ების pool
+	int pool_size;					// mapping pool-ის მიმდინარე ზომა
 };
+
+struct thread
+  {
+    ... რაც იყო ...
+
+#ifdef VM
+	...
+	struct file_mappings mem_mappings;	// memory mapping-ები
+#endif
+
+	... რაც იყო ...
+  };
 
 ---- ALGORITHMS ----
 

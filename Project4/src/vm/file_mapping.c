@@ -6,10 +6,12 @@
 #include "lib/kernel/hash.h"
 #include "userprog/syscall.h"
 
+// True, if the file mapping is inactive.
 static bool file_mapping_unused(struct file_mapping *f) {
 	return ((f == NULL) || ((f->fl == NULL) && (f->start_vaddr == NULL)));
 }
 
+// Initializes file mapping.
 void file_mapping_init(struct file_mapping *f) {
 	f->fl = NULL;
 	f->start_vaddr = NULL;
@@ -19,6 +21,7 @@ void file_mapping_init(struct file_mapping *f) {
 	f->fl_writable = false;
 }
 
+// Dosposes file mapping.
 void file_mapping_dispose(struct thread *t, struct file_mapping *f) {
 	if (file_mapping_unused(f)) return;
 	if (f->fl_writable) {
@@ -40,11 +43,13 @@ void file_mapping_dispose(struct thread *t, struct file_mapping *f) {
 	file_mapping_init(f);
 }
 
+// Initializes the list of file mappings.
 void file_mappings_init(struct file_mappings *m) {
 	m->mappings = NULL;
 	m->pool_size = 0;
 }
 
+// Disposes the list of file mappings.
 void file_mappings_dispose(struct thread *t, struct file_mappings *m) {
 	int i;
 	for (i = 0; i < m->pool_size; i++)
@@ -53,6 +58,7 @@ void file_mappings_dispose(struct thread *t, struct file_mappings *m) {
 	file_mappings_init(m);
 }
 
+// Seeks and returns free file mapping identifier.
 static int file_mappings_seek_free_id(struct file_mappings *m) {
 	int i, free_id;
 	free_id = (-1);
@@ -81,6 +87,7 @@ static int file_mappings_seek_free_id(struct file_mappings *m) {
 	}
 }
 
+// Returns true, if file is mappable on the given vaddr.
 static bool file_mappable(struct thread *t, struct file *fl, void *vaddr, uint32_t offset, uint32_t file_size, uint32_t overshoot) {
 	if (t == NULL || fl == NULL || vaddr == NULL) return false;
     if (pg_ofs(vaddr) != 0) return false;
@@ -97,6 +104,7 @@ static bool file_mappable(struct thread *t, struct file *fl, void *vaddr, uint32
 	return true;
 }
 
+// Maps file on virtual memory.
 static bool file_map(struct thread *t, struct file *fl, void *vaddr, struct file_mapping *mapping, uint32_t offset, uint32_t file_size, uint32_t overshoot, bool writable, bool fl_writable) {
 	if (t == NULL || fl == NULL || vaddr == NULL || mapping == NULL) return false;
 	filesys_lock_acquire();
@@ -124,12 +132,20 @@ static bool file_map(struct thread *t, struct file *fl, void *vaddr, struct file
 	return true;
 }
 
+/* MMAP function.
+	Parameters:
+			t			- thread;
+			fl			- file;
+			offset		- IO offset from file's start
+			file_size	- readable size fo the file (mmap can be used for partial mapping)
+			overshoot	- number of bytes that should be filled with zeroes after the file's end (or the end of the readable segment of the file)
+			writable	- true, if the virtual address should be writable
+			fl_writable	- true, if the file can be updated
+	Return value:
+			Mapping identifier, if the mapping was successful, or (-1) if it failed.
+*/
 int file_mappings_map(struct thread *t, struct file *fl, void *vaddr, uint32_t offset, uint32_t file_size, uint32_t overshoot, bool writable, bool fl_writable) {
-	if (!file_mappable(t, fl, vaddr, offset, file_size, overshoot)) {
-		//PANIC("############################################# NOT MAPPABLE ###################################################\n");
-		return (-1);
-	}
-	//PANIC("############################################# ATTEMPTING TO MAP ###################################################\n");
+	if (!file_mappable(t, fl, vaddr, offset, file_size, overshoot)) return (-1);
 	struct file_mappings *mappings = &t->mem_mappings;
 	int free_id = file_mappings_seek_free_id(mappings);
 	if (free_id >= 0)
@@ -137,7 +153,7 @@ int file_mappings_map(struct thread *t, struct file *fl, void *vaddr, uint32_t o
 			free_id = (-1);
 	return free_id;
 }
-
+// Unmaps file mapping (updates file automatically, if possible).
 int file_mappings_unmap(struct thread *t, int mapping_id) {
 	struct file_mappings *mappings = &t->mem_mappings;
 	if (mapping_id >= 0 && mapping_id < mappings->pool_size)

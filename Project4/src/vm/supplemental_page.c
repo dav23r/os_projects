@@ -11,25 +11,28 @@
 #include "vm_util.h"
 
 
+// Hash function for SP
 unsigned pages_map_hash(const struct hash_elem *e, void *aux UNUSED) {
 	struct suppl_page *page = hash_entry(e, struct suppl_page, hash_elem);
 	return (page->vaddr);
 }
 
+// Less function for SP
 bool pages_map_less(const struct hash_elem *a, const struct hash_elem *b, void *aux UNUSED) {
 	struct suppl_page *page_a = hash_entry(a, struct suppl_page, hash_elem);
 	struct suppl_page *page_b = hash_entry(b, struct suppl_page, hash_elem);
 	return (page_a->vaddr < page_b->vaddr);
 }
 
+// Destroys SP.
 static void suppl_page_hash_dispose(struct hash_elem *e, void *aux UNUSED) {
 	struct suppl_page *page = hash_entry(e, struct suppl_page, hash_elem);
 	suppl_page_delete(page);
 }
 
+// Initializes empty SP.
 void suppl_page_init(uint32_t *pagedir, struct suppl_page *page) {
 	if (page == NULL) return;
-    //page->vaddr = 0;
     page->kaddr = 0;
 	page->saddr = SWAP_NO_PAGE;
 	page->pagedir = pagedir;
@@ -39,12 +42,14 @@ void suppl_page_init(uint32_t *pagedir, struct suppl_page *page) {
 	page->accessed = false;
 }
 
+// Allocates, initializes and returns an empty SP.
 struct suppl_page * suppl_page_new(uint32_t *pagedir) {
 	struct suppl_page * page = malloc(sizeof(struct suppl_page));
 	suppl_page_init(pagedir, page);
 	return page;
 }
 
+// Cleans SP.
 void suppl_page_dispose(struct suppl_page *page) {
 	if (page == NULL) return;
 	if (page->pagedir == NULL) PANIC("\n########################## PAGE MISSING PAGEDIR ############################\n");
@@ -55,10 +60,10 @@ void suppl_page_dispose(struct suppl_page *page) {
 	}
 	if (page->saddr != SWAP_NO_PAGE)
 		swap_free_page(page->saddr);
-    //file_mapping_dispose(page->mapping);
     suppl_page_init(page->pagedir, page);
 }
 
+// Cleans and deallocates SP.
 void suppl_page_delete(struct suppl_page *page) {
 	suppl_page_dispose(page);
 	if (page != NULL) free(page);
@@ -70,15 +75,17 @@ void suppl_page_delete(struct suppl_page *page) {
 		bit = function(page->pagedir, ((const void*)page->vaddr)); \
 		return bit; \
 	} else return false
+// Returns true, if SP is/ever was dirty.
 bool suppl_page_dirty(struct suppl_page *page) {
 	BIT_CHECK_FN((page->dirty), pagedir_is_dirty);
 }
+// Returns true, if SP is/ever was accessed.
 bool suppl_page_accessed(struct suppl_page *page) {
 	BIT_CHECK_FN((page->accessed), pagedir_is_accessed);
 }
 #undef BIT_CHECK_FN
 
-
+// Restores/allocates SP if needed.
 static bool set_kpage_if_needed(struct suppl_page *page, bool eviction_call) {
 	if (eviction_call) return (page->kaddr != 0);
 	void *kpage = ((void*)page->kaddr);
@@ -91,12 +98,9 @@ static bool set_kpage_if_needed(struct suppl_page *page, bool eviction_call) {
 			return restore_page_from_swap(page, false);
 		}
 		else {
-			//printf("EVICTING to read addr: %d\n", (int)page->vaddr);
 			kpage = evict_and_get_kaddr();
 		}
 		if (kpage == NULL) return false;
-		// ETC... ?
-		//return false;
 	}
 	void *vaddr = ((void*)page->vaddr);
 	if (kpage_new) {
@@ -105,10 +109,11 @@ static bool set_kpage_if_needed(struct suppl_page *page, bool eviction_call) {
 			return false;
 		}
 		page->kaddr = ((uint32_t)kpage);
-		//register_suppl_page(page);
 	}
 	return true;
 }
+
+// Loads page from file.
 bool suppl_page_load_from_file(struct suppl_page *page) {
 	ASSERT(page->location == PG_LOCATION_FILE && page->mapping != NULL);
 	if (page->mapping->fl == NULL) return false;
@@ -134,25 +139,6 @@ bool suppl_page_load_from_file(struct suppl_page *page) {
 		}
 		else buff++;
 	}
-	/*
-	printf("########################\n");
-	int i;
-	printf("Map ADDRESS: %u\n", (uint32_t)page->mapping);
-	printf("writable:    %u\n", (uint32_t)page->mapping->writable);
-	printf("fl_writable: %u\n", (uint32_t)page->mapping->fl_writable);
-	printf("vaddr:       %u\n", (uint32_t)page->vaddr);
-	printf("map vaddr:   %u\n", (uint32_t)page->mapping->start_vaddr);
-	printf("file_size:   %u\n", (uint32_t)page->mapping->file_size);
-	printf("offset:      %u\n", (uint32_t)page->mapping->offset);
-	printf("---------------\n");
-	for (i = 0; i < PAGE_SIZE; i++) {
-		char c = ((char*)page->vaddr)[i];
-		if ((c >= 'a' && c <= 'z') || (c >= 'A' && c <= 'Z') || c == ' ' || c == '\n' || c == '\t')
-			printf("%c", c);
-		//else printf("<%d>", (int)c);
-	}
-	printf("\n########################\n");
-	//*/
 
 	pagedir_set_dirty(page->pagedir, (const void*)page->vaddr, false);
 	if (!page->mapping->writable) {
@@ -165,10 +151,10 @@ bool suppl_page_load_from_file(struct suppl_page *page) {
 	}
 	register_suppl_page(page);
 	page->location = PG_LOCATION_RAM;
-	// PANIC("################################ READING KINDA SEEMS SUCCESSFUL ###############################\n");
 
 	return true;
 }
+// Loads page to file.
 bool suppl_page_load_to_file(struct suppl_page *page, bool eviction_call) {
 	if (page == NULL || page->mapping == NULL || page->mapping->fl == NULL) return false;
 	else if (!suppl_page_dirty(page)) return true;
@@ -187,9 +173,7 @@ bool suppl_page_load_to_file(struct suppl_page *page, bool eviction_call) {
 			filesys_lock_acquire();
 			file_seek(page->mapping->fl, (start - file_start));
 			int buffer_size = (end - start);
-			//printf("Writing...\n");
 			bool rv = (file_write(page->mapping->fl, ((char*)pg_round_down((void*)page->kaddr)) + (start - ((char*)page->vaddr)), buffer_size) == buffer_size);
-			//printf("Done......\n");
 			filesys_lock_release();
 			if (!eviction_call) register_suppl_page(page);
 			return rv;
@@ -202,6 +186,7 @@ bool suppl_page_load_to_file(struct suppl_page *page, bool eviction_call) {
 }
 
 
+// Initializes SPT.
 void suppl_pt_init(struct suppl_pt *pt) {
 	if (pt == NULL) return;
 	if (!hash_init(&pt->pages_map, pages_map_hash, pages_map_less, NULL))
@@ -209,27 +194,30 @@ void suppl_pt_init(struct suppl_pt *pt) {
 	pt->owner_thread = NULL;
 }
 
+// Allocates and initializes SPT.
 struct suppl_pt * suppl_pt_new(void) {
 	struct suppl_pt *pt = malloc(sizeof(struct suppl_pt));
 	suppl_pt_init(pt);
 	return pt;
 }
 
+// Cleans SPT.
 void suppl_pt_dispose(struct suppl_pt *pt) {
 	if (pt == NULL) return;
 	hash_destroy(&pt->pages_map, suppl_page_hash_dispose);
 }
 
+// Cleans and deallocates SPT.
 void suppl_pt_delete(struct suppl_pt *pt) {
 	suppl_pt_dispose(pt);
 	if(pt != NULL) free(pt);
 }
 
+// Sets SP to the given kernel address.
 bool suppl_table_set_page(struct thread *t, void *upage, void *kpage, bool rw) {
 	upage = pg_round_down(upage);
 	struct suppl_page * page = suppl_page_new(t->pagedir);
 	if (page == NULL) return false;
-    // TODO check below line (unsure about negation)
 	if (!pagedir_set_page_synch(t->pagedir, upage, kpage, rw)) {
 		suppl_page_delete(page);
 		return false;
@@ -243,10 +231,10 @@ bool suppl_table_set_page(struct thread *t, void *upage, void *kpage, bool rw) {
 	register_suppl_page(page);
 
 	hash_insert(&t->suppl_page_table->pages_map, &page->hash_elem);
-	// ETC...
 	return true;
 }
 
+// Sets file mapping.
 bool suppl_table_set_file_mapping(struct thread *t, void* upage, struct file_mapping *mapping){
 	upage = pg_round_down(upage);
     ASSERT(pg_ofs(upage) == 0);
@@ -256,22 +244,19 @@ bool suppl_table_set_file_mapping(struct thread *t, void* upage, struct file_map
     struct suppl_page *page = suppl_page_new(t->pagedir);
     if (page == NULL) return false;
     page->vaddr = (uint32_t) upage;
-	//page->map_cln = *mapping;
-	page->mapping = mapping;//&page->map_cln;
+	page->mapping = mapping;
 	page->location = PG_LOCATION_FILE;
     
     hash_insert(&spt->pages_map, &page->hash_elem);
     
-	//PANIC("####################################### MAPPED #########################################\n");
-
 	return true;
 }
 
+// Allocates SP (almost exclusively used for stack growth).
 bool suppl_table_alloc_user_page(struct thread *t, void *upage, bool writeable) {
 	void* kpage = palloc_get_page(PAL_USER | PAL_ZERO);
 	if(kpage == NULL) {
 		kpage = evict_and_get_kaddr();
-		// ETC... ?
 		if(kpage == NULL) return false;
 	}
 	if (!suppl_table_set_page(t, upage, kpage, writeable)) {
@@ -281,6 +266,7 @@ bool suppl_table_alloc_user_page(struct thread *t, void *upage, bool writeable) 
 	else return true;
 }
 
+// Searches for SP in given SPT.
 struct suppl_page *suppl_pt_lookup(struct suppl_pt *pt, void *vaddr) {
 	struct suppl_page tmp;
 	tmp.vaddr = ((uint32_t)pg_round_down(vaddr));
