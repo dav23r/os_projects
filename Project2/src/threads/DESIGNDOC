@@ -271,20 +271,24 @@ int recent_cpu;                     /* Recently used cpu */
 >> scheduling decision and the priority and recent_cpu values for each
 >> thread after each given number of timer ticks:
 
-timer  recent_cpu    priority   thread
-ticks   A   B   C   A   B   C   to run
+Assuming given default values for system parameters:
+PRI_MIN = 0
+PRI_MAX = 63
+TIMER_FREQ = 100
+TIME_SLICE = 4
 
- 0     0   0   0   63  61  59     A
- 4     4   0   0   62  61  59     A
- 8     8   0   0   61  61  59     B
-12     8   4   0   61  60  59     A
-16     12  4   0   60  60  59     B
-20     12  8   0   60  59  59     A
-24     16  8   0   59  59  59     C
-28     16  8   4   59  59  58     B 
-32     16  12  4   59  58  58     A 
-36     20  12  4   58  58  58     C
-
+timer        recent_cpu    priority    thread
+ticks   A      B      C    A   B   C   to run
+ 0    1.00   1.00   2.00   63  60  58     A
+ 4    5.00   1.00   2.00   62  60  58     A
+ 8    9.00   1.00   2.00   61  60  58     A
+12   12.00   2.00   2.00   60  60  58     B
+16   13.00   5.00   2.00   60  59  58     A
+20   16.00   6.00   2.00   59  59  58     B
+24   17.00   9.00   2.00   59  58  58     A
+28   20.00   9.00   3.00   58  58  58     C
+32   20.00  10.00   6.00   58  58  57     B
+36   21.00  13.00   6.00   58  57  57     A
 
 >> C3: Did any ambiguities in the scheduler specification make values
 >> in the table uncertain?  If so, what rule did you use to resolve
