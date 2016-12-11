@@ -464,43 +464,15 @@ load_segment (struct file *file, off_t ofs, uint8_t *upage,
 
 #ifdef VM
   struct thread *t = thread_current();
-
-  /*
-  printf("######################### MAPPING:\n");
-  printf("                                  UPAGE:       %d\n", (int)upage);
-  printf("                                  OFFSET:      %d\n", (int)ofs);
-  printf("                                  READ_BYTES:  %d\n", (int)read_bytes);
-  printf("                                  ZERO_BYTES:  %d\n", (int)zero_bytes);
-  printf("                                  WRITEABLE:   %d\n", (int)upage);
-  printf("                                  ZEROS_START: %d\n", ((int)upage) + ((int)read_bytes));
-  printf("                                  ZEROS_END:   %d\n", ((int)upage) + ((int)read_bytes) + ((int)zero_bytes));
-  printf("                                  REM:         %d\n", ((int)(upage + read_bytes + zero_bytes)) % PGSIZE);
-  //*/
-  //filesys_lock_release();
-  //zero_bytes = ((read_bytes + zero_bytes + PGSIZE - 1) / PGSIZE) * PGSIZE - read_bytes;
   bool mapped = (file_mappings_map(t, file, upage, ofs, read_bytes + ofs, zero_bytes, writable, false) != (-1));
   //*
-  int j;
-  for (j = 0; j < 2; j++) {
-	  uint32_t i;
-	  for (i = 0; i < read_bytes + zero_bytes; i++) {
-		  char c = (*(((char*)upage) + i));
-		  if ((c >= 'a' && c <= 'z') || (c >= 'A' && c <= 'Z') || c == ' ' || c == '\n' || c == '\t')
-			  asm volatile("");//printf("%c", c);
-	  }
+  uint32_t i;
+  for (i = 0; i < read_bytes + zero_bytes; i++) {
+	  char c = (*(((char*)upage) + i));
+	  if (c != '\0') asm volatile("");
   }
-  //printf("############## LOAD SEGMENT DONE (%d) ##########\n", (int)mapped);
   //*/
-  //ASSERT(suppl_pt_lookup(t->suppl_page_table, (upage)+((int)read_bytes) + ((int)zero_bytes)) == NULL);
-  //filesys_lock_acquire();
-  if (mapped) {
-	  //printf("######################### MAPPED...\n");
-	  return true;
-  }
-  else {
-	  //printf("######################### NOT MAPPED...\n");
-	  return false;
-  }
+  return mapped;
 #else
   file_seek (file, ofs);
   while (read_bytes > 0 || zero_bytes > 0) 
@@ -543,21 +515,6 @@ load_segment (struct file *file, off_t ofs, uint8_t *upage,
 	  if (read_bytes > 0)
 		  list_remove(&spage->list_elem);
 #endif
-	  //*
-	  printf("\n\n\n########################!!!!!!!!!!!!!!!!!!!!!!!!#########################\n");
-	  int i;
-	  printf("vaddr:       %u\n", (uint32_t)upage);
-	  printf("buffer:      %u\n", (uint32_t)page_read_bytes);
-	  printf("zeros:       %u\n", (uint32_t)page_zero_bytes);
-	  printf("---------------\n");
-	  for (i = 0; i < PGSIZE; i++) {
-		  char c = ((char*)upage)[i];
-		  if ((c >= 'a' && c <= 'z') || (c >= 'A' && c <= 'Z') || c == ' ' || c == '\n' || c == '\t')
-			  printf("%c", c);
-		  //else printf("<%d>", (int)c);
-	  }
-	  printf("\n########################\n");
-	  //*/
 
       /* Advance. */
       read_bytes -= page_read_bytes;

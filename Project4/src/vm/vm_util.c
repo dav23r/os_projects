@@ -133,7 +133,7 @@ static bool evict_page(void) {
 		EVICTION_GET_PAGE_TYPE;
 		if ((!referenced) && (!modified)) {
 			//printf("############### THROWING THE PAGE AWAY ###########################\n");
-			/*EVICTION_EVICT_MODIFIED; /*/ EVICTION_EVICT_NOT_MODIFIED; //*/
+			EVICTION_EVICT_NOT_MODIFIED;
 		}
 		EVICTION_MOVE_TO_NEXT;
 	}
@@ -151,15 +151,13 @@ static bool evict_page(void) {
 		bool modified = suppl_page_dirty(page);
 		if ((!modified)) {
 			//PANIC("############### THROWING THE PAGE AWAY ###########################\n");
-			/*EVICTION_EVICT_MODIFIED; /*/ EVICTION_EVICT_NOT_MODIFIED; //*/
+			EVICTION_EVICT_NOT_MODIFIED;
 		}
 		EVICTION_MOVE_TO_NEXT;
 	}
 	EVICTION_GET_PAGE;
 	//PANIC("############### EVICTING THE PAGE ###########################\n");
 	EVICTION_EVICT_MODIFIED;
-	//PANIC("########################### EVICTION NEEDED ###########################\n");
-	//return false;
 }
 
 // Undefs for the macros:
@@ -172,21 +170,15 @@ static bool evict_page(void) {
 
 // Evicts and allocates a kernel page.
 void *evict_and_get_kaddr(void) {
-	//printf("evicting...\n");
 	if (!evict_page()) return NULL;
 	void* kpage = palloc_get_page(PAL_USER | PAL_ZERO);
-	//if (kpage == NULL) PANIC("ERROR");
-	//else printf("ok...\n");
 	return kpage;
 }
 
 
 // Restores given page from swap.
 bool restore_page_from_swap(struct suppl_page *page, bool reg_page) {
-	//PANIC("################### RESTORING ######################\n");
-	//printf("Restoring...\n");
 	sema_down(&eviction_lock);
-	//printf("Restoring...\n");
 	ASSERT(page->location == PG_LOCATION_SWAP && page->saddr != SWAP_NO_PAGE);
 	void* kpage = palloc_get_page(PAL_USER | PAL_ZERO);
 	if (kpage == NULL) {
@@ -211,7 +203,6 @@ bool restore_page_from_swap(struct suppl_page *page, bool reg_page) {
 	sema_up(&eviction_lock);
 	if(reg_page)
 		register_suppl_page(page);
-	//printf("done...\n");
 	return true;
 }
 
