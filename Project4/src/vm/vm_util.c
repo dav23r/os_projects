@@ -4,7 +4,7 @@
 #include "userprog/pagedir.h"
 #include "threads/synch.h"
 
-#define VM_UTIL_MAX_STACK_OFFSET 32
+#define VM_UTIL_MAX_STACK_OFFSET 128
 #define VM_MAX_STACK_SIZE (1024 * 1024 * 8)
 #define VM_STACK_END (PHYS_BASE - VM_MAX_STACK_SIZE)
 
@@ -45,9 +45,14 @@ void register_suppl_page(struct suppl_page *page) {
 	}
 }
 
+// Returns true, if the address can be a part of stack at some point in time.
+bool addr_in_stack_range(const void *addr) {
+	return (is_user_vaddr(addr) && ((uint32_t)addr) >= ((uint32_t)VM_STACK_END));
+}
+
 // Returns true, if stack growth is reasonable, if page faulted on the given address.
 bool stack_grow_needed(const void *addr, const void *esp) {
-	return (is_user_vaddr(addr) && ((const char*)addr) >= ((const char*)esp - VM_UTIL_MAX_STACK_OFFSET) && ((uint32_t)addr) >= ((uint32_t)VM_STACK_END));
+	return (addr_in_stack_range(addr) && ((const char*)addr) >= ((const char*)esp - VM_UTIL_MAX_STACK_OFFSET));
 }
 
 

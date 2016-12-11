@@ -11,6 +11,9 @@ void undo_suppl_page_registration(struct suppl_page *page);
 // Adds given page to evictables.
 void register_suppl_page(struct suppl_page *page);
 
+// Returns true, if the address can be a part of stack at some point in time.
+bool addr_in_stack_range(const void *addr);
+
 // Returns true, if stack growth is reasonable, if page faulted on the given address.
 bool stack_grow_needed(const void *addr, const void *esp);
 

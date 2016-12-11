@@ -123,6 +123,7 @@ struct thread
 #ifdef VM
 	struct suppl_pt *suppl_page_table;
 	struct file_mappings mem_mappings;
+	uint8_t *intr_stack;
 #endif
 
     /* Owned by thread.c. */

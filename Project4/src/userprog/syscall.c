@@ -13,6 +13,7 @@
 #include "devices/input.h"
 #ifdef VM
 #include "vm/file_mapping.h"
+#include "vm/vm_util.h"
 #endif
 
 
@@ -35,6 +36,9 @@ static int user_address_mappable(void *addr, unsigned int size) {
 	char *ptr = ((char*)addr);
 	while (size > 0) {
 		if (ptr == NULL || (!is_user_vaddr((uint32_t*)ptr))) return false;
+#ifdef VM
+		if (addr_in_stack_range((const void*)ptr)) return false;
+#endif
 		size--;
 		ptr++;
 	}
@@ -43,8 +47,16 @@ static int user_address_mappable(void *addr, unsigned int size) {
 
 // Checks, if the user address is valid (by making sure, it's below PHYS_BASE and it's already mapped/allocated)
 static int user_address_valid(void *addr) {
+	struct thread *cur = thread_current();
 	if (addr == NULL || (!is_user_vaddr((uint32_t*)addr))) return false;
-	else return (pagedir_get_page(thread_current()->pagedir, (uint32_t *)addr) != NULL);
+	else if (pagedir_get_page(cur->pagedir, (uint32_t *)addr) != NULL) return true;
+	else {
+#ifdef VM
+		if (stack_grow_needed((const void*)addr, (const void*)(cur->intr_stack)))
+			if (suppl_table_alloc_user_page(cur, addr, true)) return true;
+#endif
+		return false;
+	}
 }
 
 // Checks, if the given number of pointers in a row are valid (returns 0 even if one of them is not)
@@ -542,8 +554,12 @@ syscall_init(void)
 }
 
 static void
-syscall_handler(struct intr_frame *f UNUSED)
+syscall_handler(struct intr_frame *f)
 {
+#ifdef VM
+	struct thread *cur = thread_current();
+	cur->intr_stack = (uint8_t*)f->esp;
+#endif
 	if (!pointers_valid(ESP, sizeof(int))) exit(-1);
 	init_sys_handlers();
 	int syscall_id = *ESP;
