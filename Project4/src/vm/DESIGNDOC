@@ -83,11 +83,6 @@ struct file_mappings {
 	int pool_size;					// mapping pool-ის მიმდინარე ზომა
 };
 
-static struct bitmap *alloc_map;	// სვაპის ბითმეფი
-static struct block *swap_block;	// სვაპის ბლოკი
-
-#define SECTORS_PER_PAGE (PAGE_SIZE / BLOCK_SECTOR_SIZE) // სექტორების რაოდენობა ერთ ბლოკზე
-
 #define VM_UTIL_MAX_STACK_OFFSET 128 					// მაქსიმალური დასაშვები "გადაცდომა" სტეკ პოინტერიდან, იმისთვის, რომ სტეკი გაიზარდოს
 #define VM_MAX_STACK_SIZE (1024 * 1024 * 8)				// სტეკის მაქსიმალური ზომა
 #define VM_STACK_END (PHYS_BASE - VM_MAX_STACK_SIZE)	// სტეკის "ქვედა ზღვარი"
@@ -133,15 +128,14 @@ SPT არის SP ჰეშმეპი, სადაც ვირტუალ
 >> A4: When two user processes both need a new frame at the same time,
 >> how are races avoided?
 
-ბიტმეპის ატომურობის ხარჯზეა გაკეთებული. რადგან პროცესორის დონეზე
-გვაქვს ატომურობის გარანტია.
+ნებისმიერი ოპერაცია სვაპზე სინქრონიზირებულია.
 
 ---- RATIONALE ----
 
 >> A5: Why did you choose the data structure(s) that you did for
 >> representing virtual-to-physical mappings?
 
-ლისტზე გაცილებით სწრაფია და დამატებითი ბევრი წვალებაც არ იყო საჭირო
+გამოვიყენეთ ჰეშმეპი, რადგან ლისტზე გაცილებით სწრაფია და დამატებითი ბევრი წვალებაც არ იყო საჭირო
 იმპლემენტაციისთვის.
 
 		       PAGING TO AND FROM DISK
@@ -152,6 +146,23 @@ SPT არის SP ჰეშმეპი, სადაც ვირტუალ
 >> B1: Copy here the declaration of each new or changed `struct' or
 >> `struct' member, global or static variable, `typedef', or
 >> enumeration.  Identify the purpose of each in 25 words or less.
+
+static struct bitmap *alloc_map;	// სვაპის ბითმეფი
+static struct block *swap_block;	// სვაპის ბლოკი
+
+#define SECTORS_PER_PAGE (PAGE_SIZE / BLOCK_SECTOR_SIZE) // სექტორების რაოდენობა ერთ ბლოკზე
+
+მომხმარებელი ხედავს ფუნქციებს:
+// ინიციალიზაცია.
+void swap_init(void);
+// ფრეიმის ძებნა.
+swap_page swap_get_page(void);
+// ფრეიმის გათავისუფლება.
+void swap_free_page(swap_page page);
+// ფრეიმიდან ფეიჯში გადაწერა.
+void swap_load_page_to_ram(swap_page page, void *addr);
+// ფეიჯის სვაპში გადაწერა.
+void swap_load_page_to_swap(swap_page page, void *addr);
 
 ---- ALGORITHMS ----
 
@@ -179,7 +190,7 @@ SPT არი ყველა სრედისთვის თავისი.
 >> invalid virtual address should cause the stack to be extended into
 >> the page that faulted.
 უფლებას ვაძლევთ, რომ დაქრეშილი მისამართი(page_fault რა მისამართზეც 
-ამოვარდა ის მისამართი) იყოს SP-ზე მაქსიმუმ 32 ბაიტით ქვემოთ და PHYS_BASE-ზე
+ამოვარდა ის მისამართი) იყოს SP-ზე მაქსიმუმ 128 ბაიტით ქვემოთ და PHYS_BASE-ზე
 მაქსიმუმ 8 მეგაბაიტით ქვემოთ. თუ ამ პირობებს აკმაყოფილებს სტეკს ვზრდით,
 წინააღმდეგ შემთხვევაში კი პროგრამას ვკლავთ.
 
@@ -189,9 +200,10 @@ SPT არი ყველა სრედისთვის თავისი.
 >> particular, explain how it prevents deadlock.  (Refer to the
 >> textbook for an explanation of the necessary conditions for
 >> deadlock.)
-ჩადგმული ლოქების აღება არ გვაქვს, შესაბამისად არც მოხდება დედლოქი.
-(ერთ სრედს ერთ მომენტში მაქსიმუმ ერთი ლოქი უჭირავს და მაქსიმუმ 
-ერთი ლოქის აღება უნდა.)
+სულ არის ორი ლოქი: სვაპის და ფაილური სისტემის. არასდროს არ ხდება ისე, 
+რომ რომელიმე ნაკადმა აიღოს ჯერ ფაილური სისტემის და შემდეგ სვაპის ლოქი.
+(რადგან ვიღებთ ყოველთვის ფიქსირებული მიმდევრობით, deadlock შეუძლებელია მოხდეს)
+
 >> B6: A page fault in process P can cause another process Q's frame
 >> to be evicted.  How do you ensure that Q cannot access or modify
 >> the page during the eviction process?  How do you avoid a race
