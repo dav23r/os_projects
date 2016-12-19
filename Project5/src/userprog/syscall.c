@@ -422,6 +422,64 @@ static int munmap(int map_id) {
 #endif
 
 
+#ifdef FILESYS
+/**
+Changes the current working directory of the process to dir, which may be relative
+or absolute. Returns true if successful, false on failure.
+*/
+static bool chdir(const char *dir UNUSED) {
+	return true;
+}
+
+/**
+Creates the directory named dir, which may be relative or absolute. Returns true if
+successful, false on failure. Fails if dir already exists or if any directory name in dir,
+besides the last, does not already exist. That is, mkdir("/a/b/c") succeeds only if
+‘/a/b’ already exists and ‘/a/b/c’ does not.
+*/
+static bool mkdir(const char *dir UNUSED) {
+	return true;
+}
+
+/**
+Reads a directory entry from file descriptor fd, which must represent a directory. If
+successful, stores the null-terminated file name in name, which must have room for
+READDIR_MAX_LEN + 1 bytes, and returns true. If no entries are left in the directory,
+returns false.
+‘.’ and ‘..’ should not be returned by readdir.
+If the directory changes while it is open, then it is acceptable for some entries not to
+be read at all or to be read multiple times. Otherwise, each directory entry should
+be read once, in any order.
+READDIR_MAX_LEN is defined in ‘lib/user/syscall.h’. If your file system supports
+longer file names than the basic file system, you should increase this value from the
+default of 14.
+*/
+static bool readdir(int fd UNUSED, char *name UNUSED) {
+	return true;
+}
+
+/**
+Returns true if fd represents a directory, false if it represents an ordinary file.
+*/
+static bool isdir(int fd UNUSED) {
+	return true;
+}
+
+/**
+Returns the inode number of the inode associated with fd, which may represent an
+ordinary file or a directory.
+An inode number persistently identifies a file or directory. It is unique during the
+file’s existence. In Pintos, the sector number of the inode is suitable for use as an
+inode number.
+*/
+static int inumber(int fd UNUSED) {
+	return -1;
+}
+
+#endif
+
+
+
 
 
 
@@ -501,6 +559,28 @@ static void munmap_handler(struct intr_frame *f) {
 	else EAX = munmap(I_PARAM(1));
 }
 #endif
+#ifdef FILESYS
+static void chdir_handler(struct intr_frame *f) {
+	if (!check_args(f, 1, 2)) exit(-1);
+	else EAX = chdir(S_PARAM(1));
+}
+static void mkdir_handler(struct intr_frame *f) {
+	if (!check_args(f, 1, 2)) exit(-1);
+	else EAX = mkdir(S_PARAM(1));
+}
+static void readdir_handler(struct intr_frame *f) {
+	if (!check_args(f, 1, 3)) exit(-1);
+	else EAX = readdir(I_PARAM(1), S_PARAM(2));
+}
+static void isdir_handler(struct intr_frame *f) {
+	if (!check_args(f, 1, 2)) exit(-1);
+	else EAX = isdir(I_PARAM(1));
+}
+static void inumber_handler(struct intr_frame *f) {
+	if (!check_args(f, 1, 2)) exit(-1);
+	else EAX = inumber(I_PARAM(1));
+}
+#endif
 
 #define MAX_SYS_CALL_ID \
 				max( \
@@ -559,6 +639,13 @@ static void init_sys_handlers(void) {
 #ifdef VM
 		sys_handlers[SYS_MMAP] = mmap_handler;
 		sys_handlers[SYS_MUNMAP] = munmap_handler;
+#endif
+#ifdef FILESYS
+		sys_handlers[SYS_CHDIR] = chdir_handler;
+		sys_handlers[SYS_MKDIR] = mkdir_handler;
+		sys_handlers[SYS_READDIR] = readdir_handler;
+		sys_handlers[SYS_ISDIR] = isdir_handler;
+		sys_handlers[SYS_INUMBER] = inumber_handler;
 #endif
 		sys_initialized = true;
 	}
