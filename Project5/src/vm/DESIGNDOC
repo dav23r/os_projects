@@ -1,0 +1,321 @@
+        +---------------------------+
+		    | CS 140                    |
+		    | PROJECT 3: VIRTUAL MEMORY	|
+		    |	DESIGN DOCUMENT           |
+		    +---------------------------+
+
+---- GROUP ----
+
+>> Fill in the names and email addresses of your group members.
+
+Nikoloz Donadze ndona14@freeuni.edu.ge
+Irakli Khaduri ikhad14@freeuni.edu.ge
+Beka Maisuradze bmaisu14@freeuni.edu.ge
+Davit Akopov dakop14@freeuni.edu.ge
+
+---- PRELIMINARIES ----
+
+>> If you have any preliminary comments on your submission, notes for the
+>> TAs, or extra credit, please give them here.
+
+>> Please cite any offline or online sources you consulted while
+>> preparing your submission, other than the Pintos documentation, course
+>> text, lecture notes, and course staff.
+We watched this very cool explanation on 'Virtual Memory'
+ჩვენ ვუყურეთ ამ ძალიან კარგ ახსნას ვირტუალური მეხსიერების უკეთ გასაგებად:
+https://www.youtube.com/watch?v=qcBIvnQt0Bw&list=PLiwt1iVUib9s2Uo5BeYmwkDFUh70fJPxX
+by David Black-Schaffer
+
+			PAGE TABLE MANAGEMENT
+			=====================
+
+---- DATA STRUCTURES ----
+
+>> A1: Copy here the declaration of each new or changed `struct' or
+>> `struct' member, global or static variable, `typedef', or
+>> enumeration.  Identify the purpose of each in 25 words or less.
+
+Following three structures are used as part of implementation of 
+supplemental page table
+
+
+// ენუმერაცია ფეიჯის მიმდინარე მდებარეობისთვის:
+enum suppl_page_location {
+	PG_LOCATION_UNKNOWN,	// უცნობი (ეს ნებისმიერი ფეიჯისთის ძირითადად ნიშნავს შეცდომას)
+	PG_LOCATION_RAM,		// ფიზიკურ მეხსიერებაში
+	PG_LOCATION_SWAP,		// სვაპში
+	PG_LOCATION_FILE		// ფაილში
+};
+
+// SP-ს სტრუქტურა:
+struct suppl_page {
+    uint32_t vaddr;			// ვირტუალური მისამართი
+    uint32_t kaddr;			// კერნელის მისამართი (NULL თუ არაა დამეპილი)
+	swap_page saddr;		// სვაპის ბლოკის იდენთიფიკატორი (SWAP_NO_PAGE თუ სვაპში არაა)
+	uint32_t *pagedir;		// მფლობელი ნაკადის PD
+    const struct file_mapping *mapping;	// ფაილზე მეპინგი (NULL თუ დამეპილი არაა)
+	enum suppl_page_location location;	// ფეიჯის მიმდინარე მდებარეობა
+	bool dirty;			// True, თუ ფეიჯი არის dirty
+	bool accessed;		// True, თუ ფეიჯი არის accessed
+    struct hash_elem hash_elem;	// hash map-ის ელემენტი
+	struct list_elem list_elem;	// list_elem, evictable-ების ლისტში ჩასაგდებად
+};
+
+// SPT-ს ტრუქტურა:
+struct suppl_pt {
+	struct thread *owner_thread;	// მფლობელი ნაკადი
+	struct hash pages_map;			// Hash map PS-ისთვის
+};
+
+#define VM_UTIL_MAX_STACK_OFFSET 128 					// მაქსიმალური დასაშვები "გადაცდომა" სტეკ პოინტერიდან, იმისთვის, რომ სტეკი გაიზარდოს
+#define VM_MAX_STACK_SIZE (1024 * 1024 * 8)				// სტეკის მაქსიმალური ზომა
+#define VM_STACK_END (PHYS_BASE - VM_MAX_STACK_SIZE)	// სტეკის "ქვედა ზღვარი"
+
+static struct list page_list;	// evictable-ების ლისტი
+static struct list_elem *page_elem; // Clock ალგორითმის "ისარი"
+static struct semaphore eviction_lock; // ლოქი eviction-ის სინქრონიზირებისთვის
+
+struct thread
+  {
+    ... რაც იყო ...
+
+#ifdef VM
+	struct suppl_pt *suppl_page_table;	// SPT
+	...
+#endif
+
+	... რაც იყო ...
+  };
+
+---- ALGORITHMS ----
+
+>> A2: In a few paragraphs, describe your code for accessing the data
+>> stored in the SPT about a given page.
+SPT არის SP ჰეშმეპი, სადაც ვირტუალური მისამართით ხდება ელემენტზე 
+მიმართვა. დანარჩენი ინფორმაცია მთლიანად წერია SP-ში, ზემოთ
+აღწერილი სტრუქტურების და ენამების მიხედვით. ანუ თავიდან, ვამრგვალებთ
+მისამართს (რომ სწორ ფეიჯზე მიუთითოს) ვეძებთ ჰეშმეპით SP-ს და ნაპოვნ
+ფეიჯში წერია ყველა საჭირო ინფორმაცია. (SPT გვაქვს per-thread ლოგიკით).
+
+
+>> A3: How does your code coordinate accessed and dirty bits between
+>> kernel and user virtual addresses that alias a single frame, or
+>> alternatively how do you avoid the issue?
+თუ ფაილიდან მოხდა ფეიჯის ჩატვირთვა dirty bit-ზე ვწერთ false-ს. 
+გვაქვს ასევე SPT-ში dirty და accessed ბულეან ტიპის ცვლადები,
+სადაც ჩაიწერება თუ ოდესმე იყო dirty ან accessed და eviction-ის შემდგომ
+ლოგიკურად აღდგება შესაბამისად მდგომარეობები.
+(once you go dirty, you never go back)
+
+---- SYNCHRONIZATION ----
+
+>> A4: When two user processes both need a new frame at the same time,
+>> how are races avoided?
+
+ნებისმიერი ოპერაცია სვაპზე სინქრონიზირებულია.
+
+---- RATIONALE ----
+
+>> A5: Why did you choose the data structure(s) that you did for
+>> representing virtual-to-physical mappings?
+
+გამოვიყენეთ ჰეშმეპი, რადგან ლისტზე გაცილებით სწრაფია და დამატებითი ბევრი წვალებაც არ იყო საჭირო
+იმპლემენტაციისთვის.
+
+		       PAGING TO AND FROM DISK
+		       =======================
+
+---- DATA STRUCTURES ----
+
+>> B1: Copy here the declaration of each new or changed `struct' or
+>> `struct' member, global or static variable, `typedef', or
+>> enumeration.  Identify the purpose of each in 25 words or less.
+
+static struct bitmap *alloc_map;	// სვაპის ბითმეფი
+static struct block *swap_block;	// სვაპის ბლოკი
+
+#define SECTORS_PER_PAGE (PAGE_SIZE / BLOCK_SECTOR_SIZE) // სექტორების რაოდენობა ერთ ბლოკზე
+
+მომხმარებელი ხედავს ფუნქციებს:
+// ინიციალიზაცია.
+void swap_init(void);
+// ფრეიმის ძებნა.
+swap_page swap_get_page(void);
+// ფრეიმის გათავისუფლება.
+void swap_free_page(swap_page page);
+// ფრეიმიდან ფეიჯში გადაწერა.
+void swap_load_page_to_ram(swap_page page, void *addr);
+// ფეიჯის სვაპში გადაწერა.
+void swap_load_page_to_swap(swap_page page, void *addr);
+
+---- ALGORITHMS ----
+
+>> B2: When a frame is required but none is free, some frame must be
+>> evicted.  Describe your code for choosing a frame to evict.
+
+გვიწერია clock ალგორითმი. ანუ, ვაგდებთ შემდეგი თანმიმდევრობით:
+სამჯერ გადავუყვებით წრიულად ფეიჯთა ლისტს(ბოლოს სად ვიდექით ცხადია
+ვინახავთ) თუ ვიპოვეთ ფეიჯი რომელიც არც referenced არის და არც modified
+პირდაპირ ვაგდებთ. თუ ასეთი ვერ ვიპოვეთ მეორე გადაყოლაზე ვეძებთ ისეთს,
+რომელიც referenced არაა, მაგრამ modified არის. თუ ფაილზე იყო დამეპილი
+და ფაილის განახლება შეიძლებოდა, ვანახლებთ ფაილს, თუ არა ვაგდებთ სვაპში.
+მესამე გადაყოლაზე კი ვეძებთ ფეიჯს რომელიც referenced იყო და modified არა.
+თუ ვიპოვეთ გადავაგდებთ. ბოლოს კი თუ ვერც ერთი ვერ ვიპოვეთ, პირველივე ფეიჯს
+მოვექცევით ისე, თითქოს მეორე გადაყოლაზე ვიპოვეთ.
+
+>> B3: When a process P obtains a frame that was previously used by a
+>> process Q, how do you adjust the page table (and any other data
+>> structures) to reflect the frame Q no longer has?
+SPT არი ყველა სრედისთვის თავისი. სვაპის ფეიჯები კი უნიკალური
+იდენთიფიკატორებითაა შექმნილი და თუ ვინმემ გაათავისუფლა ბიტმეპში
+მოინიშნება.
+
+>> B4: Explain your heuristic for deciding whether a page fault for an
+>> invalid virtual address should cause the stack to be extended into
+>> the page that faulted.
+უფლებას ვაძლევთ, რომ დაქრეშილი მისამართი(page_fault რა მისამართზეც 
+ამოვარდა ის მისამართი) იყოს SP-ზე მაქსიმუმ 128 ბაიტით ქვემოთ და PHYS_BASE-ზე
+მაქსიმუმ 8 მეგაბაიტით ქვემოთ. თუ ამ პირობებს აკმაყოფილებს სტეკს ვზრდით,
+წინააღმდეგ შემთხვევაში კი პროგრამას ვკლავთ.
+
+---- SYNCHRONIZATION ----
+
+>> B5: Explain the basics of your VM synchronization design.  In
+>> particular, explain how it prevents deadlock.  (Refer to the
+>> textbook for an explanation of the necessary conditions for
+>> deadlock.)
+სულ არის ორი ლოქი: სვაპის და ფაილური სისტემის. არასდროს არ ხდება ისე, 
+რომ რომელიმე ნაკადმა აიღოს ჯერ ფაილური სისტემის და შემდეგ სვაპის ლოქი.
+(რადგან ვიღებთ ყოველთვის ფიქსირებული მიმდევრობით, deadlock შეუძლებელია მოხდეს)
+
+>> B6: A page fault in process P can cause another process Q's frame
+>> to be evicted.  How do you ensure that Q cannot access or modify
+>> the page during the eviction process?  How do you avoid a race
+>> between P evicting Q's frame and Q faulting the page back in?
+ევიქშენი არის მთლიანად სერიალიზირებული, რადგან წინააღმდეგ 
+შემთხვევაში უბრალოდ შეუშლიდნენ ერთმანეთს ხელს, ერთსა და იმავე
+ობიექტებში ძებნით.
+
+
+>> B7: Suppose a page fault in process P causes a page to be read from
+>> the file system or swap.  How do you ensure that a second process Q
+>> cannot interfere by e.g. attempting to evict the frame while it is
+>> still being read in?
+ჯერ წაიკითხება ეს ფეიჯი და შემდგომ დარეგისტრირდება როგორც evictable
+(ანუ შესაბამის ლისტში ჩავაგდებთ.)
+
+>> B8: Explain how you handle access to paged-out pages that occur
+>> during system calls.  Do you use page faults to bring in pages (as
+>> in user programs), or do you have a mechanism for "locking" frames
+>> into physical memory, or do you use some other design?  How do you
+>> gracefully handle attempted accesses to invalid virtual addresses?
+თუ paged-out არის, ან ფაილში იქნება ჩაწერილი და ხელახლა წავიკითხავთ,
+ანუ უბრალოდ სვაპში წავიკითხავთ. არ ხდება ჩვენთან მასეთი რაღაცები.
+
+
+---- RATIONALE ----
+
+>> B9: A single lock for the whole VM system would make
+>> synchronization easy, but limit parallelism.  On the other hand,
+>> using many locks complicates synchronization and raises the
+>> possibility for deadlock but allows for high parallelism.  Explain
+>> where your design falls along this continuum and why you chose to
+>> design it this way.
+მძიმე(გლობალური) ლოქები გვჭირდება მხოლოდ eviction-ზე და ცხადია 
+ფაილურ სისტემაზეც. დანარჩენ შემთხვევაში, რადგან SPT per-thread ლოგიკით
+გვაქვს იმპლემენტირებული,  სინქრონიზაციის საჭიროება ქრება(გამონაკლისი 
+შემთხვევების გარდა).
+
+
+
+			 MEMORY MAPPED FILES
+			 ===================
+
+---- DATA STRUCTURES ----
+
+>> C1: Copy here the declaration of each new or changed `struct' or
+>> `struct' member, global or static variable, `typedef', or
+>> enumeration.  Identify the purpose of each in 25 words or less.
+
+// სტრუქტურა ფაილზე დამეპვისთვის:
+struct file_mapping {
+	struct file *fl;		// ფაილი
+	uint32_t offset;		// დამეპვის offset
+	uint32_t file_size;		// ფაილის წაკითხვადი სეგმენტის ზომა + offset
+	void *start_vaddr;		// დამეპვის პირველი ვირტუალური მისამართი
+	bool writable;			// True, თუ ვირტუალურ მისამართზე ჩაწერა შეიძლება
+	bool fl_writable;		// True, თუ ფაილის შიგთავსის განახლება შეიძლება
+};
+
+// file mappings-ების სია ერთი კონკრეტული ნაკადისთვის:
+struct file_mappings {
+	struct file_mapping *mappings;	// File mapping-ების pool
+	int pool_size;					// mapping pool-ის მიმდინარე ზომა
+};
+
+struct thread
+  {
+    ... რაც იყო ...
+
+#ifdef VM
+	...
+	struct file_mappings mem_mappings;	// memory mapping-ები
+#endif
+
+	... რაც იყო ...
+  };
+
+---- ALGORITHMS ----
+
+>> C2: Describe how memory mapped files integrate into your virtual
+>> memory subsystem.  Explain how the page fault and eviction
+>> processes differ between swap pages and other pages.
+
+კონკრეტული ვირტუალური მისამართი არის თუ არა ფაილზე დამეპილი
+ვიცით. შესაბამისად, ევიქშენის დროს ვითვალისწინებთ ამას და თუ ფაილია
+შესაცვლელი ვცვლით ფაილს და არ ვაგდებთ სვაპში. თუ dirty არ არის, 
+საერთოდ შეგვიძლია გადავაგდოთ და ისე მოვნიშნოთ, რომ exception შემთხვევაში
+ისევ ფაილიდან წაიკითხოს.
+
+>> C3: Explain how you determine whether a new file mapping overlaps
+>> any existing segment.
+
+SP-ებს ვეძებთ სადაც უნდა მოინიშნოს და თუ რომელიმე უკვე არსებობს(გამოყოფილია),
+ვაბრუნებთ ერორ კოდს.
+
+---- RATIONALE ----
+
+>> C4: Mappings created with "mmap" have similar semantics to those of
+>> data demand-paged from executables, except that "mmap" mappings are
+>> written back to their original files, not to swap.  This implies
+>> that much of their implementation can be shared.  Explain why your
+>> implementation either does or does not share much of the code for
+>> the two situations.
+
+კოდის  სეგმენტის წაკითხვა გახდა ერთი mmap, უბრალოდ კოდის სეგმენტს დაემატა
+ბულეან პარამეტრები, რომლებიც ეუბნებიან რომ ფაილში ჩაწერა(შეცვლა)
+არ შეიძლება. 
+
+			   SURVEY QUESTIONS
+			   ================
+
+Answering these questions is optional, but it will help us improve the
+course in future quarters.  Feel free to tell us anything you
+want--these questions are just to spur your thoughts.  You may also
+choose to respond anonymously in the course evaluations at the end of
+the quarter.
+
+>> In your opinion, was this assignment, or any one of the three problems
+>> in it, too easy or too hard?  Did it take too long or too little time?
+
+>> Did you find that working on a particular part of the assignment gave
+>> you greater insight into some aspect of OS design?
+
+>> Is there some particular fact or hint we should give students in
+>> future quarters to help them solve the problems?  Conversely, did you
+>> find any of our guidance to be misleading?
+
+>> Do you have any suggestions for the TAs to more effectively assist
+>> students, either for future quarters or the remaining projects?
+
+>> Any other comments?
