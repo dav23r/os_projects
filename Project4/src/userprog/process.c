@@ -534,7 +534,9 @@ setup_stack (void **esp, const char *file_name)
 	bool success = false;
 
 	kpage = palloc_get_page(PAL_USER | PAL_ZERO);
+#ifdef VM
 	if (kpage == NULL) kpage = evict_and_get_kaddr();
+#endif
 	if (kpage != NULL)
 	{
 		success = install_page(((uint8_t *)PHYS_BASE) - PGSIZE, kpage, true);

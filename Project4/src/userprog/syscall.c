@@ -31,19 +31,19 @@ void filesys_lock_release(void) {
 	lock_release(&filesys_lock);
 }
 
+#ifdef VM
 // Checks, if the user address is mappable
 static int user_address_mappable(void *addr, unsigned int size) {
 	char *ptr = ((char*)addr);
 	while (size > 0) {
 		if (ptr == NULL || (!is_user_vaddr((uint32_t*)ptr))) return false;
-#ifdef VM
 		if (addr_in_stack_range((const void*)ptr)) return false;
-#endif
 		size--;
 		ptr++;
 	}
 	return true;
 }
+#endif
 
 // Checks, if the user address is valid (by making sure, it's below PHYS_BASE and it's already mapped/allocated)
 static int user_address_valid(void *addr) {

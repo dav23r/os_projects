@@ -4,8 +4,10 @@
 #include "userprog/gdt.h"
 #include "threads/interrupt.h"
 #include "threads/thread.h"
+#ifdef VM
 #include "vm/supplemental_page.h"
 #include "vm/vm_util.h"
+#endif
 
 /* Number of page faults processed. */
 static long long page_fault_cnt;
@@ -150,6 +152,7 @@ page_fault (struct intr_frame *f)
   write = (f->error_code & PF_W) != 0;
   user = (f->error_code & PF_U) != 0;
 
+#ifdef VM
   struct thread *cur = thread_current();
   if (not_present && cur != NULL && cur->suppl_page_table != NULL) {
 	  struct suppl_page *page = suppl_pt_lookup(cur->suppl_page_table, fault_addr);
@@ -163,6 +166,7 @@ page_fault (struct intr_frame *f)
 		  if (suppl_table_alloc_user_page(cur, fault_addr, true)) return;
 	  }
   }
+#endif
 
 
   /* To implement virtual memory, delete the rest of the function
