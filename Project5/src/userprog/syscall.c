@@ -430,7 +430,7 @@ Changes the current working directory of the process to dir, which may be relati
 or absolute. Returns true if successful, false on failure.
 */
 static bool chdir(const char *dir UNUSED) {
-	return true;
+	return false;
 }
 
 /**
@@ -440,7 +440,7 @@ besides the last, does not already exist. That is, mkdir("/a/b/c") succeeds only
 ‘/a/b’ already exists and ‘/a/b/c’ does not.
 */
 static bool mkdir(const char *dir UNUSED) {
-	return true;
+	return false;
 }
 
 /**
@@ -457,14 +457,14 @@ longer file names than the basic file system, you should increase this value fro
 default of 14.
 */
 static bool readdir(int fd UNUSED, char *name UNUSED) {
-	return true;
+	return false;
 }
 
 /**
 Returns true if fd represents a directory, false if it represents an ordinary file.
 */
 static bool isdir(int fd UNUSED) {
-	return true;
+	return false;
 }
 
 /**
