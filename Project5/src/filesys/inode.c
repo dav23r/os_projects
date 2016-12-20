@@ -361,21 +361,24 @@ inode_write_at (struct inode *inode, const void *buffer_, off_t size,
     return 0;
 
 #ifdef FILESYS
+  off_t min_size = offset + size;
   off_t start = bytes_to_sectors(inode->data.length);
-  off_t end = bytes_to_sectors(offset + size);
-  if (start < end) {
-	  while (start < end) {
-		  if (!allocate_inode_sector(&inode->data, start))
+  off_t end = bytes_to_sectors(min_size);
+  if (inode->data.length < min_size) {
+	  off_t ptr = start;
+	  while (ptr < end) {
+		  if (!allocate_inode_sector(&inode->data, ptr))
 			  break;
-		  start++;
+		  ptr++;
 	  }
-	  if (start >= end) {
-		  inode->data.length = offset + size;
+	  if (ptr >= end) {
+		  inode->data.length = min_size;
 		  block_write(fs_device, inode->sector, &inode->data);
 	  }
 	  else {
-		  off_t ptr = bytes_to_sectors(inode->data.length);
-		  while (ptr < start) {
+		  end = ptr;
+		  ptr = start;
+		  while (ptr < end) {
 			  deallocate_inode_sector(&inode->data, ptr);
 			  ptr++;
 		  }
