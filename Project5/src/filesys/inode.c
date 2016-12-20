@@ -46,8 +46,20 @@ struct inode
   };
 
 #ifdef FILESYS
+#define INODE_SEARCH_GET_ID_AND_RID uint32_t id = index / 128; uint32_t rid = index % 128
+#define INODE_ID_RID_INVALID (id >= 126 || rid >= 128)
+#define INODE_ID_NOT_ALLOCATED (inode->dir[id] == (block_sector_t)(-1))
+#define INODE_ID_RID_ERROR (INODE_ID_RID_INVALID || INODE_ID_NOT_ALLOCATED)
+
 static block_sector_t get_inode_sector(const struct inode_disk *inode, size_t index) {
-	return -1;
+	INODE_SEARCH_GET_ID_AND_RID;
+	if (INODE_ID_RID_ERROR) return -1;
+	block_sector_t * dir = malloc(sizeof(block_sector_t) * 128);
+	if (dir == NULL) return -1;
+	block_read(fs_device, inode->dir[id], dir);
+	block_sector_t rv = dir[rid];
+	free(dir);
+	return rv;
 }
 static bool allocate_inode_sector(struct inode_disk *inode, size_t index) {
 	return false;
@@ -58,6 +70,11 @@ static void deallocate_inode_sector(struct inode_disk *inode, size_t index) {
 		free_map_release(sector, 1);
 	}
 }
+
+#undef INODE_SEARCH_GET_ID_AND_RID
+#undef INODE_ID_RID_INVALID
+#undef INODE_ID_NOT_ALLOCATED
+#undef INODE_ID_RID_ERROR
 #endif
 
 /* Returns the block device sector that contains byte offset POS
