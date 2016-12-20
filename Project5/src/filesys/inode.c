@@ -14,10 +14,16 @@
    Must be exactly BLOCK_SECTOR_SIZE bytes long. */
 struct inode_disk
   {
+#ifndef FILESYS
     block_sector_t start;               /* First data sector. */
-    off_t length;                       /* File size in bytes. */
+#endif
+	off_t length;                       /* File size in bytes. */
     unsigned magic;                     /* Magic number. */
+#ifndef FILESYS
     uint32_t unused[125];               /* Not used. */
+#else
+	block_sector_t dir[126];			/* Inode sector directory. */
+#endif
   };
 
 /* Returns the number of sectors to allocate for an inode SIZE
@@ -39,6 +45,21 @@ struct inode
     struct inode_disk data;             /* Inode content. */
   };
 
+#ifdef FILESYS
+static block_sector_t get_inode_sector(const struct inode_disk *inode, size_t index) {
+	return -1;
+}
+static bool allocate_inode_sector(struct inode_disk *inode, size_t index) {
+	return false;
+}
+static void deallocate_inode_sector(struct inode_disk *inode, size_t index) {
+	block_sector_t sector = get_inode_sector(inode, index);
+	if (sector != (block_sector_t)(-1)) {
+		free_map_release(sector, 1);
+	}
+}
+#endif
+
 /* Returns the block device sector that contains byte offset POS
    within INODE.
    Returns -1 if INODE does not contain data for a byte at offset
@@ -47,8 +68,13 @@ static block_sector_t
 byte_to_sector (const struct inode *inode, off_t pos) 
 {
   ASSERT (inode != NULL);
-  if (pos < inode->data.length)
-    return inode->data.start + pos / BLOCK_SECTOR_SIZE;
+  if (pos < inode->data.length) {
+#ifndef FILESYS
+	  return inode->data.start + pos / BLOCK_SECTOR_SIZE;
+#else
+	  return get_inode_sector(&inode->data, pos / BLOCK_SECTOR_SIZE);
+#endif
+  }
   else
     return -1;
 }
@@ -87,6 +113,7 @@ inode_create (block_sector_t sector, off_t length)
       size_t sectors = bytes_to_sectors (length);
       disk_inode->length = length;
       disk_inode->magic = INODE_MAGIC;
+#ifndef FILESYS
       if (free_map_allocate (sectors, &disk_inode->start)) 
         {
           block_write (fs_device, sector, disk_inode);
@@ -100,6 +127,23 @@ inode_create (block_sector_t sector, off_t length)
             }
           success = true; 
         } 
+#else
+	  size_t i;
+	  for (i = 0; i < 126; i++)
+		  disk_inode->dir[i] = -1;
+	  success = true;
+	  for (i = 0; i < sectors; i++)
+		  if (!allocate_inode_sector(disk_inode, i)) {
+			  success = false;
+			  break;
+		  }
+	  if(success)
+		  block_write(fs_device, sector, disk_inode);
+	  else while (i > 0) {
+		  i--;
+		  deallocate_inode_sector(disk_inode, i);
+	  }
+#endif
       free (disk_inode);
     }
   return success;
@@ -177,8 +221,19 @@ inode_close (struct inode *inode)
       if (inode->removed) 
         {
           free_map_release (inode->sector, 1);
+#ifndef FILESYS
           free_map_release (inode->data.start,
-                            bytes_to_sectors (inode->data.length)); 
+                            bytes_to_sectors (inode->data.length));
+#else
+		  size_t sector_count = bytes_to_sectors(inode->data.length);
+		  size_t i;
+		  for (i = 0; i < sector_count; i++)
+			  deallocate_inode_sector(&inode->data, i);
+		  for (i = 0; i < 126; i++)
+			  if (inode->data.dir[i] != (block_sector_t)(-1)) {
+				  free_map_release(inode->data.dir[i], 1);
+			  }
+#endif
         }
 
       free (inode); 
