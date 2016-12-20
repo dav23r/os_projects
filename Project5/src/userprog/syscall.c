@@ -15,6 +15,9 @@
 #include "vm/file_mapping.h"
 #include "vm/vm_util.h"
 #endif
+#ifdef FILESYS
+#include "filesys/inode.h"
+#endif
 
 
 #define max(a, b) (((a) > (b)) ? (a) : (b))
@@ -409,7 +412,6 @@ static int mmap(int fd, void *vaddr) {
 	struct file *fl = thread_get_file(t, fd);
 	if (fl == NULL) return (-1);
 	uint32_t file_sz = (uint32_t)filesize(fd);
-	//printf("File size: %d\n", file_sz);
 	if (!user_address_mappable(vaddr, (int)file_sz)) return (-1);
 	return file_mappings_map(t, fl, vaddr, 0, file_sz, 0, true, true);
 }
@@ -472,8 +474,13 @@ An inode number persistently identifies a file or directory. It is unique during
 file’s existence. In Pintos, the sector number of the inode is suitable for use as an
 inode number.
 */
-static int inumber(int fd UNUSED) {
-	return -1;
+static int inumber(int fd) {
+	int rv = -1;
+	struct thread *t = thread_current();
+	struct file *fl = thread_get_file(t, fd);
+	if (fl != NULL)
+		rv = inode_get_inumber(file_get_inode(fl));
+	return rv;
 }
 
 #endif
