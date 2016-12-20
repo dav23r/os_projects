@@ -62,7 +62,30 @@ static block_sector_t get_inode_sector(const struct inode_disk *inode, size_t in
 	return rv;
 }
 static bool allocate_inode_sector(struct inode_disk *inode, size_t index) {
-	return false;
+	INODE_SEARCH_GET_ID_AND_RID;
+	if (INODE_ID_RID_INVALID) return false;
+	block_sector_t * dir = malloc(sizeof(block_sector_t) * 128);
+	if (dir == NULL) return false;
+	if (INODE_ID_NOT_ALLOCATED) {
+		if (!free_map_allocate(1, inode->dir + id)) {
+			free(dir);
+			return false;
+		}
+		size_t i;
+		for (i = 0; i < 128; i++)
+			dir[i] = -1;
+	}
+	else block_read(fs_device, inode->dir[id], dir);
+	bool success = (dir[rid] != (block_sector_t)(-1));
+	if (!success)
+		if (free_map_allocate(1, dir + rid)) {
+			static char zeros[BLOCK_SECTOR_SIZE];
+			block_write(fs_device, dir[rid], zeros);
+			block_write(fs_device, inode->dir[id], dir);
+			success = true;
+		}
+	free(dir);
+	return success;
 }
 static void deallocate_inode_sector(struct inode_disk *inode, size_t index) {
 	block_sector_t sector = get_inode_sector(inode, index);
