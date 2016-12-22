@@ -10,6 +10,9 @@
 /* Identifies an inode. */
 #define INODE_MAGIC 0x494e4f44
 
+#define ON_INODE_DIR_SIZE 125
+#define REDIRECTION_LEVEL 3
+
 /* On-disk inode.
    Must be exactly BLOCK_SECTOR_SIZE bytes long. */
 struct inode_disk
@@ -22,7 +25,8 @@ struct inode_disk
 #ifndef FILESYS
     uint32_t unused[125];               /* Not used. */
 #else
-	block_sector_t dir[126];			/* Inode sector directory. */
+	uint32_t flags;							/* Flags */
+	block_sector_t dir[ON_INODE_DIR_SIZE];	/* Inode sector directory. */
 #endif
   };
 
@@ -46,23 +50,114 @@ struct inode
   };
 
 #ifdef FILESYS
+
+static void *get_sector_handle(block_sector_t sector_id) {
+	if (sector_id == (block_sector_t)(-1)) return NULL;
+	// TMP:
+	void *sector_data = malloc(sizeof(block_sector_t) * 128);
+	if (sector_data == NULL) return NULL;
+	block_read(fs_device, sector_id, sector_data);
+	return sector_data;
+}
+static void release_sector_handle(block_sector_t sector_id, void *sector_data, bool made_dirty) {
+	if (sector_id == (block_sector_t)(-1)) return;
+	if (sector_data == NULL) return;
+	// TMP:
+	if (made_dirty) block_write(fs_device, sector_id, sector_data);
+	free(sector_data);
+}
+static void *get_sector_data(void *sector_handle) {
+	return sector_handle;
+}
+
+static bool get_redirection_ids(uint32_t *ids, size_t index) {
+	uint32_t i;
+	for (i = REDIRECTION_LEVEL - 1; ; i--) {
+		ids[i] = (index % 128);
+		index /= 128;
+		if (i == 0) break;
+	}
+	if (index > 0) return false;
+	else if (ids[0] >= ON_INODE_DIR_SIZE) return false;
+	else return true;
+}
+
 #define INODE_SEARCH_GET_ID_AND_RID uint32_t id = index / 128; uint32_t rid = index % 128
 #define INODE_ID_RID_INVALID (id >= 126 || rid >= 128)
 #define INODE_ID_NOT_ALLOCATED (inode->dir[id] == (block_sector_t)(-1))
 #define INODE_ID_RID_ERROR (INODE_ID_RID_INVALID || INODE_ID_NOT_ALLOCATED)
 
 static block_sector_t get_inode_sector(const struct inode_disk *inode, size_t index) {
-	INODE_SEARCH_GET_ID_AND_RID;
+	uint32_t ids[REDIRECTION_LEVEL];
+	if (!get_redirection_ids(ids, index)) return (-1);
+	uint32_t i;
+	block_sector_t sector = inode->dir[ids[0]];
+	for (i = 1; i < REDIRECTION_LEVEL; i++) {
+		void *handle = get_sector_handle(sector);
+		if (handle == NULL) return (-1);
+		block_sector_t *data = (block_sector_t*)get_sector_data(handle);
+		block_sector_t next_sector = data[ids[i]];
+		release_sector_handle(sector, handle, false);
+		sector = next_sector;
+	}
+	return sector;
+	/*INODE_SEARCH_GET_ID_AND_RID;
 	if (INODE_ID_RID_ERROR) return -1;
 	block_sector_t * dir = malloc(sizeof(block_sector_t) * 128);
 	if (dir == NULL) return -1;
 	block_read(fs_device, inode->dir[id], dir);
 	block_sector_t rv = dir[rid];
 	free(dir);
-	return rv;
+	return rv;*/
 }
 static bool allocate_inode_sector(struct inode_disk *inode, size_t index) {
-	INODE_SEARCH_GET_ID_AND_RID;
+	uint32_t ids[REDIRECTION_LEVEL];
+	if (!get_redirection_ids(ids, index)) return (-1);
+	uint32_t i;
+	block_sector_t sector = inode->dir[ids[0]];
+	bool last_sector_newly_allocated = false;
+	if (sector == (block_sector_t)(-1)) {
+		if (!free_map_allocate(1, inode->dir + ids[0])) return false;
+		else {
+			last_sector_newly_allocated = true;
+			sector = inode->dir[ids[0]];
+		}
+	}
+	for (i = 1; i < REDIRECTION_LEVEL; i++) {
+		void *handle = get_sector_handle(sector);
+		if (handle == NULL) return false;
+		block_sector_t *data = (block_sector_t*)get_sector_data(handle);
+		if (last_sector_newly_allocated) {
+			uint32_t j;
+			for (j = 0; j < 128; j++)
+				data[j] = (block_sector_t)(-1);
+		}
+		block_sector_t next_sector = data[ids[i]];
+		bool altered = false;
+		if (next_sector == (block_sector_t)(-1)) {
+			if (!free_map_allocate(1, data + ids[i])) {
+				release_sector_handle(sector, handle, false);
+				return false;
+			}
+			else {
+				altered = true;
+				next_sector = data[ids[i]];
+			}
+		}
+		release_sector_handle(sector, handle, altered);
+		sector = next_sector;
+		last_sector_newly_allocated = altered;
+	}
+	if (last_sector_newly_allocated) {
+		void *handle = get_sector_handle(sector);
+		if (handle == NULL) return false;
+		uint32_t *data = (uint32_t*)get_sector_data(handle);
+		for (i = 0; i < 128; i++)
+			data[i] = 0;
+		release_sector_handle(sector, handle, true);
+	}
+	return true;
+	/*INODE_SEARCH_GET_ID_AND_RID;
 	if (INODE_ID_RID_INVALID) return false;
 	block_sector_t * dir = malloc(sizeof(block_sector_t) * 128);
 	if (dir == NULL) return false;
@@ -85,7 +180,7 @@ static bool allocate_inode_sector(struct inode_disk *inode, size_t index) {
 			success = true;
 		}
 	free(dir);
-	return success;
+	return success;*/
 }
 static void deallocate_inode_sector(struct inode_disk *inode, size_t index) {
 	block_sector_t sector = get_inode_sector(inode, index);
@@ -169,7 +264,7 @@ inode_create (block_sector_t sector, off_t length)
         } 
 #else
 	  size_t i;
-	  for (i = 0; i < 126; i++)
+	  for (i = 0; i < ON_INODE_DIR_SIZE; i++)
 		  disk_inode->dir[i] = -1;
 	  success = true;
 	  for (i = 0; i < sectors; i++)
@@ -269,7 +364,7 @@ inode_close (struct inode *inode)
 		  size_t i;
 		  for (i = 0; i < sector_count; i++)
 			  deallocate_inode_sector(&inode->data, i);
-		  for (i = 0; i < 126; i++)
+		  for (i = 0; i < ON_INODE_DIR_SIZE; i++)
 			  if (inode->data.dir[i] != (block_sector_t)(-1)) {
 				  free_map_release(inode->data.dir[i], 1);
 			  }
