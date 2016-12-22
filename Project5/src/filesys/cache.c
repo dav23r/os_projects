@@ -2,6 +2,8 @@
 #include "threads/malloc.h"
 #include "devices/block.h"
 #include "filesys/filesys.h"
+#include "devices/timer.h"
+#include "threads/interrupt.h"
 
 
 static struct cache cache;
@@ -112,13 +114,20 @@ void release_sector(struct sector *sec, block_sector_t index, bool changed)
 
 
 
+int64_t last_flush_t = 0;
 void sector_cache_flush(void) {
-	lock_acquire(&cache.cache_lock);
-	uint32_t i;
-	for (i = 0; i < SECTOR_COUNT; i++) {
-		struct sector * cur = (cache.sectors + i);
-		if (cur->index != (block_sector_t)(-1))
-			if (cur->dirty) block_write(fs_device, cur->index, cur->data);
+	int64_t t = timer_ticks();
+	if ((t - last_flush_t) > TIMER_FREQ) {
+		if(!intr_context())
+			lock_acquire(&cache.cache_lock);
+		uint32_t i;
+		for (i = 0; i < SECTOR_COUNT; i++) {
+			struct sector * cur = (cache.sectors + i);
+			if (cur->index != (block_sector_t)(-1))
+				if (cur->dirty) block_write(fs_device, cur->index, cur->data);
+		}
+		if (!intr_context())
+			lock_release(&cache.cache_lock);
+		last_flush_t = t;
 	}
-	lock_release(&cache.cache_lock);
 }
