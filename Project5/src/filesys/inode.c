@@ -82,11 +82,6 @@ static bool get_redirection_ids(uint32_t *ids, size_t index) {
 	else return true;
 }
 
-#define INODE_SEARCH_GET_ID_AND_RID uint32_t id = index / 128; uint32_t rid = index % 128
-#define INODE_ID_RID_INVALID (id >= 126 || rid >= 128)
-#define INODE_ID_NOT_ALLOCATED (inode->dir[id] == (block_sector_t)(-1))
-#define INODE_ID_RID_ERROR (INODE_ID_RID_INVALID || INODE_ID_NOT_ALLOCATED)
-
 static block_sector_t get_inode_sector(const struct inode_disk *inode, size_t index) {
 	uint32_t ids[REDIRECTION_LEVEL];
 	if (!get_redirection_ids(ids, index)) return (-1);
@@ -101,14 +96,6 @@ static block_sector_t get_inode_sector(const struct inode_disk *inode, size_t in
 		sector = next_sector;
 	}
 	return sector;
-	/*INODE_SEARCH_GET_ID_AND_RID;
-	if (INODE_ID_RID_ERROR) return -1;
-	block_sector_t * dir = malloc(sizeof(block_sector_t) * 128);
-	if (dir == NULL) return -1;
-	block_read(fs_device, inode->dir[id], dir);
-	block_sector_t rv = dir[rid];
-	free(dir);
-	return rv;*/
 }
 static bool allocate_inode_sector(struct inode_disk *inode, size_t index) {
 	uint32_t ids[REDIRECTION_LEVEL];
@@ -157,30 +144,6 @@ static bool allocate_inode_sector(struct inode_disk *inode, size_t index) {
 		release_sector_handle(sector, handle, true);
 	}
 	return true;
-	/*INODE_SEARCH_GET_ID_AND_RID;
-	if (INODE_ID_RID_INVALID) return false;
-	block_sector_t * dir = malloc(sizeof(block_sector_t) * 128);
-	if (dir == NULL) return false;
-	if (INODE_ID_NOT_ALLOCATED) {
-		if (!free_map_allocate(1, inode->dir + id)) {
-			free(dir);
-			return false;
-		}
-		size_t i;
-		for (i = 0; i < 128; i++)
-			dir[i] = -1;
-	}
-	else block_read(fs_device, inode->dir[id], dir);
-	bool success = (dir[rid] != (block_sector_t)(-1));
-	if (!success)
-		if (free_map_allocate(1, dir + rid)) {
-			static char zeros[BLOCK_SECTOR_SIZE];
-			block_write(fs_device, dir[rid], zeros);
-			block_write(fs_device, inode->dir[id], dir);
-			success = true;
-		}
-	free(dir);
-	return success;*/
 }
 static void deallocate_inode_sector(struct inode_disk *inode, size_t index) {
 	block_sector_t sector = get_inode_sector(inode, index);
@@ -188,11 +151,6 @@ static void deallocate_inode_sector(struct inode_disk *inode, size_t index) {
 		free_map_release(sector, 1);
 	}
 }
-
-#undef INODE_SEARCH_GET_ID_AND_RID
-#undef INODE_ID_RID_INVALID
-#undef INODE_ID_NOT_ALLOCATED
-#undef INODE_ID_RID_ERROR
 #endif
 
 /* Returns the block device sector that contains byte offset POS
