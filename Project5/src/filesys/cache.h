@@ -33,4 +33,6 @@ struct sector * take_sector(block_sector_t index);
 
 void release_sector(struct sector *sec, block_sector_t index, bool changed);
 
+void sector_cache_flush(void);
+
 #endif

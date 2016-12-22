@@ -28,15 +28,15 @@ void sector_init(struct sector *sec)
 }
 
 void cache_init(void) {
+	lock_init(&cache.cache_lock);
+	sema_init(&cache.cache_sem, SECTOR_COUNT);
+	hash_init(&cache.index_sectors_map, sectors_hash, sectors_map_less, NULL);
+	list_init(&cache.free_list);
 	unsigned int i;
 	for (i = 0; i < SECTOR_COUNT; i++) {
 		sector_init(cache.sectors + i);
 		list_push_back(&cache.free_list, &cache.sectors[i].list_elem);
 	}
-	lock_init(&cache.cache_lock);
-	sema_init(&cache.cache_sem, SECTOR_COUNT);
-	hash_init(&cache.index_sectors_map, sectors_hash, sectors_map_less, NULL);
-	list_init(&cache.free_list);
 }
 
 static uint32_t clock_hand = 0;
@@ -108,4 +108,17 @@ void release_sector(struct sector *sec, block_sector_t index, bool changed)
 	lock_release(&sec->owners_lock);
 
 	lock_release(&sec->sector_lock);
+}
+
+
+
+void sector_cache_flush(void) {
+	lock_acquire(&cache.cache_lock);
+	uint32_t i;
+	for (i = 0; i < SECTOR_COUNT; i++) {
+		struct sector * cur = (cache.sectors + i);
+		if (cur->index != (block_sector_t)(-1))
+			if (cur->dirty) block_write(fs_device, cur->index, cur->data);
+	}
+	lock_release(&cache.cache_lock);
 }
