@@ -39,9 +39,24 @@ void cache_init(void) {
 	list_init(&cache.free_list);
 }
 
-
+static uint32_t clock_hand = 0;
 static void evict_sector(void) {
-
+	uint32_t end = clock_hand;
+	while (true) {
+		struct sector * cur = (cache.sectors + clock_hand);
+		if (cur->index != (block_sector_t)(-1))
+			if (cur->owners == 0) {
+				if (cur->dirty)
+					block_write(fs_device, cur->index, cur->data);
+				hash_delete(&cache.index_sectors_map, &cur->hash_elem);
+				list_push_back(&cache.free_list, &cur->list_elem);
+				cur->index = (block_sector_t)(-1);
+				break;
+			}
+		clock_hand = ((clock_hand + 1) % SECTOR_COUNT);
+		if (clock_hand == end) break;
+	}
+	PANIC("WELL... THIS SHOULD NOT HAPPEN...\n");
 }
 
 struct sector * take_sector(block_sector_t index)
