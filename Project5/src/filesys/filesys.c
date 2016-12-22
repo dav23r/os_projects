@@ -6,6 +6,9 @@
 #include "filesys/free-map.h"
 #include "filesys/inode.h"
 #include "filesys/directory.h"
+#ifdef FILESYS
+#include "cache.h"
+#endif
 
 /* Partition that contains the file system. */
 struct block *fs_device;
@@ -35,6 +38,7 @@ filesys_init (bool format)
 void
 filesys_done (void) 
 {
+  sector_cache_flush(true);
   free_map_close ();
 }
 

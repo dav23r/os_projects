@@ -175,7 +175,7 @@ timer_interrupt (struct intr_frame *args UNUSED)
 {
   ticks++;
 #ifdef FILESYS
-  sector_cache_flush();
+  //sector_cache_flush();
 #endif
   thread_tick ();
 }

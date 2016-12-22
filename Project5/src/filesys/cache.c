@@ -46,15 +46,16 @@ static void evict_sector(void) {
 	uint32_t end = clock_hand;
 	while (true) {
 		struct sector * cur = (cache.sectors + clock_hand);
-		if (cur->index != (block_sector_t)(-1))
+		if (cur->index != (block_sector_t)(-1)) {
 			if (cur->owners == 0) {
 				if (cur->dirty)
 					block_write(fs_device, cur->index, cur->data);
 				hash_delete(&cache.index_sectors_map, &cur->hash_elem);
 				list_push_back(&cache.free_list, &cur->list_elem);
 				cur->index = (block_sector_t)(-1);
-				break;
+				return;
 			}
+		}
 		clock_hand = ((clock_hand + 1) % SECTOR_COUNT);
 		if (clock_hand == end) break;
 	}
@@ -63,6 +64,7 @@ static void evict_sector(void) {
 
 struct sector * take_sector(block_sector_t index)
 {
+	ASSERT(!intr_context());
 	lock_acquire(&cache.cache_lock);
 	static struct sector element;
 	element.index = index;
@@ -99,11 +101,11 @@ struct sector * take_sector(block_sector_t index)
 
 void release_sector(struct sector *sec, block_sector_t index, bool changed)
 {
+	ASSERT(!intr_context());
 	ASSERT(sec->index == index);
+	lock_acquire(&sec->owners_lock);
 	if (changed)
 		sec->dirty = true;
-
-	lock_acquire(&sec->owners_lock);
 	sec->owners--;
 	if (sec->owners == 0)
 		sema_up(&cache.cache_sem);
@@ -115,19 +117,23 @@ void release_sector(struct sector *sec, block_sector_t index, bool changed)
 
 
 int64_t last_flush_t = 0;
-void sector_cache_flush(void) {
+void sector_cache_flush(bool force) {
+	ASSERT(!intr_context());
 	int64_t t = timer_ticks();
-	if ((t - last_flush_t) > TIMER_FREQ) {
-		if(!intr_context())
-			lock_acquire(&cache.cache_lock);
+	if (force || (t - last_flush_t) > 512) {
+		lock_acquire(&cache.cache_lock);
 		uint32_t i;
 		for (i = 0; i < SECTOR_COUNT; i++) {
 			struct sector * cur = (cache.sectors + i);
 			if (cur->index != (block_sector_t)(-1))
-				if (cur->dirty) block_write(fs_device, cur->index, cur->data);
+				if (cur->dirty) {
+					lock_acquire(&cur->owners_lock);
+					block_write(fs_device, cur->index, cur->data);
+					cur->dirty = false;
+					lock_release(&cur->owners_lock);
+				}
 		}
-		if (!intr_context())
-			lock_release(&cache.cache_lock);
+		lock_release(&cache.cache_lock);
 		last_flush_t = t;
 	}
 }

@@ -6,6 +6,7 @@
 #include "filesys/filesys.h"
 #include "filesys/free-map.h"
 #include "threads/malloc.h"
+#include "cache.h"
 
 /* Identifies an inode. */
 #define INODE_MAGIC 0x494e4f44
@@ -53,21 +54,31 @@ struct inode
 
 static void *get_sector_handle(block_sector_t sector_id) {
 	if (sector_id == (block_sector_t)(-1)) return NULL;
-	// TMP:
+#ifndef CACHE_H
 	void *sector_data = malloc(sizeof(block_sector_t) * 128);
 	if (sector_data == NULL) return NULL;
 	block_read(fs_device, sector_id, sector_data);
 	return sector_data;
+#else
+	return ((struct sector*)take_sector(sector_id));
+#endif
 }
 static void release_sector_handle(block_sector_t sector_id, void *sector_data, bool made_dirty) {
 	if (sector_id == (block_sector_t)(-1)) return;
 	if (sector_data == NULL) return;
-	// TMP:
+#ifndef CACHE_H
 	if (made_dirty) block_write(fs_device, sector_id, sector_data);
 	free(sector_data);
+#else
+	release_sector((struct sector*)sector_data, sector_id, made_dirty);
+#endif
 }
 static void *get_sector_data(void *sector_handle) {
+#ifndef CACHE_H
 	return sector_handle;
+#else
+	return ((void*)((struct sector*)sector_handle)->data);
+#endif
 }
 
 static bool get_redirection_ids(uint32_t *ids, size_t index) {
@@ -396,13 +407,23 @@ inode_read_at (struct inode *inode, void *buffer_, off_t size, off_t offset)
       if (chunk_size <= 0)
         break;
 
+#ifdef FILESYS
+	  void *handle = get_sector_handle(sector_idx);
+	  bounce = (uint8_t*)get_sector_data(handle);
+#endif
+
       if (sector_ofs == 0 && chunk_size == BLOCK_SECTOR_SIZE)
         {
+#ifndef FILESYS
           /* Read full sector directly into caller's buffer. */
           block_read (fs_device, sector_idx, buffer + bytes_read);
+#else
+		  memcpy(buffer + bytes_read, bounce, BLOCK_SECTOR_SIZE);
+#endif
         }
       else 
         {
+#ifndef FILESYS
           /* Read sector into bounce buffer, then partially copy
              into caller's buffer. */
           if (bounce == NULL) 
@@ -412,15 +433,21 @@ inode_read_at (struct inode *inode, void *buffer_, off_t size, off_t offset)
                 break;
             }
           block_read (fs_device, sector_idx, bounce);
+#endif
           memcpy (buffer + bytes_read, bounce + sector_ofs, chunk_size);
         }
+#ifdef FILESYS
+	  release_sector_handle(sector_idx, handle, false);
+#endif
       
       /* Advance. */
       size -= chunk_size;
       offset += chunk_size;
       bytes_read += chunk_size;
     }
+#ifndef FILESYS
   free (bounce);
+#endif
 
   return bytes_read;
 }
@@ -483,14 +510,22 @@ inode_write_at (struct inode *inode, const void *buffer_, off_t size,
       int chunk_size = size < min_left ? size : min_left;
       if (chunk_size <= 0)
         break;
-
+#ifdef FILESYS
+	  void *handle = get_sector_handle(sector_idx);
+	  bounce = (uint8_t*)get_sector_data(handle);
+#endif
       if (sector_ofs == 0 && chunk_size == BLOCK_SECTOR_SIZE)
         {
+#ifndef FILESYS
           /* Write full sector directly to disk. */
           block_write (fs_device, sector_idx, buffer + bytes_written);
+#else
+		  memcpy(bounce, buffer + bytes_written, BLOCK_SECTOR_SIZE);
+#endif
         }
       else 
         {
+#ifndef FILESYS
           /* We need a bounce buffer. */
           if (bounce == NULL) 
             {
@@ -508,14 +543,25 @@ inode_write_at (struct inode *inode, const void *buffer_, off_t size,
             memset (bounce, 0, BLOCK_SECTOR_SIZE);
           memcpy (bounce + sector_ofs, buffer + bytes_written, chunk_size);
           block_write (fs_device, sector_idx, bounce);
+#else
+		  if (!(sector_ofs > 0 || chunk_size < sector_left))
+			  memset(bounce, 0, BLOCK_SECTOR_SIZE);
+		  memcpy(bounce + sector_ofs, buffer + bytes_written, chunk_size);
+#endif
         }
+#ifdef FILESYS
+	  release_sector_handle(sector_idx, handle, true);
+#endif
 
       /* Advance. */
       size -= chunk_size;
       offset += chunk_size;
       bytes_written += chunk_size;
     }
+
+#ifndef FILESYS
   free (bounce);
+#endif
 
   return bytes_written;
 }
