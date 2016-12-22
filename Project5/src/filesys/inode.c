@@ -82,17 +82,21 @@ static bool get_redirection_ids(uint32_t *ids, size_t index) {
 	else return true;
 }
 
-static block_sector_t get_inode_sector(const struct inode_disk *inode, size_t index) {
+static block_sector_t get_inode_sector(const struct inode_disk *inode, size_t index, block_sector_t *parent, uint32_t *index_in_parent) {
 	uint32_t ids[REDIRECTION_LEVEL];
 	if (!get_redirection_ids(ids, index)) return (-1);
 	uint32_t i;
 	block_sector_t sector = inode->dir[ids[0]];
+	if (parent != NULL) (*parent) = (block_sector_t)(-1);
+	if (index_in_parent != NULL) (*index_in_parent) = ids[0];
 	for (i = 1; i < REDIRECTION_LEVEL; i++) {
 		void *handle = get_sector_handle(sector);
 		if (handle == NULL) return (-1);
 		block_sector_t *data = (block_sector_t*)get_sector_data(handle);
 		block_sector_t next_sector = data[ids[i]];
 		release_sector_handle(sector, handle, false);
+		if (parent != NULL) (*parent) = sector;
+		if (index_in_parent != NULL) (*index_in_parent) = ids[i];
 		sector = next_sector;
 	}
 	return sector;
@@ -145,10 +149,44 @@ static bool allocate_inode_sector(struct inode_disk *inode, size_t index) {
 	}
 	return true;
 }
+
+static void inode_dir_cleanup_clean_level(block_sector_t sector, uint32_t level) {
+	if (sector != (block_sector_t)(-1)) {
+		if (level < REDIRECTION_LEVEL) {
+			void *handle = get_sector_handle(sector);
+			if (handle != NULL) {
+				block_sector_t *data = (block_sector_t*)get_sector_data(handle);
+				uint32_t i;
+				for (i = 0; i < 128; i++)
+					inode_dir_cleanup_clean_level(data[i], level + 1);
+				release_sector_handle(sector, handle, false);
+			}
+		}
+		free_map_release(sector, 1);
+	}
+}
+static void inode_dir_cleanup(struct inode_disk *inode) {
+	uint32_t i;
+	for (i = 0; i < ON_INODE_DIR_SIZE; i++) {
+		inode_dir_cleanup_clean_level(inode->dir[i], 1);
+		inode->dir[i] = (block_sector_t)(-1);
+	}
+}
 static void deallocate_inode_sector(struct inode_disk *inode, size_t index) {
-	block_sector_t sector = get_inode_sector(inode, index);
+	block_sector_t parent;
+	uint32_t index_in_parent;
+	block_sector_t sector = get_inode_sector(inode, index, &parent, &index_in_parent);
 	if (sector != (block_sector_t)(-1)) {
 		free_map_release(sector, 1);
+		if (parent != (block_sector_t)(-1)) {
+			void *handle = get_sector_handle(parent);
+			if (handle != NULL) {
+				block_sector_t *data = (block_sector_t*)get_sector_data(handle);
+				data[index_in_parent] = (block_sector_t)(-1);
+				release_sector_handle(sector, handle, true);
+			}
+		}
+		else inode->dir[index_in_parent] = (block_sector_t)(-1);
 	}
 }
 #endif
@@ -165,7 +203,7 @@ byte_to_sector (const struct inode *inode, off_t pos)
 #ifndef FILESYS
 	  return inode->data.start + pos / BLOCK_SECTOR_SIZE;
 #else
-	  return get_inode_sector(&inode->data, pos / BLOCK_SECTOR_SIZE);
+	  return get_inode_sector(&inode->data, pos / BLOCK_SECTOR_SIZE, NULL, NULL);
 #endif
   }
   else
@@ -202,24 +240,24 @@ inode_create (block_sector_t sector, off_t length)
 
   disk_inode = calloc (1, sizeof *disk_inode);
   if (disk_inode != NULL)
-    {
-      size_t sectors = bytes_to_sectors (length);
-      disk_inode->length = length;
-      disk_inode->magic = INODE_MAGIC;
+  {
+	  size_t sectors = bytes_to_sectors(length);
+	  disk_inode->length = length;
+	  disk_inode->magic = INODE_MAGIC;
 #ifndef FILESYS
-      if (free_map_allocate (sectors, &disk_inode->start)) 
-        {
-          block_write (fs_device, sector, disk_inode);
-          if (sectors > 0) 
-            {
-              static char zeros[BLOCK_SECTOR_SIZE];
-              size_t i;
-              
-              for (i = 0; i < sectors; i++) 
-                block_write (fs_device, disk_inode->start + i, zeros);
-            }
-          success = true; 
-        } 
+	  if (free_map_allocate(sectors, &disk_inode->start))
+	  {
+		  block_write(fs_device, sector, disk_inode);
+		  if (sectors > 0)
+		  {
+			  static char zeros[BLOCK_SECTOR_SIZE];
+			  size_t i;
+
+			  for (i = 0; i < sectors; i++)
+				  block_write(fs_device, disk_inode->start + i, zeros);
+		  }
+		  success = true;
+	  }
 #else
 	  size_t i;
 	  for (i = 0; i < ON_INODE_DIR_SIZE; i++)
@@ -230,12 +268,9 @@ inode_create (block_sector_t sector, off_t length)
 			  success = false;
 			  break;
 		  }
-	  if(success)
+	  if (success)
 		  block_write(fs_device, sector, disk_inode);
-	  else while (i > 0) {
-		  i--;
-		  deallocate_inode_sector(disk_inode, i);
-	  }
+	  else inode_dir_cleanup(disk_inode);
 #endif
       free (disk_inode);
     }
@@ -318,14 +353,7 @@ inode_close (struct inode *inode)
           free_map_release (inode->data.start,
                             bytes_to_sectors (inode->data.length));
 #else
-		  size_t sector_count = bytes_to_sectors(inode->data.length);
-		  size_t i;
-		  for (i = 0; i < sector_count; i++)
-			  deallocate_inode_sector(&inode->data, i);
-		  for (i = 0; i < ON_INODE_DIR_SIZE; i++)
-			  if (inode->data.dir[i] != (block_sector_t)(-1)) {
-				  free_map_release(inode->data.dir[i], 1);
-			  }
+		  inode_dir_cleanup(&inode->data);
 #endif
         }
 
