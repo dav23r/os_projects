@@ -457,6 +457,10 @@ longer file names than the basic file system, you should increase this value fro
 default of 14.
 */
 static bool readdir(int fd UNUSED, char *name UNUSED) {
+	struct thread *t = thread_current();
+	struct file *fl = thread_get_file(t, fd);
+	if (!file_is_dir(fl)) return false;
+	// ETC...
 	return false;
 }
 
@@ -464,7 +468,10 @@ static bool readdir(int fd UNUSED, char *name UNUSED) {
 Returns true if fd represents a directory, false if it represents an ordinary file.
 */
 static bool isdir(int fd UNUSED) {
-	return false;
+	struct thread *t = thread_current();
+	struct file *fl = thread_get_file(t, fd);
+	if (fl == NULL) return false;
+	return file_is_dir(fl);
 }
 
 /**

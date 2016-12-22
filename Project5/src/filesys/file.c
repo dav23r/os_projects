@@ -9,6 +9,9 @@ struct file
     struct inode *inode;        /* File's inode. */
     off_t pos;                  /* Current position. */
     bool deny_write;            /* Has file_deny_write() been called? */
+#ifdef FILESYS
+	bool is_dir;				/* True, if the file is a directory. */
+#endif
   };
 
 /* Opens a file for the given INODE, of which it takes ownership,
@@ -23,6 +26,9 @@ file_open (struct inode *inode)
       file->inode = inode;
       file->pos = 0;
       file->deny_write = false;
+#ifdef FILESYS
+	  file->is_dir = false;
+#endif
       return file;
     }
   else
@@ -166,3 +172,14 @@ file_tell (struct file *file)
   ASSERT (file != NULL);
   return file->pos;
 }
+
+#ifdef FILESYS
+void file_set_dir(struct file *file, bool is_dir) {
+	if (file == NULL) return;
+	file->is_dir = is_dir;
+}
+bool file_is_dir(struct file *file) {
+	if (file == NULL) return false;
+	return file->is_dir;
+}
+#endif
