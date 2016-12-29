@@ -1,5 +1,6 @@
 #include "userprog/syscall.h"
 #include <stdio.h>
+#include <string.h>
 #include <syscall-nr.h>
 #include "threads/interrupt.h"
 #include "threads/thread.h"
@@ -17,6 +18,7 @@
 #endif
 #ifdef FILESYS
 #include "filesys/inode.h"
+#include "filesys/directory.h"
 #endif
 
 
@@ -25,6 +27,8 @@
 
 struct lock filesys_lock;
 
+static bool get_full_path(const char *relative, char *buffer);
+
 // Locks the file system
 void filesys_lock_acquire(void) {
 	lock_acquire(&filesys_lock);
@@ -32,6 +36,25 @@ void filesys_lock_acquire(void) {
 // Unlocks the file system
 void filesys_lock_release(void) {
 	lock_release(&filesys_lock);
+}
+
+bool get_full_path(const char *relative, char *buffer){
+    if (relative == NULL || relative[0] == '\0') 
+        return false;
+    struct thread *cur_t = thread_current(); 
+    char *pwd = cur_t->pwd;
+    int free_in_buffer = MAX_PATH_LEN + 1;
+    int copied_bytes = 0;
+    if (relative[0] != '/'){
+        copied_bytes += strlcpy(buffer, pwd, free_in_buffer);
+        free_in_buffer -= copied_bytes;
+    }
+    if (free_in_buffer <= 1)
+        return false;
+    free_in_buffer -= strlcpy(buffer + copied_bytes, relative, free_in_buffer);
+    if (free_in_buffer <= 0)
+        return false; 
+    return true;
 }
 
 #ifdef VM
@@ -199,13 +222,14 @@ a separate operation which would require a open system call.
 */
 static bool create(const char *file, unsigned initial_size) {
 	if (!string_valid(file)) exit(-1);
-	else {
-		lock_acquire(&filesys_lock);
-		bool rv = filesys_create(file, initial_size);
-		lock_release(&filesys_lock);
-		return rv;
-	}
-	return false;
+
+    char path[MAX_PATH_LEN + 1];
+    get_full_path(file, path);
+
+    lock_acquire(&filesys_lock);
+    bool rv = filesys_create(file, initial_size);
+    lock_release(&filesys_lock);
+    return rv;
 }
 
 

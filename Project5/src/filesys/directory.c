@@ -33,6 +33,7 @@ dir_create (block_sector_t sector, block_sector_t parent_inode_sector, size_t en
   added &= dir_add(new_dir, ".", sector);
   added &= dir_add(new_dir, "..", parent_inode_sector);
   ASSERT(added);
+  dir_close(new_dir);
   return true;
 }
 
