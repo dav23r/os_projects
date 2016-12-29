@@ -37,6 +37,7 @@
 #include "filesys/filesys.h"
 #include "filesys/fsutil.h"
 #include "filesys/cache.h"
+#include "filesys/directory.h"
 #endif
 #ifdef VM
 #include "vm/swap.h"

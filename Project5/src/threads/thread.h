@@ -6,9 +6,14 @@
 #include <stdint.h>
 #include "synch.h"
 #include "filesys/file.h"
+
 #ifdef VM
 #include "vm/supplemental_page.h"
 #include "vm/file_mapping.h"
+#endif
+
+#ifdef FILESYS
+#include "filesys/directory.h"
 #endif
 
 /* States in a thread's life cycle. */
@@ -126,6 +131,10 @@ struct thread
 	uint8_t *intr_stack;
 #endif
 
+#ifdef FILESYS
+    char *pwd;                          /* Current working directory */
+#endif
+
     /* Owned by thread.c. */
     unsigned magic;                     /* Detects stack overflow. */
   };
@@ -142,6 +151,7 @@ void thread_tick (void);
 void thread_print_stats (void);
 
 typedef void thread_func (void *aux);
+
 tid_t thread_create (const char *name, int priority, thread_func *, void *);
 
 void thread_block (void);

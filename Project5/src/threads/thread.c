@@ -3,11 +3,13 @@
 #include <stddef.h>
 #include <random.h>
 #include <stdio.h>
+#include <stdlib.h>
 #include <string.h>
 #include "threads/flags.h"
 #include "threads/interrupt.h"
 #include "threads/intr-stubs.h"
 #include "threads/palloc.h"
+#include "threads/malloc.h"
 #include "threads/switch.h"
 #include "threads/synch.h"
 #include "threads/vaddr.h"
@@ -203,6 +205,12 @@ thread_create (const char *name, int priority,
   t->executable_name = name;
   t->executable_file = NULL;
   t->exit_status = -1;
+#endif
+
+#ifdef FILESYS
+  /* Allocate maximum buffer for path for current working directory. */
+  t->pwd = (char *) calloc(MAX_PATH_LEN + 1, sizeof(char));
+  ASSERT(t->pwd != NULL);
 #endif
 
   /* Add to run queue. */

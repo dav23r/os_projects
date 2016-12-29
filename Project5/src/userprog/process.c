@@ -6,6 +6,7 @@
 #include <stdlib.h>
 #include <string.h>
 #include "userprog/gdt.h"
+#include "threads/malloc.h"
 #include "userprog/pagedir.h"
 #include "userprog/tss.h"
 #include "filesys/directory.h"
@@ -18,8 +19,13 @@
 #include "threads/thread.h"
 #include "threads/vaddr.h"
 #include "syscall.h"
+
 #ifdef VM
 #include "vm/vm_util.h"
+#endif
+
+#ifdef FILESYS
+#include "filesys/directory.h"
 #endif
 
 static thread_func start_process NO_RETURN;
@@ -40,6 +46,7 @@ process_execute (const char *file_name)
 	fn_copy = palloc_get_page(0);
 	if (fn_copy == NULL)
 		return TID_ERROR;
+
 	strlcpy(fn_copy, file_name, PGSIZE);
 
 	char *file_name_only = palloc_get_page(0);
@@ -56,6 +63,7 @@ process_execute (const char *file_name)
 		palloc_free_page((void*)fn_copy);
 		palloc_free_page((void*)file_name_only);
 	}
+
 	return tid;
 }
 
@@ -79,6 +87,16 @@ start_process (void *file_name_)
   palloc_free_page ((void*)file_name);
   if (!success) 
     thread_exit ();
+
+  /* Set pwd of current thread before jumping to user program segment */
+  struct thread *cur_thread = thread_current();
+  struct thread *parent = cur_thread->parent;
+  /* In first case current process is 'main' which is assigned
+     ROOT as current working directory. Otherwise copy parent's. */
+  if (parent->pwd == NULL)
+    strlcpy(cur_thread->pwd, ROOT_DIR, MAX_PATH_LEN + 1);
+  else
+    strlcpy(cur_thread->pwd, parent->pwd, MAX_PATH_LEN + 1);
 
   /* Start the user process by simulating a return from an
      interrupt, implemented by intr_exit (in
@@ -138,6 +156,10 @@ process_exit (void)
   file_mappings_dispose(cur, &cur->mem_mappings);
   if (cur->suppl_page_table)
 	  suppl_pt_delete(cur->suppl_page_table);
+#endif
+
+#ifdef FILESYS
+  free(cur->pwd);
 #endif
 
   /* Destroy the current process's page directory and switch back
