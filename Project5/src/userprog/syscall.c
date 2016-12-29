@@ -221,7 +221,10 @@ false otherwise. Creating a new file does not open it: opening the new file is
 a separate operation which would require a open system call.
 */
 static bool create(const char *file, unsigned initial_size) {
-	if (!string_valid(file)) exit(-1);
+    if (!string_valid(file)) {
+        exit(-1);
+        return false;
+    }
 
     char path[MAX_PATH_LEN + 1];
     get_full_path(file, path);
