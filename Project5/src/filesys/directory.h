@@ -12,11 +12,12 @@
 #define NAME_MAX 14
 #define ROOT_DIR "/"
 #define MAX_PATH_LEN 256
+#define INITIAL_DIR_SIZE 16
 
 struct inode;
 
 /* Opening and closing directories. */
-bool dir_create (block_sector_t sector, size_t entry_cnt);
+bool dir_create (block_sector_t sector, block_sector_t parent_inode_sector, size_t entry_cnt);
 struct dir *dir_open (struct inode *);
 struct dir *dir_open_root (void);
 struct dir *dir_reopen (struct dir *);
