@@ -17,14 +17,51 @@ struct block *fs_device;
 static void do_format (void);
 static bool approach_leaf(const char *, struct dir **, char *);
 
+/* Parses 'path' and populates last filename and cotaining dir. */
 static bool approach_leaf(const char *path, 
                           struct dir **containing_dir, 
                           char *filename){
-   struct dir *dir = dir_open_root();
-   ASSERT (dir != NULL);
-   *containing_dir = dir;
-   strlcpy(filename, path, NAME_MAX + 1);
-   return true;
+  int path_len = strnlen(path, MAX_PATH_LEN + 1);
+  if (path_len == 0 || path_len > MAX_PATH_LEN)  
+    return false; 
+  
+  /* Local copy to feed strtok which messes up provided string */
+  char path_copy[MAX_PATH_LEN + 1];
+  strlcpy(path_copy, path, MAX_PATH_LEN + 1);
+
+  char *cur_token = NULL;
+  char last_identifier[MAX_PATH_LEN + 1];
+  struct dir *cur_dir = NULL;
+  /* Decide if path is in absolute or relative form. */
+  if (path[0] == PATH_DELIM_CHAR) 
+    cur_dir = dir_open_root();
+  else 
+    cur_dir = dir_reopen(thread_current()->pwd);
+  
+  char *state; // internal state of strtok_r
+  cur_token = strtok_r(path_copy, PATH_DELIM_STRING, &state);
+  /* Should not end on directory */
+  if (cur_token == NULL)
+    return false;
+  strlcpy(last_identifier, cur_token, MAX_PATH_LEN + 1);
+
+  while (true){
+    cur_token = strtok_r(NULL, PATH_DELIM_STRING, &state);
+    if (cur_token == NULL) 
+      break;
+    struct inode *inode = NULL;
+    bool is_in_dir = dir_lookup(cur_dir, last_identifier, &inode);
+    dir_close(cur_dir);
+    if (!is_in_dir)
+      return false;
+    cur_dir = dir_open(inode);
+    strlcpy(last_identifier, cur_token, MAX_PATH_LEN + 1);
+  }
+
+  /* Set last dir and filename variables for caller. */
+  *containing_dir = cur_dir;
+  strlcpy(filename, last_identifier, MAX_PATH_LEN + 1);
+  return true;
 }
 
 /* Initializes the file system module.
@@ -61,7 +98,7 @@ filesys_done (void)
 bool
 filesys_create (const char *path, off_t initial_size, bool is_dir) 
 {
-  char filename[NAME_MAX];
+  char filename[NAME_MAX + 1];
   struct dir *containing_dir;
   if (!approach_leaf(path, &containing_dir, filename))
     return false;
@@ -86,7 +123,7 @@ filesys_create (const char *path, off_t initial_size, bool is_dir)
 struct file *
 filesys_open (const char *path)
 {
-  char filename[NAME_MAX];
+  char filename[NAME_MAX + 1];
   struct dir *containing_dir;
   if (!approach_leaf(path, &containing_dir, filename))
     return NULL;
@@ -107,7 +144,7 @@ bool
 filesys_remove (const char *path) 
 {
   
-  char filename[NAME_MAX];
+  char filename[NAME_MAX + 1];
   struct dir *containing_dir;
   if (!approach_leaf(path, &containing_dir, filename))
     return false;

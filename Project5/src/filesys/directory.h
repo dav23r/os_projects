@@ -12,6 +12,8 @@
 #define NAME_MAX 14
 #define MAX_PATH_LEN 256
 #define INITIAL_DIR_SIZE 16
+#define PATH_DELIM_CHAR '/'
+#define PATH_DELIM_STRING "/"
 
 struct inode;
 
