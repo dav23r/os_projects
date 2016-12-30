@@ -132,7 +132,7 @@ struct thread
 #endif
 
 #ifdef FILESYS
-    char *pwd;                          /* Current working directory */
+    struct dir *pwd;                           /* Current working directory */
 #endif
 
     /* Owned by thread.c. */

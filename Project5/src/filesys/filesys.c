@@ -2,6 +2,7 @@
 #include <debug.h>
 #include <stdio.h>
 #include <string.h>
+#include "threads/thread.h"
 #include "filesys/file.h"
 #include "filesys/free-map.h"
 #include "filesys/inode.h"
@@ -49,16 +50,19 @@ filesys_done (void)
 bool
 filesys_create (const char *name, off_t initial_size) 
 {
+  
   block_sector_t inode_sector = 0;
-  struct dir *dir = dir_open_root ();
+  struct dir *dir;
+  ASSERT (thread_current()->pwd != NULL)
+  dir = dir_reopen( thread_current()->pwd );
+  ASSERT ( inode_get_inumber(dir_get_inode(dir)) == (block_sector_t) ROOT_DIR_SECTOR);
   bool success = (dir != NULL
                   && free_map_allocate (1, &inode_sector)
-                  && inode_create (inode_sector, initial_size)
+                  && inode_create (inode_sector, initial_size, false)
                   && dir_add (dir, name, inode_sector));
   if (!success && inode_sector != 0) 
     free_map_release (inode_sector, 1);
   dir_close (dir);
-
   return success;
 }
 

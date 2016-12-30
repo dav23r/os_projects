@@ -131,6 +131,8 @@ main (void)
   ide_init ();
   locate_block_devices ();
   filesys_init (format_filesys);
+  /* Set pwd of 'init' to root directory */
+  thread_current()->pwd = dir_open_root();
 #endif
 
 #ifdef VM

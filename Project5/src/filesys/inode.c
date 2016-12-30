@@ -238,7 +238,7 @@ inode_init (void)
    Returns true if successful.
    Returns false if memory or disk allocation fails. */
 bool
-inode_create (block_sector_t sector, off_t length)
+inode_create (block_sector_t sector, off_t length, bool is_dir)
 {
   struct inode_disk *disk_inode = NULL;
   bool success = false;
@@ -255,6 +255,7 @@ inode_create (block_sector_t sector, off_t length)
 	  size_t sectors = bytes_to_sectors(length);
 	  disk_inode->length = length;
 	  disk_inode->magic = INODE_MAGIC;
+      disk_inode->flags = (uint32_t) is_dir;
 #ifndef FILESYS
 	  if (free_map_allocate(sectors, &disk_inode->start))
 	  {
@@ -296,7 +297,9 @@ inode_open (block_sector_t sector)
 {
   struct list_elem *e;
   struct inode *inode;
+  
 
+  
   /* Check whether this inode is already open. */
   for (e = list_begin (&open_inodes); e != list_end (&open_inodes);
        e = list_next (e)) 

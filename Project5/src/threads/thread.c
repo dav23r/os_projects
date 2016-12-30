@@ -101,6 +101,11 @@ thread_init (void)
   init_thread (initial_thread, "main", PRI_DEFAULT);
   initial_thread->status = THREAD_RUNNING;
   initial_thread->tid = allocate_tid ();
+  /* 'init' will get it's root pwd in 'init.c' after 
+      initialization of necessary components of OS
+      is complete. And of couse all the descendants
+      of init will have valid 'pwd' */
+  initial_thread->pwd = NULL;
 }
 
 /* Starts preemptive thread scheduling by enabling interrupts.
@@ -208,9 +213,16 @@ thread_create (const char *name, int priority,
 #endif
 
 #ifdef FILESYS
-  /* Allocate maximum buffer for path for current working directory. */
-  t->pwd = (char *) calloc(MAX_PATH_LEN + 1, sizeof(char));
-  ASSERT(t->pwd != NULL);
+
+  /* Stores pointer to current working directory. 
+     After 'process_start' is guaranteed to reference 
+     valid directory. NULL will indicate 'process_start
+     to set pwd to root directory */
+  if (t->parent == NULL || t->parent->pwd == NULL)
+    t->pwd = NULL;
+  else
+    t->pwd = dir_reopen(t->parent->pwd);
+  
 #endif
 
   /* Add to run queue. */

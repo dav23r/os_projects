@@ -10,7 +10,6 @@
    After directories are implemented, this maximum length may be
    retained, but much longer full path names must be allowed. */
 #define NAME_MAX 14
-#define ROOT_DIR "/"
 #define MAX_PATH_LEN 256
 #define INITIAL_DIR_SIZE 16
 

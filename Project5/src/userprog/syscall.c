@@ -27,7 +27,7 @@
 
 struct lock filesys_lock;
 
-static bool get_full_path(const char *relative, char *buffer);
+//static bool get_full_path(const char *relative, char *buffer);
 
 // Locks the file system
 void filesys_lock_acquire(void) {
@@ -38,6 +38,7 @@ void filesys_lock_release(void) {
 	lock_release(&filesys_lock);
 }
 
+/*
 bool get_full_path(const char *relative, char *buffer){
     if (relative == NULL || relative[0] == '\0') 
         return false;
@@ -56,6 +57,7 @@ bool get_full_path(const char *relative, char *buffer){
         return false; 
     return true;
 }
+*/
 
 #ifdef VM
 // Checks, if the user address is mappable
@@ -225,9 +227,6 @@ static bool create(const char *file, unsigned initial_size) {
         exit(-1);
         return false;
     }
-
-    char path[MAX_PATH_LEN + 1];
-    get_full_path(file, path);
 
     lock_acquire(&filesys_lock);
     bool rv = filesys_create(file, initial_size);
@@ -457,7 +456,7 @@ Changes the current working directory of the process to dir, which may be relati
 or absolute. Returns true if successful, false on failure.
 */
 static bool chdir(const char *dir UNUSED) {
-	return false;
+    return false;
 }
 
 /**

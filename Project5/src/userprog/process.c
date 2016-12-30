@@ -85,18 +85,14 @@ start_process (void *file_name_)
 
   /* If load failed, quit. */
   palloc_free_page ((void*)file_name);
-  if (!success) 
+  if (!success)
     thread_exit ();
 
-  /* Set pwd of current thread before jumping to user program segment */
-  struct thread *cur_thread = thread_current();
-  struct thread *parent = cur_thread->parent;
-  /* In first case current process is 'main' which is assigned
-     ROOT as current working directory. Otherwise copy parent's. */
-  if (parent->pwd == NULL)
-    strlcpy(cur_thread->pwd, ROOT_DIR, MAX_PATH_LEN + 1);
-  else
-    strlcpy(cur_thread->pwd, parent->pwd, MAX_PATH_LEN + 1);
+  /* Finalize setting pwd before jumping to user program segment */
+  struct thread *cur_t = thread_current();
+  if (cur_t->pwd == NULL){
+    cur_t->pwd = dir_open_root();
+  }
 
   /* Start the user process by simulating a return from an
      interrupt, implemented by intr_exit (in
@@ -159,7 +155,8 @@ process_exit (void)
 #endif
 
 #ifdef FILESYS
-  free(cur->pwd);
+  if (cur->pwd != NULL)
+    dir_close(cur->pwd);
 #endif
 
   /* Destroy the current process's page directory and switch back
