@@ -229,7 +229,7 @@ static bool create(const char *file, unsigned initial_size) {
     }
 
     lock_acquire(&filesys_lock);
-    bool rv = filesys_create(file, initial_size);
+    bool rv = filesys_create(file, initial_size, false);
     lock_release(&filesys_lock);
     return rv;
 }

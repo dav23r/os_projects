@@ -15,6 +15,17 @@
 struct block *fs_device;
 
 static void do_format (void);
+static bool approach_leaf(const char *, struct dir **, char *);
+
+static bool approach_leaf(const char *path, 
+                          struct dir **containing_dir, 
+                          char *filename){
+   struct dir *dir = dir_open_root();
+   ASSERT (dir != NULL);
+   *containing_dir = dir;
+   strlcpy(filename, path, NAME_MAX + 1);
+   return true;
+}
 
 /* Initializes the file system module.
    If FORMAT is true, reformats the file system. */
@@ -48,21 +59,22 @@ filesys_done (void)
    Fails if a file named NAME already exists,
    or if internal memory allocation fails. */
 bool
-filesys_create (const char *name, off_t initial_size) 
+filesys_create (const char *path, off_t initial_size, bool is_dir) 
 {
-  
+  char filename[NAME_MAX];
+  struct dir *containing_dir;
+  if (!approach_leaf(path, &containing_dir, filename))
+    return false;
+
+  ASSERT (containing_dir != NULL);
   block_sector_t inode_sector = 0;
-  struct dir *dir;
-  ASSERT (thread_current()->pwd != NULL)
-  dir = dir_reopen( thread_current()->pwd );
-  // ASSERT ( inode_get_inumber(dir_get_inode(dir)) == (block_sector_t) ROOT_DIR_SECTOR);
-  bool success = (dir != NULL
+  bool success = (containing_dir != NULL
                   && free_map_allocate (1, &inode_sector)
-                  && inode_create (inode_sector, initial_size, false)
-                  && dir_add (dir, name, inode_sector));
+                  && inode_create (inode_sector, initial_size, is_dir)
+                  && dir_add (containing_dir, filename, inode_sector));
   if (!success && inode_sector != 0) 
     free_map_release (inode_sector, 1);
-  dir_close (dir);
+  dir_close (containing_dir);
   return success;
 }
 
@@ -72,14 +84,17 @@ filesys_create (const char *name, off_t initial_size)
    Fails if no file named NAME exists,
    or if an internal memory allocation fails. */
 struct file *
-filesys_open (const char *name)
+filesys_open (const char *path)
 {
-  struct dir *dir = dir_open_root ();
-  struct inode *inode = NULL;
+  char filename[NAME_MAX];
+  struct dir *containing_dir;
+  if (!approach_leaf(path, &containing_dir, filename))
+    return NULL;
 
-  if (dir != NULL)
-    dir_lookup (dir, name, &inode);
-  dir_close (dir);
+  ASSERT (containing_dir != NULL);
+  struct inode *inode = NULL;
+  dir_lookup(containing_dir, filename, &inode);
+  dir_close (containing_dir);
 
   return file_open (inode);
 }
@@ -89,11 +104,26 @@ filesys_open (const char *name)
    Fails if no file named NAME exists,
    or if an internal memory allocation fails. */
 bool
-filesys_remove (const char *name) 
+filesys_remove (const char *path) 
 {
-  struct dir *dir = dir_open_root ();
-  bool success = dir != NULL && dir_remove (dir, name);
-  dir_close (dir); 
+  
+  char filename[NAME_MAX];
+  struct dir *containing_dir;
+  if (!approach_leaf(path, &containing_dir, filename))
+    return false;
+
+  ASSERT (containing_dir != NULL);
+
+  // Don't touch directories yet
+  struct inode *inode = NULL;
+  dir_lookup(containing_dir, filename, &inode);
+  if (inode_is_dir(inode)){
+    dir_close(containing_dir);
+    return false;
+  }
+
+  bool success = dir_remove(containing_dir, filename);
+  dir_close (containing_dir);
 
   return success;
 }
