@@ -42,6 +42,9 @@ dir_create (block_sector_t sector, block_sector_t parent_inode_sector, size_t en
 struct dir *
 dir_open (struct inode *inode) 
 {
+  if (!inode_is_dir(inode))
+    return NULL;
+
   struct dir *dir = calloc (1, sizeof *dir);
 
   if (inode != NULL && dir != NULL)

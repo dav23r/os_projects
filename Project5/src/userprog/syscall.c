@@ -455,8 +455,18 @@ static int munmap(int map_id) {
 Changes the current working directory of the process to dir, which may be relative
 or absolute. Returns true if successful, false on failure.
 */
-static bool chdir(const char *dir UNUSED) {
-    return false;
+static bool chdir(const char *dir) {
+    bool status;
+    lock_acquire(&filesys_lock);
+    struct file *f = filesys_open(dir);
+    status = (f != NULL);
+    lock_release(&filesys_lock);
+    if (!status)
+        return false;
+    struct thread *t = thread_current();
+    dir_close(t->pwd);
+    t->pwd = (struct dir *) f;
+    return true;
 }
 
 /**
@@ -465,8 +475,11 @@ successful, false on failure. Fails if dir already exists or if any directory na
 besides the last, does not already exist. That is, mkdir("/a/b/c") succeeds only if
 ‘/a/b’ already exists and ‘/a/b/c’ does not.
 */
-static bool mkdir(const char *dir UNUSED) {
-	return false;
+static bool mkdir(const char *dir) {
+	lock_acquire(&filesys_lock);
+    bool status = filesys_create(dir, INITIAL_DIR_SIZE, true);
+    lock_release(&filesys_lock);
+    return status;
 }
 
 /**
