@@ -240,6 +240,10 @@ dir_readdir (struct dir *dir, char name[NAME_MAX + 1])
       dir->pos += sizeof e;
       if (e.in_use)
         {
+          /* Skip implied "." and ".." */
+          if (strcmp(e.name, ".") == 0 || strcmp(e.name, "..") == 0)
+            continue;
+
           strlcpy (name, e.name, NAME_MAX + 1);
           return true;
         } 

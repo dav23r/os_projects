@@ -127,6 +127,10 @@ filesys_create (const char *path, off_t initial_size, bool is_dir)
 struct file *
 filesys_open (const char *path)
 {
+  /* Special case if path is root dir. */
+  if (strcmp(path, PATH_DELIM_STRING) == 0)
+    return (struct file *)dir_open_root();
+
   char filename[NAME_MAX + 1];
   struct dir *containing_dir;
   if (!approach_leaf(path, &containing_dir, filename))

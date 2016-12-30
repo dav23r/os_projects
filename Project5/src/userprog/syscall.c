@@ -367,8 +367,11 @@ static int write(int fd, const void *buffer, unsigned size) {
 	}
 	else if (fd == STDIN_FILENO) return 0;
 	else {
-		lock_acquire(&filesys_lock);
 		struct file *file_ptr = thread_get_file(thread_current(), fd);
+        /* Forbid writing to directory */
+        if (file_is_dir(file_ptr))
+            return -1;
+		lock_acquire(&filesys_lock);
 		int rv = ((file_ptr != NULL) ? file_write(file_ptr, (void*)buffer, size) : 0);
 		lock_release(&filesys_lock);
 		return rv;
@@ -495,12 +498,19 @@ READDIR_MAX_LEN is defined in ‘lib/user/syscall.h’. If your file system supports
 longer file names than the basic file system, you should increase this value from the
 default of 14.
 */
-static bool readdir(int fd UNUSED, char *name UNUSED) {
+static bool readdir(int fd, char *name) {
 	struct thread *t = thread_current();
 	struct file *fl = thread_get_file(t, fd);
-	if (!file_is_dir(fl)) return false;
-	// ETC...
-	return false;
+
+	if (!file_is_dir(fl)) 
+        return false;
+	struct dir *dir = (struct dir *) fl;
+    
+    bool status;
+	lock_acquire(&filesys_lock);
+    status = dir_readdir(dir, name);
+    lock_release(&filesys_lock);
+    return status;
 }
 
 /**
