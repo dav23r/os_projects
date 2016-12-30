@@ -595,3 +595,9 @@ inode_length (const struct inode *inode)
 {
   return inode->data.length;
 }
+
+/* Returns byte indicates whether data encapsulated by inode
+   represents file system directory on not */
+bool inode_is_dir(const struct inode *inode){
+    return (inode->data.flags);
+}

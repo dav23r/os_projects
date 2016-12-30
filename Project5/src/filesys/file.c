@@ -27,7 +27,7 @@ file_open (struct inode *inode)
       file->pos = 0;
       file->deny_write = false;
 #ifdef FILESYS
-	  file->is_dir = false;
+	  file->is_dir = inode_is_dir(inode);
 #endif
       return file;
     }

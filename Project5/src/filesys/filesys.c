@@ -55,7 +55,7 @@ filesys_create (const char *name, off_t initial_size)
   struct dir *dir;
   ASSERT (thread_current()->pwd != NULL)
   dir = dir_reopen( thread_current()->pwd );
-  ASSERT ( inode_get_inumber(dir_get_inode(dir)) == (block_sector_t) ROOT_DIR_SECTOR);
+  // ASSERT ( inode_get_inumber(dir_get_inode(dir)) == (block_sector_t) ROOT_DIR_SECTOR);
   bool success = (dir != NULL
                   && free_map_allocate (1, &inode_sector)
                   && inode_create (inode_sector, initial_size, false)
