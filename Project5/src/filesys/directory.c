@@ -250,3 +250,20 @@ dir_readdir (struct dir *dir, char name[NAME_MAX + 1])
     }
   return false;
 }
+
+int
+dir_num_entries (struct dir *dir)
+{
+  ASSERT (dir != NULL);
+
+  struct dir_entry e;
+  int num_entries = 0;
+  while (inode_read_at (dir->inode, &e, sizeof e, dir->pos) == sizeof e) 
+    {
+      dir->pos += sizeof e;
+      if (e.in_use)
+        num_entries += 1;
+    }
+  /* Don't count '.' and '..' */
+  return num_entries - 2;
+}

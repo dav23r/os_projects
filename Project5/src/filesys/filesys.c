@@ -159,12 +159,17 @@ filesys_remove (const char *path)
 
   ASSERT (containing_dir != NULL);
 
-  // Don't touch directories yet
   struct inode *inode = NULL;
   dir_lookup(containing_dir, filename, &inode);
+
+  /* Forbid deleting non-empty directory */
   if (inode_is_dir(inode)){
-    dir_close(containing_dir);
-    return false;
+    struct dir *child = dir_open(inode);
+    if (dir_num_entries(child) > 0)
+    {
+      dir_close(containing_dir);
+      return false;
+    }
   }
 
   bool success = dir_remove(containing_dir, filename);
