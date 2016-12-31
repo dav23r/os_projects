@@ -598,6 +598,15 @@ inode_length (const struct inode *inode)
 
 /* Returns byte indicates whether data encapsulated by inode
    represents file system directory on not */
-bool inode_is_dir(const struct inode *inode){
-    return (inode->data.flags);
+bool 
+inode_is_dir(const struct inode *inode)
+{
+  return (inode->data.flags);
+}
+
+/* Returns true if inode is set to be removed from disk. */
+bool 
+inode_is_removed(const struct inode *inode)
+{
+  return (inode->removed);
 }

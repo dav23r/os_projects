@@ -47,7 +47,7 @@ dir_open (struct inode *inode)
 
   struct dir *dir = calloc (1, sizeof *dir);
 
-  if (inode != NULL && dir != NULL)
+  if (inode != NULL && dir != NULL && !inode_is_removed(inode))
     {
       dir->inode = inode;
       dir->pos = 0;

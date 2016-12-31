@@ -37,6 +37,9 @@ static bool approach_leaf(const char *path,
     cur_dir = dir_open_root();
   else 
     cur_dir = dir_reopen(thread_current()->pwd);
+  /* This may occur if inode encapsulated by cur_dir is set 'removed'. */
+  if (cur_dir == NULL)
+    return false;
   
   char *state; // internal state of strtok_r
   cur_token = strtok_r(path_copy, PATH_DELIM_STRING, &state);
@@ -129,7 +132,7 @@ filesys_open (const char *path)
 {
   /* Special case if path is root dir. */
   if (strcmp(path, PATH_DELIM_STRING) == 0)
-    return (struct file *)dir_open_root();
+    return (struct file *) dir_open_root();
 
   char filename[NAME_MAX + 1];
   struct dir *containing_dir;
