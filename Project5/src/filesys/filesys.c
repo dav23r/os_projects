@@ -43,9 +43,12 @@ static bool approach_leaf(const char *path,
   
   char *state; // internal state of strtok_r
   cur_token = strtok_r(path_copy, PATH_DELIM_STRING, &state);
-  /* Should not end on directory */
-  if (cur_token == NULL)
+  /* Return false if path does not contain any identifiers. */
+  if (cur_token == NULL){
+    dir_close(cur_dir);
     return false;
+  }
+
   strlcpy(last_identifier, cur_token, MAX_PATH_LEN + 1);
 
   while (true){
@@ -114,7 +117,7 @@ filesys_create (const char *path, off_t initial_size, bool is_dir)
   bool success = (containing_dir != NULL
                   && free_map_allocate (1, &inode_sector)
                   && ( is_dir ? dir_create   (inode_sector, inode_get_inumber(dir_get_inode(containing_dir)),  initial_size) :
-                                inode_create (inode_sector, initial_size, is_dir) )
+                                inode_create (inode_sector, initial_size, false) )
                   && dir_add (containing_dir, filename, inode_sector));
   if (!success && inode_sector != 0) 
     free_map_release (inode_sector, 1);
@@ -132,7 +135,7 @@ filesys_open (const char *path)
 {
   /* Special case if path is root dir. */
   if (strcmp(path, PATH_DELIM_STRING) == 0)
-    return (struct file *) dir_open_root();
+    return file_open( inode_open(ROOT_DIR_SECTOR) );
 
   char filename[NAME_MAX + 1];
   struct dir *containing_dir;

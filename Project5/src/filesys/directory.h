@@ -9,7 +9,7 @@
    This is the traditional UNIX maximum length.
    After directories are implemented, this maximum length may be
    retained, but much longer full path names must be allowed. */
-#define NAME_MAX 14
+#define NAME_MAX 25
 #define MAX_PATH_LEN 256
 #define INITIAL_DIR_SIZE 16
 #define PATH_DELIM_CHAR '/'
