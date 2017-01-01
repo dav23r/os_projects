@@ -462,7 +462,7 @@ static bool chdir(const char *dir) {
     bool status;
     lock_acquire(&filesys_lock);
     struct file *f = filesys_open(dir);
-    status = (f != NULL);
+    status = (f != NULL && file_is_dir(f));
     lock_release(&filesys_lock);
     if (!status)
         return false;
@@ -516,7 +516,7 @@ static bool readdir(int fd, char *name) {
 /**
 Returns true if fd represents a directory, false if it represents an ordinary file.
 */
-static bool isdir(int fd UNUSED) {
+static bool isdir(int fd) {
 	struct thread *t = thread_current();
 	struct file *fl = thread_get_file(t, fd);
 	if (fl == NULL) return false;
