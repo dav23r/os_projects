@@ -733,7 +733,6 @@ syscall_handler(struct intr_frame *f)
 	cur->intr_stack = (uint8_t*)f->esp;
 #endif
 	if (!pointers_valid(ESP, sizeof(int))) exit(-1);
-	init_sys_handlers();
 	int syscall_id = *ESP;
 	if (syscall_id >= 0 && syscall_id < sys_count && sys_handlers[syscall_id] != NULL) {
 		sys_handlers[syscall_id](f);
