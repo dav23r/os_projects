@@ -11,7 +11,7 @@
    retained, but much longer full path names must be allowed. */
 #define NAME_MAX 25
 #define MAX_PATH_LEN 256
-#define INITIAL_DIR_SIZE 16
+#define INITIAL_DIR_SIZE 4
 #define PATH_DELIM_CHAR '/'
 #define PATH_DELIM_STRING "/"
 

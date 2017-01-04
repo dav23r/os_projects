@@ -114,13 +114,22 @@ filesys_create (const char *path, off_t initial_size, bool is_dir)
   ASSERT (containing_dir != NULL);
 
   block_sector_t inode_sector = 0;
+  uint32_t dir_inode_sector = inode_get_inumber(dir_get_inode(containing_dir));
+  bool file_created = false;
   bool success = (containing_dir != NULL
                   && free_map_allocate (1, &inode_sector)
-                  && ( is_dir ? dir_create   (inode_sector, inode_get_inumber(dir_get_inode(containing_dir)),  initial_size) :
-                                inode_create (inode_sector, initial_size, false) )
+                  && ( file_created = (is_dir ? dir_create   (inode_sector, dir_inode_sector,  initial_size) :
+                                                inode_create (inode_sector, initial_size, false)) )
                   && dir_add (containing_dir, filename, inode_sector));
-  if (!success && inode_sector != 0) 
+
+  if (inode_sector == 0){
+    PANIC ("Unable to allocate main sector for inode\n");
+  }
+  if (!success && inode_sector != 0){
+    if (!file_created)
+      PANIC ("For some reason unable to allocate inode.\n");
     free_map_release (inode_sector, 1);
+  }
   dir_close (containing_dir);
   return success;
 }
@@ -171,8 +180,9 @@ filesys_remove (const char *path)
   /* Forbid deleting non-empty directory */
   if (inode_is_dir(inode)){
     struct dir *child = dir_open(inode);
-    if (dir_num_entries(child) > 0)
-    {
+    bool forbid = (dir_num_entries(child) > 0);
+    dir_close(child);
+    if (forbid){
       dir_close(containing_dir);
       return false;
     }
