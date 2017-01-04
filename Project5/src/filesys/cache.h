@@ -7,7 +7,7 @@
 #include "lib/kernel/hash.h"
 
 #define SECTOR_COUNT 64
-#define WRITE_BEHIND_SLEEP_TICKS 32
+#define WRITE_BEHIND_SLEEP_TICKS 256
 
 struct sector {
 	block_sector_t index;
@@ -30,9 +30,9 @@ struct cache {
 void sector_init(struct sector *sec);
 void cache_init(void);
 
-struct sector * take_sector(block_sector_t index);
+struct sector * take_sector(block_sector_t index, bool block);
 
-void release_sector(struct sector *sec, block_sector_t index, bool changed);
+void release_sector(struct sector *sec, block_sector_t index, bool changed, bool blocked);
 
 void sector_cache_flush(bool force);
 

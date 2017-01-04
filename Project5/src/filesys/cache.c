@@ -72,7 +72,7 @@ static void evict_sector(void) {
 	PANIC("WELL... THIS SHOULD NOT HAPPEN...\n");
 }
 
-struct sector * take_sector(block_sector_t index)
+struct sector * take_sector(block_sector_t index, bool block)
 {
 	ASSERT(!intr_context());
 	lock_acquire(&cache.cache_lock);
@@ -89,7 +89,8 @@ struct sector * take_sector(block_sector_t index)
 		lock_release(&res->owners_lock);
 
 		lock_release(&cache.cache_lock);
-		lock_acquire(&res->sector_lock);
+		if (block) 
+			lock_acquire(&res->sector_lock);
 		return res;
 	}
 
@@ -104,12 +105,12 @@ struct sector * take_sector(block_sector_t index)
 	hash_insert(&cache.index_sectors_map, &res->hash_elem);
 	
 	lock_release(&cache.cache_lock);
-
-	lock_acquire(&res->sector_lock);
+	if (block) 
+		lock_acquire(&res->sector_lock);
 	return res;
 }
 
-void release_sector(struct sector *sec, block_sector_t index, bool changed)
+void release_sector(struct sector *sec, block_sector_t index, bool changed, bool blocked)
 {
 	ASSERT(!intr_context());
 	ASSERT(sec->index == index);
@@ -121,7 +122,8 @@ void release_sector(struct sector *sec, block_sector_t index, bool changed)
 		sema_up(&cache.cache_sem);
 	lock_release(&sec->owners_lock);
 
-	lock_release(&sec->sector_lock);
+	if(blocked)
+		lock_release(&sec->sector_lock);
 }
 
 
