@@ -697,9 +697,7 @@ bool thread_set_file_force(struct thread *t, struct file *file, file_descriptor 
 	if (fd < 0 || fd >= MAX_OPEN_FILES) return false;
 	else {
 		if (t->open_files[fd] != NULL) {
-			filesys_lock_acquire();
 			file_close(t->open_files[fd]);
-			filesys_lock_release();
 		}
 		t->open_files[fd] = file;
 		return true;
@@ -707,7 +705,6 @@ bool thread_set_file_force(struct thread *t, struct file *file, file_descriptor 
 }
 // Closes all the files opened for the given thread.
 void thread_close_all_files(struct thread *t) {
-	filesys_lock_acquire();
 	file_descriptor i = 0;
 	while (i < MAX_OPEN_FILES) {
 		if (t->open_files[i] != NULL) {
@@ -716,7 +713,6 @@ void thread_close_all_files(struct thread *t) {
 		}
 		i++;
 	}
-	filesys_lock_release();
 }
 
 

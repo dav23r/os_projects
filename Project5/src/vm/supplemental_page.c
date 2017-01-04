@@ -130,10 +130,8 @@ bool suppl_page_load_from_file(struct suppl_page *page) {
 				uint32_t buf_sz = (PAGE_SIZE - (buff - start));
 				uint32_t till_fl_end = (fl_end - buff);
 				if (till_fl_end < buf_sz) buf_sz = till_fl_end;
-				filesys_lock_acquire();
 				file_seek(page->mapping->fl, ((char*)buff) - ((char*)page->mapping->start_vaddr) + page->mapping->offset);
 				buff += file_read(page->mapping->fl, (((char*)pg_round_down((void*)page->kaddr)) + (buff - start)), buf_sz);
-				filesys_lock_release();
 			}
 			file_r = true;
 		}
@@ -170,11 +168,9 @@ bool suppl_page_load_to_file(struct suppl_page *page, bool eviction_call) {
 		if (((uint32_t)end) > ((uint32_t)file_end))
 			end = file_end;
 		if (start < end) {
-			filesys_lock_acquire();
 			file_seek(page->mapping->fl, (start - file_start));
 			int buffer_size = (end - start);
 			bool rv = (file_write(page->mapping->fl, ((char*)pg_round_down((void*)page->kaddr)) + (start - ((char*)page->vaddr)), buffer_size) == buffer_size);
-			filesys_lock_release();
 			if (!eviction_call) register_suppl_page(page);
 			return rv;
 		}

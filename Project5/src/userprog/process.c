@@ -139,12 +139,10 @@ process_exit (void)
 
   if (cur->executable_name != NULL) printf("%s: exit(%d)\n", cur->executable_name, cur->exit_status);
   if (cur->executable_name != NULL) palloc_free_page((void*)cur->executable_name);
-  filesys_lock_acquire();
   if (cur->executable_file != NULL) {
 	  file_allow_write(cur->executable_file);
 	  file_close(cur->executable_file);
   }
-  filesys_lock_release();
   thread_free_all_children(cur);
   thread_close_all_files(cur);
 
@@ -301,7 +299,6 @@ load (const char *file_name, void (**eip) (void), void **esp)
 	  }
 	  i++;
   }
-  //filesys_lock_acquire();
   file = filesys_open(file_name);
   ((char*)file_name)[i] = saved_char;
   if (file == NULL) 
@@ -406,7 +403,6 @@ load (const char *file_name, void (**eip) (void), void **esp)
 	  palloc_free_page((void*)t->executable_name);
 	  t->executable_name = NULL;
   }
-  //filesys_lock_release();
   return success;
 }
 

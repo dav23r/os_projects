@@ -47,7 +47,8 @@ struct inode
     int open_cnt;                       /* Number of openers. */
     bool removed;                       /* True if deleted, false otherwise. */
     int deny_write_cnt;                 /* 0: writes ok, >0: deny writes. */
-    struct inode_disk data;             /* Inode content. */
+    uint32_t is_dir;                    /* True if directory. */
+    off_t length;                       /* Length of data encapsulated by inode. */
   };
 
 #ifdef FILESYS
@@ -210,11 +211,16 @@ static block_sector_t
 byte_to_sector (const struct inode *inode, off_t pos) 
 {
   ASSERT (inode != NULL);
-  if (pos < inode->data.length) {
+  if (pos < inode->length) {
 #ifndef FILESYS
 	  return inode->data.start + pos / BLOCK_SECTOR_SIZE;
 #else
-	  return get_inode_sector(&inode->data, pos / BLOCK_SECTOR_SIZE, NULL, NULL);
+      block_sector_t main_sector = inode->sector;
+      void *handle = get_sector_handle(main_sector);
+      struct inode_disk *data = (struct inode_disk *) get_sector_data(handle);
+	  block_sector_t seek = get_inode_sector(data, pos / BLOCK_SECTOR_SIZE, NULL, NULL);
+      release_sector_handle(main_sector, handle, false);
+      return seek;
 #endif
   }
   else
@@ -280,8 +286,13 @@ inode_create (block_sector_t sector, off_t length, bool is_dir)
 			  success = false;
 			  break;
 		  }
-	  if (success)
-		  block_write(fs_device, sector, disk_inode);
+	  if (success){
+          block_sector_t main_sector = sector;
+          void *handle = get_sector_handle(main_sector);
+          struct inode_disk *data = (struct inode_disk *) get_sector_data(handle);
+          memcpy(data, disk_inode, sizeof(struct inode_disk));
+          release_sector_handle(main_sector, handle, true);
+      }
 	  else inode_dir_cleanup(disk_inode);
 #endif
       free (disk_inode);
@@ -318,12 +329,17 @@ inode_open (block_sector_t sector)
     return NULL;
 
   /* Initialize. */
+  void *handle = get_sector_handle(sector);
+  struct inode_disk *data = (struct inode_disk *) get_sector_data(handle);
+  inode->is_dir = data->flags;
+  inode->length = data->length;
+  release_sector_handle(sector, handle, false);
+
   list_push_front (&open_inodes, &inode->elem);
   inode->sector = sector;
   inode->open_cnt = 1;
   inode->deny_write_cnt = 0;
   inode->removed = false;
-  block_read (fs_device, inode->sector, &inode->data);
   return inode;
 }
 
@@ -362,13 +378,17 @@ inode_close (struct inode *inode)
       /* Deallocate blocks if removed. */
       if (inode->removed) 
         {
-          free_map_release (inode->sector, 1);
 #ifndef FILESYS
           free_map_release (inode->data.start,
                             bytes_to_sectors (inode->data.length));
 #else
-		  inode_dir_cleanup(&inode->data);
+          block_sector_t main_sector = inode->sector;
+          void *handle = get_sector_handle(main_sector);
+          struct inode_disk *data = (struct inode_disk *) get_sector_data(handle);
+		  inode_dir_cleanup(data);
+          release_sector_handle(main_sector, handle, true);
 #endif
+          free_map_release (inode->sector, 1);
         }
 
       free (inode); 
@@ -473,28 +493,36 @@ inode_write_at (struct inode *inode, const void *buffer_, off_t size,
 
 #ifdef FILESYS
   off_t min_size = offset + size;
-  off_t start = bytes_to_sectors(inode->data.length);
+  off_t start = bytes_to_sectors(inode->length);
   off_t end = bytes_to_sectors(min_size);
-  if (inode->data.length < min_size) {
+  if (inode->length < min_size) {
+
+      block_sector_t main_sector = inode->sector;
+      void *handle = get_sector_handle(main_sector);
+      struct inode_disk *data = (struct inode_disk *) get_sector_data(handle);
+
 	  off_t ptr = start;
 	  while (ptr < end) {
-		  if (!allocate_inode_sector(&inode->data, ptr))
+		  if (!allocate_inode_sector(data, ptr))
 			  break;
 		  ptr++;
 	  }
 	  if (ptr >= end) {
-		  inode->data.length = min_size;
-		  block_write(fs_device, inode->sector, &inode->data);
+		  data->length = min_size;
+          inode->length = data->length;
 	  }
 	  else {
 		  end = ptr;
 		  ptr = start;
 		  while (ptr < end) {
-			  deallocate_inode_sector(&inode->data, ptr);
+			  deallocate_inode_sector(data, ptr);
 			  ptr++;
 		  }
+          release_sector_handle(main_sector, handle, true);
 		  return 0;
 	  }
+
+      release_sector_handle(main_sector, handle, true);
   }
 #endif
 
@@ -593,7 +621,7 @@ inode_allow_write (struct inode *inode)
 off_t
 inode_length (const struct inode *inode)
 {
-  return inode->data.length;
+  return inode->length;
 }
 
 /* Returns byte indicates whether data encapsulated by inode
@@ -601,7 +629,7 @@ inode_length (const struct inode *inode)
 bool 
 inode_is_dir(const struct inode *inode)
 {
-  return (inode->data.flags);
+  return (inode->is_dir);
 }
 
 /* Returns true if inode is set to be removed from disk. */

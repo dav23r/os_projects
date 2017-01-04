@@ -37,9 +37,7 @@ void file_mapping_dispose(struct thread *t, struct file_mapping *f) {
 			cur_page += PAGE_SIZE;
 		}
 	}
-	filesys_lock_acquire();
 	file_close(f->fl);
-	filesys_lock_release();
 	file_mapping_init(f);
 }
 
@@ -107,13 +105,10 @@ static bool file_mappable(struct thread *t, struct file *fl, void *vaddr, uint32
 // Maps file on virtual memory.
 static bool file_map(struct thread *t, struct file *fl, void *vaddr, struct file_mapping *mapping, uint32_t offset, uint32_t file_size, uint32_t overshoot, bool writable, bool fl_writable) {
 	if (t == NULL || fl == NULL || vaddr == NULL || mapping == NULL) return false;
-	filesys_lock_acquire();
 	struct file *new_file = file_reopen(fl);
 	if (new_file == NULL) {
-		filesys_lock_release();
 		return false;
 	}
-	filesys_lock_release();
 
 	mapping->fl = new_file;
 	mapping->start_vaddr = vaddr;

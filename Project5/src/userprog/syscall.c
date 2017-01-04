@@ -25,40 +25,6 @@
 #define max(a, b) (((a) > (b)) ? (a) : (b))
 #define min(a, b) (((a) < (b)) ? (a) : (b))
 
-struct lock filesys_lock;
-
-//static bool get_full_path(const char *relative, char *buffer);
-
-// Locks the file system
-void filesys_lock_acquire(void) {
-	lock_acquire(&filesys_lock);
-}
-// Unlocks the file system
-void filesys_lock_release(void) {
-	lock_release(&filesys_lock);
-}
-
-/*
-bool get_full_path(const char *relative, char *buffer){
-    if (relative == NULL || relative[0] == '\0') 
-        return false;
-    struct thread *cur_t = thread_current(); 
-    char *pwd = cur_t->pwd;
-    int free_in_buffer = MAX_PATH_LEN + 1;
-    int copied_bytes = 0;
-    if (relative[0] != '/'){
-        copied_bytes += strlcpy(buffer, pwd, free_in_buffer);
-        free_in_buffer -= copied_bytes;
-    }
-    if (free_in_buffer <= 1)
-        return false;
-    free_in_buffer -= strlcpy(buffer + copied_bytes, relative, free_in_buffer);
-    if (free_in_buffer <= 0)
-        return false; 
-    return true;
-}
-*/
-
 #ifdef VM
 // Checks, if the user address is mappable
 static int user_address_mappable(void *addr, unsigned int size) {
@@ -227,10 +193,7 @@ static bool create(const char *file, unsigned initial_size) {
         exit(-1);
         return false;
     }
-
-    lock_acquire(&filesys_lock);
     bool rv = filesys_create(file, initial_size, false);
-    lock_release(&filesys_lock);
     return rv;
 }
 
@@ -243,9 +206,7 @@ not close it. See [Removing an Open File], page 35, for details.
 static bool remove(const char *file) {
 	if (!string_valid(file)) exit(-1);
 	else {
-		lock_acquire(&filesys_lock);
 		bool rv = filesys_remove(file);
-		lock_release(&filesys_lock);
 		return rv;
 	}
 	return false;
@@ -269,8 +230,6 @@ position.
 static int open(const char *file) {
 	if (!string_valid(file)) exit(-1);
 	else {
-		lock_acquire(&filesys_lock);
-
 		struct thread *this_thread = thread_current();
 		
 		file_descriptor fd = thread_get_free_fd(this_thread);
@@ -286,9 +245,6 @@ static int open(const char *file) {
 				fd = -1;
 			}
 		}
-
-		lock_release(&filesys_lock);
-		
 		return fd;
 	}
 	return -1;
@@ -299,10 +255,8 @@ static int open(const char *file) {
 Returns the size, in bytes, of the file open as fd.
 */
 static int filesize(int fd) {
-	lock_acquire(&filesys_lock);
 	struct file *file_ptr = thread_get_file(thread_current(), fd);
 	int rv = ((file_ptr != NULL) ? file_length(file_ptr) : (-1));
-	lock_release(&filesys_lock);
 	return rv;
 }
 
@@ -327,10 +281,8 @@ static int read(int fd, void *buffer, unsigned size) {
 	}
 	else if (fd == STDOUT_FILENO) return 0;
 	else {
-		lock_acquire(&filesys_lock);
 		struct file *file_ptr = thread_get_file(thread_current(), fd);
 		int rv = ((file_ptr != NULL) ? file_read(file_ptr, (void*)buffer, size) : 0);
-		lock_release(&filesys_lock);
 		return rv;
 	}
 	return 0;
@@ -371,9 +323,7 @@ static int write(int fd, const void *buffer, unsigned size) {
         /* Forbid writing to directory */
         if (file_is_dir(file_ptr))
             return -1;
-		lock_acquire(&filesys_lock);
 		int rv = ((file_ptr != NULL) ? file_write(file_ptr, (void*)buffer, size) : 0);
-		lock_release(&filesys_lock);
 		return rv;
 	}
 	return 0;
@@ -390,14 +340,11 @@ writes past end of file will return an error.) These semantics are implemented i
 file system and do not require any special effort in system call implementation.
 */
 static void seek(int fd, unsigned position) {
-	lock_acquire(&filesys_lock);
 
 	struct file *file_ptr = thread_get_file(thread_current(), fd);
 
 	if (file_ptr != NULL)
 		file_seek(file_ptr, position);
-
-	lock_release(&filesys_lock);
 }
 
 
@@ -406,13 +353,10 @@ Returns the position of the next byte to be read or written in open file fd, exp
 in bytes from the beginning of the file.
 */
 static unsigned tell(int fd) {
-	lock_acquire(&filesys_lock);
 
 	struct file *file_ptr = thread_get_file(thread_current(), fd);
 	int rv = ((file_ptr != NULL) ? file_tell(file_ptr) : 0);
 	
-	lock_release(&filesys_lock);
-
 	return rv;
 }
 
@@ -460,10 +404,8 @@ or absolute. Returns true if successful, false on failure.
 */
 static bool chdir(const char *dir) {
     bool status;
-    lock_acquire(&filesys_lock);
     struct file *f = filesys_open(dir);
     status = (f != NULL && file_is_dir(f));
-    lock_release(&filesys_lock);
     if (!status)
         return false;
     struct thread *t = thread_current();
@@ -479,9 +421,7 @@ besides the last, does not already exist. That is, mkdir("/a/b/c") succeeds only
 ‘/a/b’ already exists and ‘/a/b/c’ does not.
 */
 static bool mkdir(const char *dir) {
-	lock_acquire(&filesys_lock);
     bool status = filesys_create(dir, INITIAL_DIR_SIZE, true);
-    lock_release(&filesys_lock);
     return status;
 }
 
@@ -507,9 +447,7 @@ static bool readdir(int fd, char *name) {
 	struct dir *dir = (struct dir *) fl;
     
     bool status;
-	lock_acquire(&filesys_lock);
     status = dir_readdir(dir, name);
-    lock_release(&filesys_lock);
     return status;
 }
 
@@ -722,7 +660,6 @@ syscall_init(void)
 {
 	intr_register_int(0x30, 3, INTR_ON, syscall_handler, "syscall");
 	init_sys_handlers();
-	lock_init(&filesys_lock);
 }
 
 static void
