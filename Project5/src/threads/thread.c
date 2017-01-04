@@ -216,7 +216,7 @@ thread_create (const char *name, int priority,
 
   /* Stores pointer to current working directory. 
      After 'process_start' is guaranteed to reference 
-     valid directory. NULL will indicate 'process_start
+     valid directory. NULL will indicate 'process_start'
      to set pwd to root directory */
   if (t->parent == NULL || t->parent->pwd == NULL)
     t->pwd = NULL;
