@@ -4,6 +4,7 @@
 #include "filesys/filesys.h"
 #include "devices/timer.h"
 #include "threads/interrupt.h"
+#include "threads/thread.h"
 
 
 static struct cache cache;
@@ -12,6 +13,13 @@ static unsigned sectors_hash(const struct hash_elem *e, void *aux UNUSED)
 {
 	struct sector *sec = hash_entry(e, struct sector, hash_elem);
 	return sec->index;
+}
+
+static void write_behind(void *arg UNUSED) { 
+    while (true){
+        timer_sleep(WRITE_BEHIND_SLEEP_TICKS); 
+        sector_cache_flush(false); 
+    }
 }
 
 static bool sectors_map_less(const struct hash_elem *a, const struct hash_elem *b, void *aux UNUSED) {
@@ -39,6 +47,8 @@ void cache_init(void) {
 		sector_init(cache.sectors + i);
 		list_push_back(&cache.free_list, &cache.sectors[i].list_elem);
 	}
+    tid_t tid = thread_create("write-behind", PRI_DEFAULT, write_behind, NULL);
+    ASSERT (tid);
 }
 
 static uint32_t clock_hand = 0;

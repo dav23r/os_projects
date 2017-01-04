@@ -7,6 +7,7 @@
 #include "lib/kernel/hash.h"
 
 #define SECTOR_COUNT 64
+#define WRITE_BEHIND_SLEEP_TICKS 32
 
 struct sector {
 	block_sector_t index;
