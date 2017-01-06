@@ -2,12 +2,14 @@
 #include <debug.h>
 #include "filesys/inode.h"
 #include "threads/malloc.h"
+#include "threads/synch.h"
 
 /* An open file. */
 struct file 
   {
     struct inode *inode;        /* File's inode. */
     off_t pos;                  /* Current position. */
+    struct lock lock;           /* Lock for file access. */
     bool deny_write;            /* Has file_deny_write() been called? */
 #ifdef FILESYS
 	bool is_dir;				/* True, if the file is a directory. */
@@ -27,6 +29,7 @@ file_open (struct inode *inode)
       file->pos = 0;
       file->deny_write = false;
 #ifdef FILESYS
+      lock_init(&file->lock);
 	  file->is_dir = inode_is_dir(inode);
 #endif
       return file;

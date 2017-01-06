@@ -5,12 +5,14 @@
 #include "filesys/filesys.h"
 #include "filesys/inode.h"
 #include "threads/malloc.h"
+#include "threads/synch.h"
 
 /* A directory. */
 struct dir 
   {
     struct inode *inode;                /* Backing store. */
     off_t pos;                          /* Current position. */
+    struct lock dir_lock;               /* To serialize access to some segments. */
   };
 
 /* A single directory entry. */
@@ -51,6 +53,7 @@ dir_open (struct inode *inode)
     {
       dir->inode = inode;
       dir->pos = 0;
+      lock_init(&dir->dir_lock);
       return dir;
     }
   else
@@ -101,7 +104,7 @@ dir_get_inode (struct dir *dir)
    directory entry if OFSP is non-null.
    otherwise, returns false and ignores EP and OFSP. */
 static bool
-lookup (const struct dir *dir, const char *name,
+lookup (struct dir *dir, const char *name,
         struct dir_entry *ep, off_t *ofsp) 
 {
   struct dir_entry e;
@@ -110,6 +113,7 @@ lookup (const struct dir *dir, const char *name,
   ASSERT (dir != NULL);
   ASSERT (name != NULL);
 
+  lock_acquire(&dir->dir_lock);
   for (ofs = 0; inode_read_at (dir->inode, &e, sizeof e, ofs) == sizeof e;
        ofs += sizeof e) 
     if (e.in_use && !strcmp (name, e.name)) 
@@ -118,8 +122,10 @@ lookup (const struct dir *dir, const char *name,
           *ep = e;
         if (ofsp != NULL)
           *ofsp = ofs;
+        lock_release(&dir->dir_lock);
         return true;
       }
+  lock_release(&dir->dir_lock);
   return false;
 }
 
@@ -128,7 +134,7 @@ lookup (const struct dir *dir, const char *name,
    On success, sets *INODE to an inode for the file, otherwise to
    a null pointer.  The caller must close *INODE. */
 bool
-dir_lookup (const struct dir *dir, const char *name,
+dir_lookup (struct dir *dir, const char *name,
             struct inode **inode) 
 {
   struct dir_entry e;
@@ -175,6 +181,7 @@ dir_add (struct dir *dir, const char *name, block_sector_t inode_sector)
      inode_read_at() will only return a short read at end of file.
      Otherwise, we'd need to verify that we didn't get a short
      read due to something intermittent such as low memory. */
+  lock_acquire(&dir->dir_lock);
   for (ofs = 0; inode_read_at (dir->inode, &e, sizeof e, ofs) == sizeof e;
        ofs += sizeof e) 
     if (!e.in_use)
@@ -185,6 +192,7 @@ dir_add (struct dir *dir, const char *name, block_sector_t inode_sector)
   strlcpy (e.name, name, sizeof e.name);
   e.inode_sector = inode_sector;
   success = inode_write_at (dir->inode, &e, sizeof e, ofs) == sizeof e;
+  lock_release(&dir->dir_lock);
 
  done:
   return success;
@@ -215,6 +223,7 @@ dir_remove (struct dir *dir, const char *name)
 
   /* Erase directory entry. */
   e.in_use = false;
+  lock_acquire(&dir->dir_lock);
   if (inode_write_at (dir->inode, &e, sizeof e, ofs) != sizeof e) 
     goto done;
 
@@ -223,6 +232,7 @@ dir_remove (struct dir *dir, const char *name)
   success = true;
 
  done:
+  lock_release(&dir->dir_lock);
   inode_close (inode);
   return success;
 }
@@ -235,6 +245,7 @@ dir_readdir (struct dir *dir, char name[NAME_MAX + 1])
 {
   struct dir_entry e;
 
+  lock_acquire(&dir->dir_lock);
   while (inode_read_at (dir->inode, &e, sizeof e, dir->pos) == sizeof e) 
     {
       dir->pos += sizeof e;
@@ -245,9 +256,11 @@ dir_readdir (struct dir *dir, char name[NAME_MAX + 1])
             continue;
 
           strlcpy (name, e.name, NAME_MAX + 1);
+          lock_release(&dir->dir_lock);
           return true;
         } 
     }
+  lock_release(&dir->dir_lock);
   return false;
 }
 
@@ -258,12 +271,14 @@ dir_num_entries (struct dir *dir)
 
   struct dir_entry e;
   int num_entries = 0;
+  lock_acquire(&dir->dir_lock);
   while (inode_read_at (dir->inode, &e, sizeof e, dir->pos) == sizeof e) 
     {
       dir->pos += sizeof e;
       if (e.in_use)
         num_entries += 1;
     }
+  lock_release(&dir->dir_lock);
   /* Don't count '.' and '..' */
   return num_entries - 2;
 }
