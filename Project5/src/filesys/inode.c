@@ -208,10 +208,10 @@ static void deallocate_inode_sector(struct inode_disk *inode, size_t index) {
    Returns -1 if INODE does not contain data for a byte at offset
    POS. */
 static block_sector_t
-byte_to_sector (const struct inode *inode, off_t pos) 
+byte_to_sector (const struct inode *inode, off_t pos, bool ignore_length) 
 {
   ASSERT (inode != NULL);
-  if (pos < inode->length) {
+  if (ignore_length || pos < inode->length) {
 #ifndef FILESYS
 	  return inode->data.start + pos / BLOCK_SECTOR_SIZE;
 #else
@@ -417,7 +417,7 @@ inode_read_at (struct inode *inode, void *buffer_, off_t size, off_t offset)
   while (size > 0) 
     {
       /* Disk sector to read, starting byte offset within sector. */
-      block_sector_t sector_idx = byte_to_sector (inode, offset);
+      block_sector_t sector_idx = byte_to_sector (inode, offset, false);
       int sector_ofs = offset % BLOCK_SECTOR_SIZE;
 
       /* Bytes left in inode, bytes left in sector, lesser of the two. */
@@ -481,117 +481,124 @@ inode_read_at (struct inode *inode, void *buffer_, off_t size, off_t offset)
    (Normally a write at end of file would extend the inode, but
    growth is not yet implemented.) */
 off_t
-inode_write_at (struct inode *inode, const void *buffer_, off_t size,
-                off_t offset) 
+inode_write_at(struct inode *inode, const void *buffer_, off_t size,
+	off_t offset)
 {
-  const uint8_t *buffer = buffer_;
-  off_t bytes_written = 0;
-  uint8_t *bounce = NULL;
+	const uint8_t *buffer = buffer_;
+	off_t bytes_written = 0;
+	uint8_t *bounce = NULL;
 
-  if (inode->deny_write_cnt)
-    return 0;
+	if (inode->deny_write_cnt)
+		return 0;
 
 #ifdef FILESYS
-  off_t min_size = offset + size;
-  off_t start = bytes_to_sectors(inode->length);
-  off_t end = bytes_to_sectors(min_size);
-  if (inode->length < min_size) {
-
-      block_sector_t main_sector = inode->sector;
-      void *handle = get_sector_handle(main_sector, true);
-      struct inode_disk *data = (struct inode_disk *) get_sector_data(handle);
-
-	  off_t ptr = start;
-	  while (ptr < end) {
-		  if (!allocate_inode_sector(data, ptr))
-			  break;
-		  ptr++;
-	  }
-	  if (ptr >= end) {
-		  data->length = min_size;
-          inode->length = data->length;
-	  }
-	  else {
-		  end = ptr;
-		  ptr = start;
-		  while (ptr < end) {
-			  deallocate_inode_sector(data, ptr);
-			  ptr++;
-		  }
-          release_sector_handle(main_sector, handle, true, true);
-		  return 0;
-	  }
-
-      release_sector_handle(main_sector, handle, true, true);
-  }
+	off_t min_size = offset + size;
+	off_t start = bytes_to_sectors(inode->length);
+	off_t end = bytes_to_sectors(min_size);
+	bool file_grown = false;
+	void *main_handle = NULL;
+	struct inode_disk *data = NULL;
+	block_sector_t main_sector = inode->sector;
+	main_handle = get_sector_handle(main_sector, true);
+	data = (struct inode_disk *) get_sector_data(main_handle);
+	off_t inode_cur_length = inode->length;
+	if (inode->length < min_size) {
+		off_t ptr = start;
+		while (ptr < end) {
+			if (!allocate_inode_sector(data, ptr))
+				break;
+			ptr++;
+		}
+		if (ptr >= end) {
+			inode_cur_length = min_size;
+			file_grown = true;
+		}
+		else {
+			end = ptr;
+			ptr = start;
+			while (ptr < end) {
+				deallocate_inode_sector(data, ptr);
+				ptr++;
+			}
+			release_sector_handle(main_sector, main_handle, true, true);
+			return 0;
+		}
+	}
+	else release_sector_handle(main_sector, main_handle, true, true);
 #endif
 
-  while (size > 0) 
-    {
-      /* Sector to write, starting byte offset within sector. */
-      block_sector_t sector_idx = byte_to_sector (inode, offset);
-      int sector_ofs = offset % BLOCK_SECTOR_SIZE;
+	while (size > 0)
+	{
+		/* Sector to write, starting byte offset within sector. */
+		block_sector_t sector_idx = byte_to_sector(inode, offset, true);
+		int sector_ofs = offset % BLOCK_SECTOR_SIZE;
 
-      /* Bytes left in inode, bytes left in sector, lesser of the two. */
-      off_t inode_left = inode_length (inode) - offset;
-      int sector_left = BLOCK_SECTOR_SIZE - sector_ofs;
-      int min_left = inode_left < sector_left ? inode_left : sector_left;
+		/* Bytes left in inode, bytes left in sector, lesser of the two. */
+		off_t inode_left = inode_cur_length - offset;
+		int sector_left = BLOCK_SECTOR_SIZE - sector_ofs;
+		int min_left = inode_left < sector_left ? inode_left : sector_left;
 
-      /* Number of bytes to actually write into this sector. */
-      int chunk_size = size < min_left ? size : min_left;
-      if (chunk_size <= 0)
-        break;
+		/* Number of bytes to actually write into this sector. */
+		int chunk_size = size < min_left ? size : min_left;
+		if (chunk_size <= 0)
+			break;
 #ifdef FILESYS
-	  void *handle = get_sector_handle(sector_idx, false);
-	  bounce = (uint8_t*)get_sector_data(handle);
+		void *handle = get_sector_handle(sector_idx, false);
+		bounce = (uint8_t*)get_sector_data(handle);
 #endif
-      if (sector_ofs == 0 && chunk_size == BLOCK_SECTOR_SIZE)
-        {
+		if (sector_ofs == 0 && chunk_size == BLOCK_SECTOR_SIZE)
+		{
 #ifndef FILESYS
-          /* Write full sector directly to disk. */
-          block_write (fs_device, sector_idx, buffer + bytes_written);
+			/* Write full sector directly to disk. */
+			block_write(fs_device, sector_idx, buffer + bytes_written);
 #else
-		  memcpy(bounce, buffer + bytes_written, BLOCK_SECTOR_SIZE);
+			memcpy(bounce, buffer + bytes_written, BLOCK_SECTOR_SIZE);
 #endif
-        }
-      else 
-        {
+		}
+		else
+		{
 #ifndef FILESYS
-          /* We need a bounce buffer. */
-          if (bounce == NULL) 
-            {
-              bounce = malloc (BLOCK_SECTOR_SIZE);
-              if (bounce == NULL)
-                break;
-            }
+			/* We need a bounce buffer. */
+			if (bounce == NULL)
+			{
+				bounce = malloc(BLOCK_SECTOR_SIZE);
+				if (bounce == NULL)
+					break;
+			}
 
-          /* If the sector contains data before or after the chunk
-             we're writing, then we need to read in the sector
-             first.  Otherwise we start with a sector of all zeros. */
-          if (sector_ofs > 0 || chunk_size < sector_left) 
-            block_read (fs_device, sector_idx, bounce);
-          else
-            memset (bounce, 0, BLOCK_SECTOR_SIZE);
-          memcpy (bounce + sector_ofs, buffer + bytes_written, chunk_size);
-          block_write (fs_device, sector_idx, bounce);
+			/* If the sector contains data before or after the chunk
+			   we're writing, then we need to read in the sector
+			   first.  Otherwise we start with a sector of all zeros. */
+			if (sector_ofs > 0 || chunk_size < sector_left)
+				block_read(fs_device, sector_idx, bounce);
+			else
+				memset(bounce, 0, BLOCK_SECTOR_SIZE);
+			memcpy(bounce + sector_ofs, buffer + bytes_written, chunk_size);
+			block_write(fs_device, sector_idx, bounce);
 #else
-		  if (!(sector_ofs > 0 || chunk_size < sector_left))
-			  memset(bounce, 0, BLOCK_SECTOR_SIZE);
-		  memcpy(bounce + sector_ofs, buffer + bytes_written, chunk_size);
+			if (!(sector_ofs > 0 || chunk_size < sector_left))
+				memset(bounce, 0, BLOCK_SECTOR_SIZE);
+			memcpy(bounce + sector_ofs, buffer + bytes_written, chunk_size);
 #endif
-        }
+		}
 #ifdef FILESYS
-	  release_sector_handle(sector_idx, handle, true, false);
+		release_sector_handle(sector_idx, handle, true, false);
 #endif
 
-      /* Advance. */
-      size -= chunk_size;
-      offset += chunk_size;
-      bytes_written += chunk_size;
-    }
+		/* Advance. */
+		size -= chunk_size;
+		offset += chunk_size;
+		bytes_written += chunk_size;
+	}
 
 #ifndef FILESYS
-  free (bounce);
+	free(bounce);
+#else
+	if (file_grown) {
+		data->length = min_size;
+		inode->length = data->length;
+		release_sector_handle(main_sector, main_handle, true, true);
+	}
 #endif
 
   return bytes_written;
