@@ -33,8 +33,84 @@ https://en.wikipedia.org/wiki/Inode_pointer_structure
 >> `struct' member, global or static variable, `typedef', or
 >> enumeration.  Identify the purpose of each in 25 words or less.
 
+/* In-memory inode. */
+struct inode
+  {
+    struct list_elem elem;              /* Element in inode list. */
+    block_sector_t sector;              /* Sector number of disk location. */
+    int open_cnt;                       /* Number of openers. */
+    bool removed;                       /* True if deleted, false otherwise. */
+    int deny_write_cnt;                 /* 0: writes ok, >0: deny writes. */
+    uint32_t is_dir;                    /* True if directory. */
+    off_t length;                       /* Length of data encapsulated by inode. */
+  };
+
+
+  /* On-disk inode.
+     Must be exactly BLOCK_SECTOR_SIZE bytes long. */
+  struct inode_disk
+    {
+  	  off_t length;                           /* File size in bytes. */
+      unsigned magic;                         /* Magic number. */
+  	  uint32_t flags;							            /* Flags */
+  	  block_sector_t dir[ON_INODE_DIR_SIZE];	/* Inode sector directory. */
+    };
+
+inode ის სტრუქტურიდან წავშალეთ inode_disk ზე მიმთითებელი, ანუ
+inode ის მთავარ სექტორს ვკითხულობთ "lazy" სტილში, როდესაც დაგვჭირდება.
+ამასთანავე დავამატეთ is_dir და length პარამეტრები inode_disk იდან,
+ის მინიმუმი რაც inode მა უნდა იცოდეს თავის შესახებ ქონთენთისგან დამოუკიდებლად.
+
 >> A2: What is the maximum size of a file supported by your inode
 >> structure?  Show your work.
+
+#define ON_INODE_DIR_SIZE 125
+#define REDIRECTION_LEVEL 3
+
+inode ში ენკაპსულირებული მონაცემები შენახულია indirection ის საშუალებით.
+მთავარი სექტორში არის 125 სექტორის ნომრის შენახვის საშუალებით, შემდეგ
+სექტორებში კი 128 (512 / 4)
+
+[data sector] - sector which stores actual data
+
+    LEVEL1              LEVEL2                  ...               LEVELN
+
+                /-----> /----\              -->/----\             /----\
+                |       |----|  ---->          |----| ->          |----|   ---> [data sector]
+                |       |----|  ---->          |----| ->          |----|   ---> [data sector]
+  inode_disk    |        ....                   ....               ....
+    /-----\     |       \----/                 \----/             \----/
+    |-----|  ---/
+    |-----|  -------->  /----\              -->/----\             /----\
+    |-----|  ---\       |----|  ---->          |----| ->          |----|   ---> [data sector]
+      ...       |       |----|  ---->          |----| ->          |----|   ---> [data sector]
+    \-----/     |        ....                   ....               ....
+                |       \----/                 \----/             \----/
+                |
+                \---->  /----\              -->/----\             /----\
+                        |----|  ---->          |----| ->          |----|   ---> [data sector]
+                        |----|  ---->          |----| ->          |----|   ---> [data sector]
+                         ....                   ....               ....
+                        \----/                 \----/             \----/
+
+                       ........               .........          ........
+
+ამდაგვარად სტრუქტურა იძლევა 125 * ( 128 ** (INDIRECTION_LEVEL - 1) ) * 512
+ბაიტის შენახვის საშუალებას. INDIRECTION_LEVEL ის გაზრდით მაქსიმალური ზომაც
+ექსპონენციალურად იზრდება. 7Mb ის შესანახად საკმარისია 3ზომის გადამისამართება.
+
+N.B.
+მონაცემები ყოველთვის შენახულია სტრუქტურის ბოლო level -ში.
+INDIRECTION ცხრილების ალოკაცია ხდება საჭიროების მიხედვით.
+როდესაც გვჭირდება მე-n სექტორი ვაკეთებთ ასეთ რამეს:
+n რიცხვს წარმოვადგენთ 128 ობით სისტემაში (შევნიშნოთ
+რომ პირველ ცხრილში ეს რიცხი 125 მდე უნდა იყოს).
+
+      [0-125] [0-128] [0-128] ... [0-128]
+
+შემდეგ ხეს გადავუყვებით და ყოველ ცხრილში ვირჩევთ მომდევნო
+'ციფრის' სექტორს.      
+
 
 ---- SYNCHRONIZATION ----
 
