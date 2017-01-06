@@ -1,5 +1,5 @@
-       	       	     +-------------------------+
-		     |		CS 140	       |
+       	 +-------------------------+
+		     |		     CS 140	         |
 		     | PROJECT 4: FILE SYSTEMS |
 		     |	   DESIGN DOCUMENT     |
 		     +-------------------------+
@@ -50,10 +50,10 @@ struct inode
      Must be exactly BLOCK_SECTOR_SIZE bytes long. */
   struct inode_disk
     {
-  	  off_t length;                           /* File size in bytes. */
+      off_t length;                           /* File size in bytes. */
       unsigned magic;                         /* Magic number. */
-  	  uint32_t flags;							            /* Flags */
-  	  block_sector_t dir[ON_INODE_DIR_SIZE];	/* Inode sector directory. */
+      uint32_t flags;	                        /* Flags */
+      block_sector_t dir[ON_INODE_DIR_SIZE];	/* Inode sector directory. */
     };
 
 inode ის სტრუქტურიდან წავშალეთ inode_disk ზე მიმთითებელი, ანუ
@@ -254,6 +254,10 @@ removed ფაილის ხელახლა გახსნას ვბლ
 
 >> B6: Explain why you chose to represent the current directory of a
 >> process the way you did.
+ეს არის ყველაზე ბუნებრივი წარმოდგენა, არსებული ფუნქციონალის გამოყენებით.
+შეიძლებოდა plaintext path შენახვა pwd ში მაგრამ ამ შემთხვევაში ყოველ
+ჯერზე თავიდან გადაყოლა იქნებოდა საჭირო pwd ში 'მისასვლელად'.  dir სტრუქტურის
+შენახვა გაცილები ელეგანტური და efficient მიდგომაა.
 
 			     BUFFER CACHE
 			     ============
@@ -264,28 +268,100 @@ removed ფაილის ხელახლა გახსნას ვბლ
 >> `struct' member, global or static variable, `typedef', or
 >> enumeration.  Identify the purpose of each in 25 words or less.
 
----- ALGORITHMS ----
+სექტორ სტრუქტურა ინტახავს მე index სექტორის მონაცემებს
+data მასივში, ასევე პარამეტრებს dirty - შეცვლილია თუ არა
+წაკითხვის მომენტიდან, owner რამდენჯერ აქვს ქეშს გაცემული
+აღნიშნული სექტორი.
+sector_lock გამოიყენება write mode ში მოთხოხვნების სერიალიზაციისთვის.
+owner_lock owners ცვლადის increment/decrement ის სერიალიზაციისთვისაა.
+hash_elem სექტორის index_sectors ში შესანახად, ხოლო list_elem
+free_list ში შესანახადაა.
 
+struct sector {
+	block_sector_t index;
+	char data[BLOCK_SECTOR_SIZE];
+	bool dirty;
+	uint32_t owners;
+	struct lock sector_lock;
+	struct lock owners_lock;
+	struct hash_elem hash_elem;
+	struct list_elem list_elem;
+};
+
+ქეშის სტრუქტურა, რომელშიც რეზერვირებულია SECTOR_COUNT სექტორ სტრუქტურისთვის
+მეხსიერება. index_sector არის მეფინგი sector ის ინდექსაა და სექტორ სტრუქტურას
+შორის (თუ ის არის ქეშში იმ მომენტისთვის).
+free_list თავისუფალი სექტორ სტრუქტურების ლისტია.
+cache_lock გამოიყენება მთლიანად ქეშის კოდის რაღაც სეგმენტები სერიალიზაციისთვის.
+cache_sem  არის SECTOR_COUNT ით ინიციალიებული სემაფორა რომელიც ერთით მცირდება
+თითო ახალი სექტორის დისკიდან წამოღებისა და შენახვისას. სექტორების მასივი შეივსო,
+ახალ მოთხოვნას სექტორზე დალოდება მოუწევს სანამ რომელიმე requester არ დააბრუნებს
+სექტოზე კონტროლს ქეშში.
+
+struct cache {
+	struct sector sectors[SECTOR_COUNT];
+	struct lock cache_lock;
+	struct semaphore cache_sem;
+	struct hash index_sectors_map;
+	struct list free_list;
+};
+
+ქეშის ინტერფეისი:
+void sector_init(struct sector *sec);
+void cache_init(void);
+struct sector * take_sector(block_sector_t index, bool block); // block if in write mode
+void release_sector(struct sector *sec, block_sector_t index, bool changed, bool blocked);
+void sector_cache_flush(bool force);
+
+
+---- ALGORITHMS ----
 >> C2: Describe how your cache replacement algorithm chooses a cache
 >> block to evict.
+clock ალგორითმი გადაუყვება სექტორების მასივს და პირველივეს ამოაგდებს
+რომლის owner_count 0ია (default ად გამოუყენებელსაც 0აქვს). ასეთი
+გარანტირებულად იქნება იმიტომ რომ ევიქშენის გამოძახებამდე ხდება cache_sem
+სემაფორაზე დალოდება, რომელიც მხოლოდ მაშინ გაატარებს სრედს თუ არსებობს
+ერთი მაინც თავისუფალი სექტორი მასივში.
 
 >> C3: Describe your implementation of write-behind.
+write-behind ცალკე სრედში WRITE_BEHIND_SLEEP_TICKS პერიოდულობით
+გადაუყვება სექტორების მასივს და dirty-დ მონიშნვის შემთხვევაში ჩაწერს
+სექტორს დისკზე.
 
 >> C4: Describe your implementation of read-ahead.
+რა სტრუქტურითაც გვაქვს ფაილი შენახული, წარმოდგენა არ გავქვს ფრაგმენტაციაზე და
+შეიძლება read ahead-მა დაანელოს საერთოდ. read ahead-ის მაგვარი არის ის,
+რომ სექტორს როდესაც ვკითხულობთ, ქეშში რჩება, სანამ ფიზიკურად შესაძლებელია
+(ანუ ევიქშენი სანამ არ გადააგდებს, იმის მიუხედავად, საჭიროა, თუ არა
+და ციკლში რო ფაილი განახლდა, განახლდა თუ არა)
 
 ---- SYNCHRONIZATION ----
 
 >> C5: When one process is actively reading or writing data in a
 >> buffer cache block, how are other processes prevented from evicting
 >> that block?
+თუ პროცესი წერს/კითხულობს სექტორიდან მას ამ სექტორის ჰენდლი აქვს
+აღებული ქეშიდან. ეს ნიშნავს რომ ამ სექტორის owner_count არანულოვანია,
+რაც არ დაუშვებს ამ სექტორის ევიქშენს. ჩვენ არ ვითვალისწინებთ თუ რამდენად
+'აქტიურად' გამოიყენება სექტორი ევიქშენისას. თუ მისი ჰენდლი ვინმეს აღებული
+აქვს, ის უნდა დარჩეს ქეშში სანამ ჰენდლს არ დააბრუნებენ.
 
 >> C6: During the eviction of a block from the cache, how are other
 >> processes prevented from attempting to access the block?
+როგორც ავღნიშნე, თუ სექტორი ევიქთდება, მისი ჰენდლი არავის ხელში არაა
+შესაბამისაც ამ სახის race იც გამორიცხულია.
 
 ---- RATIONALE ----
 
 >> C7: Describe a file workload likely to benefit from buffer caching,
 >> and workloads likely to benefit from read-ahead and write-behind.
+ქეში მოგებას გვაძლევს როდესაც მცირე რაოდენობის სექტორებზე ხდება ძირითადი
+IO. ასეთ შემთხვევაში არ ხდება thrashing (excessive ევიქშენები) და IO ს
+სიჩქარე უახლოვდება RAM თან ურთიერთობის სისწრაფეს.
+write-behind სასარგებლოა სისტემის სტაბილურობისთვის, როდესაც გარანტია
+გვაქვს რომ რაღაც პერიოდულობით ცვლილებები permanent ხდება HDDზე; დენი
+თუ გამოირთო, 20წუთის წინ დასეივებული ფაილი გარანტირებულად სწორად იქნება
+შენახალი.
 
 			   SURVEY QUESTIONS
 			   ================
