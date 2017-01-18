@@ -4,19 +4,30 @@
 
 const int BUFFER_SIZE = 1024;
 
+enum http_method {
+	UNDEFINED,
+	GET,
+	POST,
+};
+
 struct range_info {
 	int start;
 	int end;
 };
 
 struct header_info {
-	bool is_post;
+	enum http_method method;
 	char *host;
 	char *etag;
 	bool keep_alive;
 	struct range_info range;
 };
 
-void proccess_request(char request[BUFFER_SIZE]);
+static void header_info_despose(struct header_info *header);
+
+void proccess_request(char *request);
 static void get_header(char *request, char *header);
-static bool is_post(char *header);
+static enum http_method is_post(char *header);
+static char *get_header_value(char *header, char *key);
+static bool keep_alive(char *header);
+static struct range_info get_range_info(char *header);

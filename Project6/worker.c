@@ -6,7 +6,11 @@ void proccess_request(char *request)
 	char header[BUFFER_SIZE];
 	get_header(request, header);
 	
-	bool post = is_post(header);
+	struct header_info parsed_header;
+	parsed_header.method = is_post(header);
+	parsed_header.host = get_header_value(header, "Host");
+	parsed_header.etag = get_header_value(header, "Etag");
+	parsed_header.keep_alive = keep_alive(header);
 }
 
 static void get_header(char *request, char *header)
@@ -23,18 +27,48 @@ static void get_header(char *request, char *header)
 	}
 }
 
-static bool is_post(char *header)
+static enum http_method is_post(char *header)
 {
 	char * token;
 	token = strtok (header, " ");
 	while (token != NULL)
 	{
 		if (!strcmp(token, "GET"))
-			return false;
+			return GET;
 		if (!strcmp(token, "POST"))
-			return true;
+			return POST;
 		token = strtok (NULL, " ");
 	}
 	
-	return false;
+	return UNDEFINED;
 }
+
+static char *get_header_value(char *header, char *key)
+{
+	char *token;
+	token = strtok(header, " \n");
+	while (token != NULL)
+	{
+		if (!strcmp(token, strcat(key, ":")))
+			return strtok(NULL, " \n");
+		token = strtok(NULL, " \n");
+	}
+	return NULL;
+}
+
+static bool keep_alive(char *header)
+{
+	char *value = get_header_value(header, "Connection");
+	if (!value || strcmp(value, "keep-alive") != 0)
+		return false;
+	
+	return true;
+}
+
+static void header_info_despose(struct header_info *header)
+{
+	free(header->host);
+	free(header->etag);
+}
+
+
