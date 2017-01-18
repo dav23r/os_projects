@@ -1,10 +1,10 @@
 #include <stdio.h>
 #include "config_service.h"
 
-char* get_config_value(char *vhost_name, char *key)
+char* get_config_value(char *vhost_name, char *key, char *configfile)
 {
 	char buff[255];
-	FILE *fp = fopen(CONFIG_PATH, "r");
+	FILE *fp = fopen(configfile, "r");
 	if (fp == NULL)
         exit(EXIT_FAILURE);
 	
