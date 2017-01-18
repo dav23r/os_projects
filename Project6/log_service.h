@@ -21,7 +21,7 @@ struct accesslog_params {
 	char *user_provided_info;
 };
 
-void log(enum log_type log_level, void *log_data, char *logfile_path);
+void log_request(enum log_type log_level, void *log_data, char *logfile_path);
 
 
 

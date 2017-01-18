@@ -1,6 +1,7 @@
+#include <stdio.h>
 #include "config_service.h"
 
-char[] get_config_value(char *vhost_name, char *key)
+char* get_config_value(char *vhost_name, char *key)
 {
 	char buff[255];
 	FILE *fp = fopen(CONFIG_PATH, "r");
@@ -8,9 +9,8 @@ char[] get_config_value(char *vhost_name, char *key)
         exit(EXIT_FAILURE);
 	
 	const char delims[2] = "-";
-	char *token;
+	char *token, *res;
 	int vhost_found = false;
-	char[] res;
 	while (1)
 	{
 		int ret = fscanf(fp,"%[^\n]", buff);
@@ -19,7 +19,7 @@ char[] get_config_value(char *vhost_name, char *key)
 		token = strtok(buff, delims);
 		if (strcmp(token, "vhost") == 0)
 		{
-			value = strtok(NULL, delims);
+			char *value = strtok(NULL, delims);
 			if (strcmp(value, vhost_name) == 0)
 				vhost_found = true;
 		}
@@ -30,6 +30,6 @@ char[] get_config_value(char *vhost_name, char *key)
 		}
 	}
 	fclose(fp);
-	if (!vhost_found) return NO_KEY_VALUE;
+	if (!vhost_found) return strdup(NO_KEY_VALUE);
 	return res;
 }
