@@ -11,6 +11,10 @@ void strings_vector_free_fn(void *elem)
 	free(*(char **)elem);
 }
 
+/*
+ * generates html page of the given directory.
+ * every entry of the directory is linken on itself for user.
+ */
 static char * generate_html(char *path, vector *entries)
 {
 	int last_allocated_size = 1024;
@@ -43,6 +47,7 @@ static char * generate_html(char *path, vector *entries)
 	return res;
 }
 
+// should be called when server starts
 char * scan_and_print_directory(char *directory_path, bool save_html_file)
 {	
 	DIR *dir = opendir (directory_path);
@@ -60,8 +65,11 @@ char * scan_and_print_directory(char *directory_path, bool save_html_file)
 	char *html = generate_html(directory_path, &root_entry_names);
 	if (save_html_file)
 	{
-		FILE *fp = fopen(strcat("/document directory pages/", directory_path), "w");
+		//here, '/document directory pages' is a directory where this kind of genarated htmls go
+		FILE *fp = fopen(strcat("/document directory pages/", strcat(directory_path, ".html")), "w");
 		fprintf(fp, html);
+		fclose(fp);
+		free(html);
 	}
 	else
 		return html;
