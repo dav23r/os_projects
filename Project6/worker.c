@@ -16,9 +16,9 @@ void proccess_request(char *request)
 static void get_header(char *request, char *header)
 {
 	int i;
-	for (i = 0; i < BUFFER_SIZE - 1; i++)
+	for (i = 0; i < BUFFER_SIZE - 3; i++)
 	{
-		if (request[i] == '\n' && request[i+1] == '\n')
+		if (request[i] == '\r' && request[i+1] == '\n' && request[i+2] == '\r' && request[i+3] == '\n')
 		{
 			request[i] = '\0';
 			break;
@@ -29,8 +29,9 @@ static void get_header(char *request, char *header)
 
 static enum http_method is_post(char *header)
 {
-	char * token;
-	token = strtok (header, " ");
+	char *initial_line, *token;
+	initial_line = strtok (header, "\r\n");
+	token = strtok (initial_line, " ");
 	while (token != NULL)
 	{
 		if (!strcmp(token, "GET"))
@@ -46,12 +47,12 @@ static enum http_method is_post(char *header)
 static char *get_header_value(char *header, char *key)
 {
 	char *token;
-	token = strtok(header, " \n");
+	token = strtok(header, " \r\n");
 	while (token != NULL)
 	{
 		if (!strcmp(token, strcat(key, ":")))
-			return strtok(NULL, " \n");
-		token = strtok(NULL, " \n");
+			return strtok(NULL, " \r\n");
+		token = strtok(NULL, " \r\n");
 	}
 	return NULL;
 }
