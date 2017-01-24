@@ -11,6 +11,7 @@ void proccess_request(char *request)
 	parsed_header.host = get_header_value(header, "Host");
 	parsed_header.etag = get_header_value(header, "Etag");
 	parsed_header.keep_alive = keep_alive(header);
+	parsed_header.range = get_header_range(header);
 }
 
 static void get_header(char *request, char *header)
@@ -64,6 +65,34 @@ static bool keep_alive(char *header)
 		return false;
 	
 	return true;
+}
+
+static struct range_info * get_header_range(char *header)
+{
+	struct range_info *res = (struct range_info *) malloc(sizeof(struct range_info));
+	char *value = get_header_value(header, "range");
+	
+	// full content requested
+	if (!value || strlen(value) == 0)
+	{
+		res->start = -1;
+		res->end = -1;
+	}
+	else
+	{
+		char *token;
+		token = strtok(value, "- ");
+		if (token && strlen(token) > 0)
+		{
+			res->start = atoi(token);
+			
+			if ((token = strtok(NULL, "- ")) != NULL && strlen(token) > 0)
+				res->end = atoi(token);
+			else
+				res->end = -1;	// i.e. by the end
+		}
+	}
+	return res;
 }
 
 static void header_info_despose(struct header_info *header)
