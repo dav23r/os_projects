@@ -35,6 +35,7 @@ static char *get_header_value(char *header, char *key);
 static bool keep_alive(char *header);
 static struct range_info get_range_info(char *header);
 static struct range_info * get_header_range(char *header);
+static char * compute_file_hash(char *full_path);
 
 
 #endif

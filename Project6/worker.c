@@ -1,4 +1,7 @@
 #include "worker.h"
+#include <sys/stat.h>
+#include <time.h>
+#include <stdio.h>
 
 
 void proccess_request(char *request)
@@ -93,6 +96,22 @@ static struct range_info * get_header_range(char *header)
 		}
 	}
 	return res;
+}
+
+static char * compute_file_hash(char *full_path)
+{
+	char res[128], tmp[12];
+	struct stat attr;
+	stat(full_path, &attr);
+	
+	sprintf(tmp, "%u_\0", (unsigned)attr.st_size);
+	strcat(res, tmp);
+	sprintf(tmp, "%ld_\0", (long)attr.st_mtime);
+	strcat(res, tmp);
+	sprintf(tmp, "%ld\0", (long)attr.st_atime);
+	strcat(res, tmp);
+	
+	return strdup(res);
 }
 
 static void header_info_despose(struct header_info *header)
