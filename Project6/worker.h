@@ -1,3 +1,6 @@
+#ifndef WORKER_H
+#define WORKER_H
+
 #include <stdlib.h>
 #include <string.h>
 #include "bool.h"
@@ -31,3 +34,7 @@ static enum http_method is_post(char *header);
 static char *get_header_value(char *header, char *key);
 static bool keep_alive(char *header);
 static struct range_info get_range_info(char *header);
+
+
+#endif
+

@@ -1,3 +1,6 @@
+#ifndef LOG_SERVICE_H
+#define LOG_SERVICE_H
+
 #include <stdlib.h>
 #include <string.h>
 #include "bool.h"
@@ -21,7 +24,7 @@ struct accesslog_params {
 	char *user_provided_info;
 };
 
-void log_request(enum log_type log_level, void *log_data, char *logfile_path);
+void log_request	(enum log_type log_level, void *log_data, char *logfile_path);
 
 
-
+#endif
