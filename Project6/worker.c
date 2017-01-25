@@ -3,11 +3,15 @@
 #include <time.h>
 #include <stdio.h>
 #include <string.h>
+#include <sys/types.h>
+#include <sys/socket.h>
 
 
-void proccess_request(char *request)
+void proccess_request(int in_fd)
 {
-	char header[BUFFER_SIZE];
+	if (in_fd < 0) return;
+	char request[BUFFER_SIZE], header[BUFFER_SIZE];
+	int bytes_recieved = recv(in_fd, request, BUFFER_SIZE, 0);
 	get_header(request, header);
 	
 	struct header_info parsed_header;
