@@ -2,6 +2,7 @@
 #include <sys/stat.h>
 #include <time.h>
 #include <stdio.h>
+#include <string.h>
 
 
 void proccess_request(char *request)
@@ -10,11 +11,12 @@ void proccess_request(char *request)
 	get_header(request, header);
 	
 	struct header_info parsed_header;
-	parsed_header.method = is_post(header);
+	parsed_header.method = get_request_method(header, &parsed_header);
 	parsed_header.host = get_header_value(header, "Host");
 	parsed_header.etag = get_header_value(header, "Etag");
 	parsed_header.keep_alive = keep_alive(header);
 	parsed_header.range = get_header_range(header);
+	
 }
 
 static void get_header(char *request, char *header)
@@ -31,21 +33,40 @@ static void get_header(char *request, char *header)
 	}
 }
 
-static enum http_method is_post(char *header)
+// returns request method, also sets request type in passed header struct
+static enum http_method get_request_method(char *header, struct header_info *header_struct)
 {
+	enum http_method ret = UNDEFINED;
+	bool method_set = false;
 	char *initial_line, *token;
 	initial_line = strtok (header, "\r\n");
 	token = strtok (initial_line, " ");
 	while (token != NULL)
 	{
-		if (!strcmp(token, "GET"))
-			return GET;
-		if (!strcmp(token, "POST"))
-			return POST;
+		if (method_set)
+		{
+			const char *ext = get_filename_extension(token);
+			if (strcmp(ext, "cgi") == 0) header_struct->cgi_or_file = CGI;
+			else header_struct->cgi_or_file = STATIC_FILE;
+			return ret;
+		}
+		else
+		{
+			if (!strcmp(token, "GET"))
+			{
+				ret = GET;
+				method_set = true;
+			}
+			if (!strcmp(token, "POST"))
+			{
+				ret = POST;
+				method_set = true;
+			}
+		}
 		token = strtok (NULL, " ");
 	}
 	
-	return UNDEFINED;
+	return ret;
 }
 
 static char *get_header_value(char *header, char *key)
@@ -112,6 +133,14 @@ static char * compute_file_hash(char *full_path)
 	strcat(res, tmp);
 	
 	return strdup(res);
+}
+
+static const char *get_filename_extension(char *file_path)
+{
+    const char *last_dot = strrchr(file_path, '.');
+    if(!last_dot || last_dot == file_path)
+		return "";
+    return last_dot + 1;
 }
 
 static void header_info_despose(struct header_info *header)

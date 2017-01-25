@@ -13,6 +13,11 @@ enum http_method {
 	POST,
 };
 
+enum request_type {
+	STATIC_FILE,
+	CGI,
+};
+
 struct range_info {
 	int start;
 	int end;
@@ -20,6 +25,7 @@ struct range_info {
 
 struct header_info {
 	enum http_method method;
+	enum request_type cgi_or_file;
 	char *host;
 	char *etag;
 	bool keep_alive;
@@ -30,12 +36,13 @@ static void header_info_despose(struct header_info *header);
 
 void proccess_request(char *request);
 static void get_header(char *request, char *header);
-static enum http_method is_post(char *header);
+static enum http_method get_request_method(char *header, struct header_info *header_struct);
 static char *get_header_value(char *header, char *key);
 static bool keep_alive(char *header);
 static struct range_info get_range_info(char *header);
 static struct range_info * get_header_range(char *header);
 static char * compute_file_hash(char *full_path);
+static const char *get_filename_extension(char *file_path);
 
 
 #endif
