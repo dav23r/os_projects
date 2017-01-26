@@ -26,6 +26,7 @@ struct range_info {
 struct header_info {
 	enum http_method method;
 	enum request_type cgi_or_file;
+	char *requested_filename; // if request type is 'static file'
 	char *host;
 	char *etag;
 	bool keep_alive;

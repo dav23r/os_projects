@@ -3,15 +3,17 @@
 #include <time.h>
 #include <stdio.h>
 #include <string.h>
+#include <sys/sendfile.h>
 #include <sys/types.h>
-#include <sys/socket.h>
+//#include <sys/socket.h>
+#include "response_builder.h"
 
 
 void proccess_request(int in_fd)
 {
 	if (in_fd < 0) return;
 	char request[BUFFER_SIZE], header[BUFFER_SIZE];
-	int bytes_recieved = recv(in_fd, request, BUFFER_SIZE, 0);
+	//int bytes_recieved = recv(in_fd, request, BUFFER_SIZE, 0);
 	get_header(request, header);
 	
 	struct header_info parsed_header;
@@ -21,9 +23,15 @@ void proccess_request(int in_fd)
 	parsed_header.keep_alive = keep_alive(header);
 	parsed_header.range = get_header_range(header);
 	
+	char response[BUFFER_SIZE];
+	
 	if (parsed_header.cgi_or_file == STATIC_FILE)
 	{
-		// SEND FILE
+		FILE *fp = fopen(parsed_header.requested_filename, "r");
+		int out_fd = fileno(fp);
+		off_t *offset = (off_t *)&parsed_header.range->start;
+		size_t count = parsed_header.range->end - parsed_header.range->start < 0 ? BUFFER_SIZE : parsed_header.range->end - parsed_header.range->start;
+		ssize_t bytes = sendfile(out_fd, in_fd, offset, count);
 	}
 	else
 	{
@@ -58,9 +66,10 @@ static enum http_method get_request_method_and_type(char *header, struct header_
 		if (method_set)
 		{
 			const char *ext = get_filename_extension(token);
-			if (strcmp(ext, "html") == 0 || strcmp(ext, "jpg") == 0 || strcmp(ext, "mp4") == 0)
+			if (strcmp(ext, "html") == 0 || strcmp(ext, "jpg") == 0 || strcmp(ext, "mp4") == 0) {
 				header_struct->cgi_or_file = STATIC_FILE;
-			else header_struct->cgi_or_file = CGI;
+				header_struct->requested_filename = token;
+			} else header_struct->cgi_or_file = CGI;
 			return ret;
 		}
 		else
@@ -112,7 +121,7 @@ static struct range_info * get_header_range(char *header)
 	// full content requested
 	if (!value || strlen(value) == 0)
 	{
-		res->start = -1;
+		res->start = 0;
 		res->end = -1;
 	}
 	else
