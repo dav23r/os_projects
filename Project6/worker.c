@@ -15,12 +15,20 @@ void proccess_request(int in_fd)
 	get_header(request, header);
 	
 	struct header_info parsed_header;
-	parsed_header.method = get_request_method(header, &parsed_header);
+	parsed_header.method = get_request_method_and_type(header, &parsed_header);
 	parsed_header.host = get_header_value(header, "Host");
 	parsed_header.etag = get_header_value(header, "Etag");
 	parsed_header.keep_alive = keep_alive(header);
 	parsed_header.range = get_header_range(header);
 	
+	if (parsed_header.cgi_or_file == STATIC_FILE)
+	{
+		// SEND FILE
+	}
+	else
+	{
+		// CGI
+	}	
 }
 
 static void get_header(char *request, char *header)
@@ -38,7 +46,7 @@ static void get_header(char *request, char *header)
 }
 
 // returns request method, also sets request type in passed header struct
-static enum http_method get_request_method(char *header, struct header_info *header_struct)
+static enum http_method get_request_method_and_type(char *header, struct header_info *header_struct)
 {
 	enum http_method ret = UNDEFINED;
 	bool method_set = false;
@@ -50,8 +58,9 @@ static enum http_method get_request_method(char *header, struct header_info *hea
 		if (method_set)
 		{
 			const char *ext = get_filename_extension(token);
-			if (strcmp(ext, "cgi") == 0) header_struct->cgi_or_file = CGI;
-			else header_struct->cgi_or_file = STATIC_FILE;
+			if (strcmp(ext, "html") == 0 || strcmp(ext, "jpg") == 0 || strcmp(ext, "mp4") == 0)
+				header_struct->cgi_or_file = STATIC_FILE;
+			else header_struct->cgi_or_file = CGI;
 			return ret;
 		}
 		else
@@ -129,11 +138,11 @@ static char * compute_file_hash(char *full_path)
 	struct stat attr;
 	stat(full_path, &attr);
 	
-	sprintf(tmp, "%u_\0", (unsigned)attr.st_size);
+	sprintf(tmp, "%u_%c", (unsigned)attr.st_size, '\0');
 	strcat(res, tmp);
-	sprintf(tmp, "%ld_\0", (long)attr.st_mtime);
+	sprintf(tmp, "%ld_%c", (long)attr.st_mtime, '\0');
 	strcat(res, tmp);
-	sprintf(tmp, "%ld\0", (long)attr.st_atime);
+	sprintf(tmp, "%ld%c", (long)attr.st_atime, '\0');
 	strcat(res, tmp);
 	
 	return strdup(res);

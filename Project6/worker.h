@@ -36,7 +36,7 @@ static void header_info_despose(struct header_info *header);
 
 void proccess_request(int in_fd);
 static void get_header(char *request, char *header);
-static enum http_method get_request_method(char *header, struct header_info *header_struct);
+static enum http_method get_request_method_and_type(char *header, struct header_info *header_struct);
 static char *get_header_value(char *header, char *key);
 static bool keep_alive(char *header);
 static struct range_info get_range_info(char *header);
