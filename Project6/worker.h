@@ -26,7 +26,8 @@ struct range_info {
 struct header_info {
 	enum http_method method;
 	enum request_type cgi_or_file;
-	char *requested_filename; // if request type is 'static file'
+	char *requested_filename; 	// if request type is 'static file'
+	char *ext;					// if request type is 'static file', file extension
 	char *host;
 	char *etag;
 	bool keep_alive;
@@ -44,6 +45,7 @@ static struct range_info get_range_info(char *header);
 static struct range_info * get_header_range(char *header);
 static char * compute_file_hash(char *full_path);
 static const char *get_filename_extension(char *file_path);
+static void detect_content_type(char *content_type, char *ext);
 
 
 #endif
