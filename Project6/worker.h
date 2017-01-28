@@ -3,6 +3,7 @@
 
 #include <stdlib.h>
 #include <string.h>
+#include <stdio.h>
 #include "bool.h"
 
 const int BUFFER_SIZE = 1024;
@@ -46,6 +47,7 @@ static struct range_info * get_header_range(char *header);
 static char * compute_file_hash(char *full_path);
 static const char *get_filename_extension(char *file_path);
 static void detect_content_type(char *content_type, char *ext);
+static long int get_file_size(FILE *stream);
 
 
 #endif

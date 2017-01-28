@@ -3,7 +3,6 @@
 #include "config_service.h"
 #include <sys/stat.h>
 #include <time.h>
-#include <stdio.h>
 #include <string.h>
 #include <sys/sendfile.h>
 #include <sys/types.h>
@@ -192,6 +191,18 @@ static void detect_content_type(char *content_type, char *ext)
 		strcpy(content_type, "video/mp4");
 	else if (strcmp(ext, "jpg") == 0)
 		strcpy(content_type, "image/jpeg");
+}
+
+static long int get_file_size(FILE *stream)
+{
+	if(!stream)  {
+		perror ("Error opening file");
+		return(-1);
+	}
+	fseek(stream, 0, SEEK_END);
+
+	long int len = ftell(stream);
+	fclose(stream);
 }
 
 static void header_info_despose(struct header_info *header)
