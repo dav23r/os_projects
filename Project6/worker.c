@@ -37,9 +37,8 @@ void proccess_request(int in_fd, char *config)
 		{
 			char count_str[12], content_type[36];
 			FILE *fp = fopen(parsed_header.requested_filename, "r");
-			int out_fd = fileno(fp);
 			off_t *offset = (off_t *)&parsed_header.range->start;
-			size_t count = parsed_header.range->end - parsed_header.range->start < 0 ? BUFFER_SIZE : parsed_header.range->end - parsed_header.range->start;
+			size_t count = parsed_header.range->end - parsed_header.range->start < 0 ? get_file_size(fp) : parsed_header.range->end - parsed_header.range->start;
 			sprintf(count_str, "%d", count);
 			detect_content_type(content_type, parsed_header.ext);
 			add_header_key_value(response, "Content-Type", content_type);
@@ -47,7 +46,9 @@ void proccess_request(int in_fd, char *config)
 			add_header_key_value(response, "Cache-Control", "max-age=5");
 			add_header_key_value(response, "etag", file_new_hash);
 			add_initial_header(response, "HTTP/1.0 200 OK", strlen(response));
+			int out_fd = fileno(fp);
 			ssize_t bytes = sendfile(out_fd, in_fd, offset, count);
+			fclose(fp);
 		}
 	}
 	else
@@ -202,7 +203,6 @@ static long int get_file_size(FILE *stream)
 	fseek(stream, 0, SEEK_END);
 
 	long int len = ftell(stream);
-	fclose(stream);
 }
 
 static void header_info_despose(struct header_info *header)
