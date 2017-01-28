@@ -15,6 +15,8 @@
    It is script's responsibility write valid things to socket.
 */
 
-bool run_cgi_script(header_info *http_header, int socket_fd, char *program_to_run);
+bool run_cgi_script(struct header_info *http_header, 
+                    int socket_fd, 
+                    char *program_to_run);
 
 #endif

@@ -1,6 +1,8 @@
 #include "cgi_runner.h"
 #include "stdio.h"
 #include "unistd.h"
+#include "stdlib.h"
+
 
 void set_up_envioroment(header_infor *http_header);
 
@@ -9,7 +11,7 @@ void set_up_envioroment(header_infor *http_header);
 #define stdin_fd 0
 #define stdout_fd 1
 #define UNREACHEBLE false
-bool run_cgi_script(header_info *http_header, 
+bool run_cgi_script(struct header_info *http_header, 
                     int socket_fd, 
                     char *program_to_run){
 
@@ -40,10 +42,20 @@ bool run_cgi_script(header_info *http_header,
     /* Parent process waits for child to terminate. */
         return (wait(NULL) == 0); // There is only one child 
     }
+
     return UNREACHEBLE;
 }
 
 /* Assigns values to variables specified by CGI protocol.
    This should happend in child process(after fork), which
    will be followed by jumping to script code block. */
-void set_up_envioroment(header_info *http_header){}
+#define do_overwrite 1
+void set_up_envioroment(header_info *http_header){
+     
+    setenv("CONTENT-LENGTH", http_header->content_length, do_overwrite);
+    setenv("CONTENT-TYPE", http_header->content_type, do_overwrite);
+    setenv("GATEWAY-INTERFACE", "CGI/1.1", do_overwrite);
+    setenv("REQUEST-METHOD", http_header->method, do_overwrite);
+    setenv("SERVER-PROTOCOL", "INCLUDED", do_overwrite);
+
+}
