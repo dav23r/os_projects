@@ -5,16 +5,16 @@
 #include <time.h>
 #include <stdio.h>
 #include <string.h>
-//#include <sys/sendfile.h>
-//#include <sys/types.h>
-//#include <sys/socket.h>
+#include <sys/sendfile.h>
+#include <sys/types.h>
+#include <sys/socket.h>
 
 
 void proccess_request(int in_fd, char *config)
 {
 	if (in_fd < 0) return;
 	char request[BUFFER_SIZE], header[BUFFER_SIZE];
-	//int bytes_recieved = recv(in_fd, request, BUFFER_SIZE, 0);
+	int bytes_recieved = recv(in_fd, request, BUFFER_SIZE, 0);
 	get_header(request, header);
 	
 	struct header_info parsed_header;
@@ -28,22 +28,28 @@ void proccess_request(int in_fd, char *config)
 	
 	if (parsed_header.cgi_or_file == STATIC_FILE)
 	{
-		char count_str[12], content_type[36];
-		FILE *fp = fopen(parsed_header.requested_filename, "r");
-		int out_fd = fileno(fp);
-		off_t *offset = (off_t *)&parsed_header.range->start;
-		size_t count = parsed_header.range->end - parsed_header.range->start < 0 ? BUFFER_SIZE : parsed_header.range->end - parsed_header.range->start;
-		sprintf(count_str, "%d", count);
-		detect_content_type(content_type, parsed_header.ext);
-		add_header_key_value(response, "Content-Type", content_type);
-		add_header_key_value(response, "Content-Length", count_str);
-		add_header_key_value(response, "Cache-Control", "max-age=5");
 		char *file_path = strcat(get_config_value(parsed_header.host, "documentroot", config), parsed_header.requested_filename);
-		if (strcmp(parsed_header.etag, compute_file_hash(file_path)) == 0)
+		char *file_new_hash = compute_file_hash(file_path);
+		if (strcmp(parsed_header.etag, file_new_hash) == 0)
+		{
 			add_initial_header(response, "HTTP/1.0 304 Not Modified", strlen(response));
+		}
 		else
+		{
+			char count_str[12], content_type[36];
+			FILE *fp = fopen(parsed_header.requested_filename, "r");
+			int out_fd = fileno(fp);
+			off_t *offset = (off_t *)&parsed_header.range->start;
+			size_t count = parsed_header.range->end - parsed_header.range->start < 0 ? BUFFER_SIZE : parsed_header.range->end - parsed_header.range->start;
+			sprintf(count_str, "%d", count);
+			detect_content_type(content_type, parsed_header.ext);
+			add_header_key_value(response, "Content-Type", content_type);
+			add_header_key_value(response, "Content-Length", count_str);
+			add_header_key_value(response, "Cache-Control", "max-age=5");
+			add_header_key_value(response, "etag", file_new_hash);
 			add_initial_header(response, "HTTP/1.0 200 OK", strlen(response));
-		//ssize_t bytes = sendfile(out_fd, in_fd, offset, count);
+			ssize_t bytes = sendfile(out_fd, in_fd, offset, count);
+		}
 	}
 	else
 	{
