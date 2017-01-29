@@ -70,6 +70,7 @@ char * scan_and_print_directory(char *directory_path, bool save_html_file)
 		fprintf(fp, html);
 		fclose(fp);
 		free(html);
+		return NULL;
 	}
 	else
 		return html;

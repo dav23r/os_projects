@@ -4,9 +4,9 @@
 #include <sys/stat.h>
 #include <time.h>
 #include <string.h>
-#include <sys/sendfile.h>
-#include <sys/types.h>
-#include <sys/socket.h>
+//#include <sys/sendfile.h>
+//#include <sys/types.h>
+//#include <sys/socket.h>
 
 
 void proccess_request(int in_fd, char *config)
@@ -14,7 +14,7 @@ void proccess_request(int in_fd, char *config)
 	if (in_fd < 0) return;
 	char request[BUFFER_SIZE], header[BUFFER_SIZE], response[BUFFER_SIZE];
 	request[0] = '\0', header[0] = '\0', response[0] = '\0';
-	int bytes_recieved = recv(in_fd, request, BUFFER_SIZE, 0);
+	//int bytes_recieved = recv(in_fd, request, BUFFER_SIZE, 0);
 	get_header(request, header);
 	
 	struct header_info parsed_header;
@@ -24,19 +24,19 @@ void proccess_request(int in_fd, char *config)
 	if ((strcmp(document_root, NO_KEY_VALUE) != 0 && strlen(document_root) > 0) ||
 		((strcmp(cgi_bin, NO_KEY_VALUE) != 0 && strlen(cgi_bin) > 0)))
 	{
-		parsed_header.method = get_request_method_and_type(header, &parsed_header);	// here also we get requested filename and extension
+		parsed_header.method = get_request_method_and_type(header, &parsed_header);	// here also we get requested filename and extension if type is 'FILE'
 		parsed_header.etag = get_header_value(header, "Etag");
 		parsed_header.keep_alive = keep_alive(header);
 		parsed_header.range = get_header_range(header);
 		
 		
-		if (parsed_header.cgi_or_file == STATIC_FILE)
+		if (parsed_header.cgi_or_file == STATIC_FILE || parsed_header.cgi_or_file == DIR)
 		{
 			if (strcmp(document_root, NO_KEY_VALUE) == 0 || strlen(document_root) == 0)
 				add_initial_header(response, "HTTP/1.0 404 Not Found", strlen(response));
 			else
 			{
-				char *file_path = strcat(document_root, parsed_header.requested_filename);
+				char *file_path = parsed_header.cgi_or_file == DIR ? get_dir_page_path(document_root, parsed_header.requested_filename) : strcat(document_root, parsed_header.requested_filename);
 				char *file_new_hash = compute_file_hash(file_path);
 				if (strcmp(parsed_header.etag, file_new_hash) == 0)
 				{
@@ -59,15 +59,14 @@ void proccess_request(int in_fd, char *config)
 						add_header_key_value(response, "etag", file_new_hash);
 						add_initial_header(response, "HTTP/1.0 200 OK", strlen(response));
 						int out_fd = fileno(fp);
-						ssize_t bytes = sendfile(out_fd, in_fd, offset, count);
+		//				ssize_t bytes = sendfile(out_fd, in_fd, offset, count);
 						fclose(fp);
 					} else add_initial_header(response, "HTTP/1.0 404 Not Found", strlen(response));
 				}
 			}
 		}
-		else
+		else // CGI
 		{
-			// CGI
 			if (strcmp(cgi_bin, NO_KEY_VALUE) == 0 || strlen(cgi_bin) == 0)
 				add_initial_header(response, "HTTP/1.0 404 Not Found", strlen(response));
 			else
@@ -110,11 +109,14 @@ static enum http_method get_request_method_and_type(char *header, struct header_
 		if (method_set)
 		{
 			const char *ext = get_filename_extension(token);
-			if (strcmp(ext, "html") == 0 || strcmp(ext, "jpg") == 0 || strcmp(ext, "mp4") == 0) {
+			if (strcmp(ext, "html") == 0 || strcmp(ext, "jpg") == 0 || strcmp(ext, "mp4") == 0)
 				header_struct->cgi_or_file = STATIC_FILE;
-				header_struct->requested_filename = token;
-				header_struct->ext = strdup(ext);
-			} else header_struct->cgi_or_file = CGI;
+			else if (strcmp(ext, "/") == 0)
+				header_struct->cgi_or_file = DIR;
+			else header_struct->cgi_or_file = CGI;
+			
+			header_struct->requested_filename = token;
+			header_struct->ext = ext;
 			return ret;
 		}
 		else
@@ -205,13 +207,21 @@ static char * compute_file_hash(char *full_path)
 
 static const char *get_filename_extension(char *file_path)
 {
-    const char *last_dot = strrchr(file_path, '.');
-    if(!last_dot || last_dot == file_path)
-		return "";
-    return last_dot + 1;
+	const char *ext;
+	if (file_path[strlen(file_path)-1] == '/')
+		ext = file_path + strlen(file_path)-1;
+	else
+	{
+		const char *last_dot = strrchr(file_path, '.');
+		if(!last_dot || last_dot == file_path)
+			return NULL;
+		else
+			ext = last_dot + 1;
+	}
+    return ext;
 }
 
-static void detect_content_type(char *content_type, char *ext)
+static void detect_content_type(char *content_type, const char *ext)
 {
 	if (strcmp(ext, "html") == 0)
 		strcpy(content_type, "text/html");
@@ -230,6 +240,18 @@ static long int get_file_size(FILE *stream)
 	fseek(stream, 0, SEEK_END);
 
 	long int len = ftell(stream);
+}
+
+static char * get_dir_page_path(char *document_root, char *dir_name)
+{
+	char *doc_root_copy = strdup(document_root);
+	char *root_html_path = strcat(doc_root_copy, stract("document directory pages/", document_root));
+	char *full_path_to_file = strcat(root_html_path, dir_name + 1);
+	
+	if (!file_exists(full_path_to_file))
+		scan_and_print_directory(full_path_to_file, true);
+
+	return full_path_to_file;
 }
 
 static void header_info_despose(struct header_info *header)
