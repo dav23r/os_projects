@@ -29,7 +29,8 @@ void proccess_request(int in_fd, char *config)
 		if ((strcmp(document_root, NO_KEY_VALUE) != 0 && strlen(document_root) > 0) ||
 			((strcmp(cgi_bin, NO_KEY_VALUE) != 0 && strlen(cgi_bin) > 0)))
 		{
-			parsed_header.method = get_request_method_and_type(header, &parsed_header);	// here also we get requested filename and extension if type is 'FILE'
+			/* here also we get requested filename and extension if type is 'FILE', or program name and content-info if CGI */
+			parsed_header.method = get_request_method_and_type(header, &parsed_header);
 			parsed_header.etag = get_header_value(header, "Etag");
 			parsed_header.keep_alive = keep_alive(header);
 			parsed_header.range = get_header_range(header);
@@ -41,7 +42,7 @@ void proccess_request(int in_fd, char *config)
 					add_initial_header(response, "HTTP/1.0 404 Not Found", strlen(response));
 				else
 				{
-					char *file_path = parsed_header.cgi_or_file == DIR ? get_dir_page_path(document_root, parsed_header.requested_filename) : strcat(document_root, parsed_header.requested_filename);
+					char *file_path = parsed_header.cgi_or_file == DIR ? get_dir_page_path(document_root, parsed_header.requested_objname) : strcat(document_root, parsed_header.requested_objname);
 					char *file_new_hash = compute_file_hash(file_path);
 					if (strcmp(parsed_header.etag, file_new_hash) == 0)
 					{
@@ -78,7 +79,7 @@ void proccess_request(int in_fd, char *config)
 					add_initial_header(response, "HTTP/1.0 404 Not Found", strlen(response));
 				else
 				{
-					// run cgi
+					run_cgi_script(parsed_header, in_fd);
 					add_initial_header(response, "HTTP/1.0 200 OK", strlen(response));
 				}
 			}
@@ -126,7 +127,7 @@ static enum http_method get_request_method_and_type(char *header, struct header_
 				header_struct->cgi_or_file = DIR;
 			else header_struct->cgi_or_file = CGI;
 			
-			header_struct->requested_filename = token;
+			header_struct->requested_objname = token;
 			header_struct->ext = ext;
 			return ret;
 		}

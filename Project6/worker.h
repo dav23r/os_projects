@@ -28,12 +28,12 @@ struct range_info {
 struct header_info {
 	enum http_method method;
 	enum request_type cgi_or_file;
-	char *requested_filename; 	// if request type is 'static file'
+	char *requested_objname; 			// if request type is 'static file'
 	const char *ext;					// if request type is 'static file', file extension
 	char *host;
 	char *etag;
 	bool keep_alive;
-    // -- Added --
+    // for cgi
     char *content_type;
     int content_length;
     //
