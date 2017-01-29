@@ -1,12 +1,14 @@
 #include "worker.h"
 #include "response_builder.h"
 #include "config_service.h"
+#include "scan_documents_directory.h"
 #include <sys/stat.h>
 #include <time.h>
 #include <string.h>
-//#include <sys/sendfile.h>
-//#include <sys/types.h>
-//#include <sys/socket.h>
+#include <sys/sendfile.h>
+#include <sys/types.h>
+#include <sys/socket.h>
+#include <unistd.h>
 
 
 void proccess_request(int in_fd, char *config)
@@ -14,7 +16,7 @@ void proccess_request(int in_fd, char *config)
 	if (in_fd < 0) return;
 	char request[BUFFER_SIZE], header[BUFFER_SIZE], response[BUFFER_SIZE];
 	request[0] = '\0', header[0] = '\0', response[0] = '\0';
-	//int bytes_recieved = recv(in_fd, request, BUFFER_SIZE, 0);
+	int bytes_recieved = recv(in_fd, request, BUFFER_SIZE, 0);
 	get_header(request, header);
 	
 	struct header_info parsed_header;
@@ -59,7 +61,7 @@ void proccess_request(int in_fd, char *config)
 						add_header_key_value(response, "etag", file_new_hash);
 						add_initial_header(response, "HTTP/1.0 200 OK", strlen(response));
 						int out_fd = fileno(fp);
-		//				ssize_t bytes = sendfile(out_fd, in_fd, offset, count);
+						ssize_t bytes = sendfile(out_fd, in_fd, offset, count);
 						fclose(fp);
 					} else add_initial_header(response, "HTTP/1.0 404 Not Found", strlen(response));
 				}
@@ -245,13 +247,18 @@ static long int get_file_size(FILE *stream)
 static char * get_dir_page_path(char *document_root, char *dir_name)
 {
 	char *doc_root_copy = strdup(document_root);
-	char *root_html_path = strcat(doc_root_copy, stract("document directory pages/", document_root));
+	char *root_html_path = strcat(doc_root_copy, strcat("document directory pages/", document_root));
 	char *full_path_to_file = strcat(root_html_path, dir_name + 1);
 	
 	if (!file_exists(full_path_to_file))
 		scan_and_print_directory(full_path_to_file, true);
 
 	return full_path_to_file;
+}
+
+static bool file_exists(char *file_path)
+{
+	return access( file_path, F_OK ) != -1;
 }
 
 static void header_info_despose(struct header_info *header)
