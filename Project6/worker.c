@@ -16,10 +16,12 @@ void proccess_request(int in_fd, char *config)
 	if (in_fd < 0) return;
 	while (true)
 	{
-		char request[BUFFER_SIZE], header[BUFFER_SIZE], response[BUFFER_SIZE];
-		request[0] = '\0', header[0] = '\0', response[0] = '\0';
+		char request[BUFFER_SIZE];
+		request[0] = '\0';
 		int bytes_recieved;
 		if ((bytes_recieved = recv(in_fd, request, BUFFER_SIZE, 0)) <= 0) break;
+		char header[BUFFER_SIZE], response[BUFFER_SIZE];
+		header[0] = '\0', response[0] = '\0';
 		get_header(request, header);
 		
 		struct header_info parsed_header;
@@ -79,8 +81,9 @@ void proccess_request(int in_fd, char *config)
 					add_initial_header(response, "HTTP/1.0 404 Not Found", strlen(response));
 				else
 				{
-					run_cgi_script(parsed_header, in_fd);
-					add_initial_header(response, "HTTP/1.0 200 OK", strlen(response));
+					parsed_header.content_type = get_header_value(header, "Content-Type");
+					parsed_header.content_length = atoi(get_header_value(header, "Content-Length"));
+					run_cgi_script(parsed_header, in_fd, response);
 				}
 			}
 		}
@@ -88,8 +91,11 @@ void proccess_request(int in_fd, char *config)
 		{
 			add_initial_header(response, "HTTP/1.0 404 Not Found", strlen(response));
 		}
-		// todo: send
-		if (parsed_header.keep_alive) set_keep_alive(in_fd);
+		
+		send(in_fd, response, strlen(response), 0);
+		bool keep_alive = parsed_header.keep_alive;
+		header_info_despose(parsed_header);
+		if (keep_alive) set_keep_alive(in_fd);
 		else break;
 	}
 }
@@ -121,6 +127,7 @@ static enum http_method get_request_method_and_type(char *header, struct header_
 		if (method_set)
 		{
 			const char *ext = get_filename_extension(token);
+			
 			if (strcmp(ext, "html") == 0 || strcmp(ext, "jpg") == 0 || strcmp(ext, "mp4") == 0)
 				header_struct->cgi_or_file = STATIC_FILE;
 			else if (strcmp(ext, "/") == 0)
@@ -290,6 +297,10 @@ static void header_info_despose(struct header_info *header)
 {
 	free(header->host);
 	free(header->etag);
+	free(header->ext);
+	free(header->requested_objname);
+	free(header->content_type);
+	free(header->range);
 }
 
 
