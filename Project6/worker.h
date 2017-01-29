@@ -6,7 +6,7 @@
 #include <stdio.h>
 #include "bool.h"
 
-const int BUFFER_SIZE = 1024;
+#define BUFFER_SIZE = 1024;
 
 enum http_method {
 	UNDEFINED,
@@ -33,6 +33,10 @@ struct header_info {
 	char *host;
 	char *etag;
 	bool keep_alive;
+    // -- Added --
+    char *content_type;
+    int content_length;
+    //
 	struct range_info *range;
 };
 
@@ -52,7 +56,6 @@ static long int get_file_size(FILE *stream);
 static char * get_dir_page_path(char *document_root, char *dir_name);
 static bool file_exists(char *file_path);
 static void set_keep_alive(int socket_fd);
-
 
 #endif
 
