@@ -7,6 +7,7 @@ void log_request(enum log_type log_level, void *log_data, char *logfile_path)
 	if (log_data == NULL) return;
 	
 	char log_str[512];
+	log_str[0] = '\0';
 	strcat(strcat(log_str, ((struct connect_time_and_ip *)log_data)->connect_time), " ");
 	strcat(strcat(log_str, ((struct connect_time_and_ip *)log_data)->Ip_address), (log_level == accesslog ? " " : ""));
 	if (log_level == accesslog)

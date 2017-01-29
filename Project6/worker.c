@@ -4,16 +4,17 @@
 #include <sys/stat.h>
 #include <time.h>
 #include <string.h>
-#include <sys/sendfile.h>
-#include <sys/types.h>
-#include <sys/socket.h>
+//#include <sys/sendfile.h>
+//#include <sys/types.h>
+//#include <sys/socket.h>
 
 
 void proccess_request(int in_fd, char *config)
 {
 	if (in_fd < 0) return;
 	char request[BUFFER_SIZE], header[BUFFER_SIZE], response[BUFFER_SIZE];
-	int bytes_recieved = recv(in_fd, request, BUFFER_SIZE, 0);
+	request[0] = '\0', header[0] = '\0', response[0] = '\0';
+	//int bytes_recieved = recv(in_fd, request, BUFFER_SIZE, 0);
 	get_header(request, header);
 	
 	struct header_info parsed_header;
@@ -51,7 +52,7 @@ void proccess_request(int in_fd, char *config)
 					add_header_key_value(response, "etag", file_new_hash);
 					add_initial_header(response, "HTTP/1.0 200 OK", strlen(response));
 					int out_fd = fileno(fp);
-					ssize_t bytes = sendfile(out_fd, in_fd, offset, count);
+				//	ssize_t bytes = sendfile(out_fd, in_fd, offset, count);
 					fclose(fp);
 				} else add_initial_header(response, "HTTP/1.0 404 Not Found", strlen(response));
 			}
@@ -173,6 +174,7 @@ static struct range_info * get_header_range(char *header)
 static char * compute_file_hash(char *full_path)
 {
 	char res[128], tmp[12];
+	res[0] = '\0', tmp[0] = '\0';
 	struct stat attr;
 	stat(full_path, &attr);
 	
