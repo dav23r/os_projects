@@ -84,6 +84,15 @@ void proccess_request(int in_fd, char *config)
 	}
 }
 
+static void set_keep_alive(int socket_fd)
+{
+	struct timeval timeout;      
+    timeout.tv_sec = 5;
+    timeout.tv_usec = 0;
+
+    setsockopt(socket_fd, SOL_SOCKET, SO_RCVTIMEO, (char *)&timeout, sizeof(timeout));
+}
+
 static void get_header(char *request, char *header)
 {
 	int i;
