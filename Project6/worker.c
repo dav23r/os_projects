@@ -68,6 +68,8 @@ void proccess_request(int in_fd, char *config)
 							fclose(fp);
 						} else add_initial_header(response, "HTTP/1.0 404 Not Found", strlen(response));
 					}
+					free(file_path);
+					free(file_new_hash);
 				}
 			}
 			else // CGI
@@ -253,9 +255,15 @@ static long int get_file_size(FILE *stream)
 
 static char * get_dir_page_path(char *document_root, char *dir_name)
 {
+	char *doc_root_copy_2 = strdup(document_root);
+	if (file_exists(strcat(doc_root_copy_2, "index.html")))
+		return doc_root_copy_2;
+	free(doc_root_copy_2);
+	
 	char *doc_root_copy = strdup(document_root);
 	char *root_html_path = strcat(doc_root_copy, strcat("document directory pages/", document_root));
 	char *full_path_to_file = strcat(root_html_path, dir_name + 1);
+	full_path_to_file = strcat(full_path_to_file, ".html");
 	
 	if (!file_exists(full_path_to_file))
 		scan_and_print_directory(full_path_to_file, true);
