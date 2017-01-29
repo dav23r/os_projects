@@ -33,6 +33,10 @@ struct header_info {
 	char *host;
 	char *etag;
 	bool keep_alive;
+    // -- Added --
+    char *content_type;
+    int content_length;
+    //
 	struct range_info *range;
 };
 

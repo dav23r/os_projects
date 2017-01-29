@@ -3,7 +3,6 @@
 #include "unistd.h"
 #include <assert.h>
 
-
 void set_up_environment(struct header_info *http_header);
 
 #define child ((pid_t) 0)
@@ -56,11 +55,10 @@ void set_up_environment(struct header_info *http_header){
      
     setenv("GATEWAY-INTERFACE", "CGI/1.1", do_overwrite);
     setenv("SERVER-PROTOCOL", "INCLUDED", do_overwrite);
+    setenv("REQUEST-METHOD", 
+          (http_header->method == GET) ? "GET" : "POST",  do_overwrite);
 
-    /*
-    setenv("CONTENT-LENGTH", http_header->content_length, do_overwrite);
-    setenv("CONTENT-TYPE", http_header->content_type, do_overwrite);
-    setenv("REQUEST-METHOD", http_header->method, do_overwrite);
-    */
+    // setenv("CONTENT-TYPE", http_header->content_type, do_overwrite);
+    // setenv("CONTENT-LENGTH", http_header->content_length, do_overwrite);
 
 }
