@@ -85,17 +85,10 @@ void proccess_request(int in_fd, char *config)
 		{
 			add_initial_header(response, "HTTP/1.0 404 Not Found", strlen(response));
 		}
-		// send
+		// todo: send
+		if (parsed_header.keep_alive) set_keep_alive(in_fd);
+		else break;
 	}
-}
-
-static void set_keep_alive(int socket_fd)
-{
-	struct timeval timeout;      
-    timeout.tv_sec = 5;
-    timeout.tv_usec = 0;
-
-    setsockopt(socket_fd, SOL_SOCKET, SO_RCVTIMEO, (char *)&timeout, sizeof(timeout));
 }
 
 static void get_header(char *request, char *header)
@@ -273,6 +266,15 @@ static char * get_dir_page_path(char *document_root, char *dir_name)
 static bool file_exists(char *file_path)
 {
 	return access( file_path, F_OK ) != -1;
+}
+
+static void set_keep_alive(int socket_fd)
+{
+	struct timeval timeout;      
+    timeout.tv_sec = 5;
+    timeout.tv_usec = 0;
+
+    setsockopt(socket_fd, SOL_SOCKET, SO_RCVTIMEO, (char *)&timeout, sizeof(timeout));
 }
 
 static void header_info_despose(struct header_info *header)
