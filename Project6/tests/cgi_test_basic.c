@@ -22,7 +22,7 @@ int main(void){
     write(sduplex[0], body, strlen(body) + 1);
 
     printf ("Script started\n");
-    assert (run_cgi_script(&hinfo, sduplex[1], "/bin/pwd"));
+    assert (run_cgi_script(&hinfo, sduplex[1], "../cgi-bin/print_environment.py"));
     printf ("Script finished, socket should contain output of script\n");
 
     char reader_buf[1024];

@@ -40,7 +40,7 @@ bool run_cgi_script(struct header_info *http_header,
     } else {
     /* Parent process waits for child to terminate. */
         // TODO: should we close the socket???
-        assert( close(socket_fd) == 0);   // Let it go..
+        // assert( close(socket_fd) == 0);   // Let it go..
         return (wait(NULL) != -1);        // There is only one child 
     }
 
