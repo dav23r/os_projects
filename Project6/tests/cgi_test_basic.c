@@ -35,7 +35,6 @@ int main(void){
     }
     printf (" --> End reading output <-- \n");
 
-    close(sduplex[0]);
-    close(sduplex[1]);
+    assert (close(sduplex[0]) == 0);
     return 0;
 }

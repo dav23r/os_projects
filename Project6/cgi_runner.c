@@ -1,6 +1,7 @@
 #include "cgi_runner.h"
 #include "sys/wait.h"
 #include "unistd.h"
+#include <assert.h>
 
 
 void set_up_environment(struct header_info *http_header);
@@ -39,7 +40,9 @@ bool run_cgi_script(struct header_info *http_header,
         return false;
     } else {
     /* Parent process waits for child to terminate. */
-        return (wait(NULL) != -1); // There is only one child 
+        // TODO: should we close the socket???
+        assert( close(socket_fd) == 0);   // Let it go..
+        return (wait(NULL) != -1);        // There is only one child 
     }
 
     return UNREACHEBLE;
@@ -51,12 +54,13 @@ bool run_cgi_script(struct header_info *http_header,
 #define do_overwrite 1
 void set_up_environment(struct header_info *http_header){
      
+    setenv("GATEWAY-INTERFACE", "CGI/1.1", do_overwrite);
+    setenv("SERVER-PROTOCOL", "INCLUDED", do_overwrite);
+
     /*
     setenv("CONTENT-LENGTH", http_header->content_length, do_overwrite);
     setenv("CONTENT-TYPE", http_header->content_type, do_overwrite);
-    setenv("GATEWAY-INTERFACE", "CGI/1.1", do_overwrite);
     setenv("REQUEST-METHOD", http_header->method, do_overwrite);
-    setenv("SERVER-PROTOCOL", "INCLUDED", do_overwrite);
     */
 
 }
