@@ -4,9 +4,9 @@
 #include <sys/stat.h>
 #include <time.h>
 #include <string.h>
-//#include <sys/sendfile.h>
-//#include <sys/types.h>
-//#include <sys/socket.h>
+#include <sys/sendfile.h>
+#include <sys/types.h>
+#include <sys/socket.h>
 
 
 void proccess_request(int in_fd, char *config)
@@ -14,13 +14,15 @@ void proccess_request(int in_fd, char *config)
 	if (in_fd < 0) return;
 	char request[BUFFER_SIZE], header[BUFFER_SIZE], response[BUFFER_SIZE];
 	request[0] = '\0', header[0] = '\0', response[0] = '\0';
-	//int bytes_recieved = recv(in_fd, request, BUFFER_SIZE, 0);
+	int bytes_recieved = recv(in_fd, request, BUFFER_SIZE, 0);
 	get_header(request, header);
 	
 	struct header_info parsed_header;
 	parsed_header.host = get_header_value(header, "Host");
 	char *document_root = get_config_value(parsed_header.host, "documentroot", config);
-	if (document_root)
+	char *cgi_bin = get_config_value(parsed_header.host, "cgi-bin", config);
+	if ((strcmp(document_root, NO_KEY_VALUE) != 0 && strlen(document_root) > 0) ||
+		((strcmp(cgi_bin, NO_KEY_VALUE) != 0 && strlen(cgi_bin) > 0)))
 	{
 		parsed_header.method = get_request_method_and_type(header, &parsed_header);	// here also we get requested filename and extension
 		parsed_header.etag = get_header_value(header, "Etag");
@@ -30,39 +32,52 @@ void proccess_request(int in_fd, char *config)
 		
 		if (parsed_header.cgi_or_file == STATIC_FILE)
 		{
-			char *file_path = strcat(document_root, parsed_header.requested_filename);
-			char *file_new_hash = compute_file_hash(file_path);
-			if (strcmp(parsed_header.etag, file_new_hash) == 0)
-			{
-				add_initial_header(response, "HTTP/1.0 304 Not Modified", strlen(response));
-			}
+			if (strcmp(document_root, NO_KEY_VALUE) == 0 || strlen(document_root) == 0)
+				add_initial_header(response, "HTTP/1.0 404 Not Found", strlen(response));
 			else
 			{
-				char count_str[12], content_type[36];
-				FILE *fp = fopen(parsed_header.requested_filename, "r");
-				if (fp)
+				char *file_path = strcat(document_root, parsed_header.requested_filename);
+				char *file_new_hash = compute_file_hash(file_path);
+				if (strcmp(parsed_header.etag, file_new_hash) == 0)
 				{
-					off_t *offset = (off_t *)&parsed_header.range->start;
-					size_t count = parsed_header.range->end - parsed_header.range->start < 0 ? get_file_size(fp) : parsed_header.range->end - parsed_header.range->start;
-					sprintf(count_str, "%d", count);
-					detect_content_type(content_type, parsed_header.ext);
-					add_header_key_value(response, "Content-Type", content_type);
-					add_header_key_value(response, "Content-Length", count_str);
-					add_header_key_value(response, "Cache-Control", "max-age=5");
-					add_header_key_value(response, "etag", file_new_hash);
-					add_initial_header(response, "HTTP/1.0 200 OK", strlen(response));
-					int out_fd = fileno(fp);
-				//	ssize_t bytes = sendfile(out_fd, in_fd, offset, count);
-					fclose(fp);
-				} else add_initial_header(response, "HTTP/1.0 404 Not Found", strlen(response));
+					add_initial_header(response, "HTTP/1.0 304 Not Modified", strlen(response));
+				}
+				else
+				{
+					char count_str[12], content_type[36];
+					count_str[0] = '\0', content_type[0] = '\0';
+					FILE *fp = fopen(file_path, "r");
+					if (fp)
+					{
+						off_t *offset = (off_t *)&parsed_header.range->start;
+						size_t count = parsed_header.range->end - parsed_header.range->start < 0 ? get_file_size(fp) : parsed_header.range->end - parsed_header.range->start;
+						sprintf(count_str, "%d", count);
+						detect_content_type(content_type, parsed_header.ext);
+						add_header_key_value(response, "Content-Type", content_type);
+						add_header_key_value(response, "Content-Length", count_str);
+						add_header_key_value(response, "Cache-Control", "max-age=5");
+						add_header_key_value(response, "etag", file_new_hash);
+						add_initial_header(response, "HTTP/1.0 200 OK", strlen(response));
+						int out_fd = fileno(fp);
+						ssize_t bytes = sendfile(out_fd, in_fd, offset, count);
+						fclose(fp);
+					} else add_initial_header(response, "HTTP/1.0 404 Not Found", strlen(response));
+				}
 			}
 		}
 		else
 		{
 			// CGI
+			if (strcmp(cgi_bin, NO_KEY_VALUE) == 0 || strlen(cgi_bin) == 0)
+				add_initial_header(response, "HTTP/1.0 404 Not Found", strlen(response));
+			else
+			{
+				// run cgi
+				add_initial_header(response, "HTTP/1.0 200 OK", strlen(response));
+			}
 		}
 	}
-	else	// i.e. host is not valid or document directory isn't provided in config file
+	else	// i.e. host is not valid or neither document and cgi-bin directories aren't provided in config file
 	{
 		add_initial_header(response, "HTTP/1.0 404 Not Found", strlen(response));
 	}
