@@ -12,49 +12,59 @@
 void proccess_request(int in_fd, char *config)
 {
 	if (in_fd < 0) return;
-	char request[BUFFER_SIZE], header[BUFFER_SIZE];
+	char request[BUFFER_SIZE], header[BUFFER_SIZE], response[BUFFER_SIZE];
 	int bytes_recieved = recv(in_fd, request, BUFFER_SIZE, 0);
 	get_header(request, header);
 	
 	struct header_info parsed_header;
-	parsed_header.method = get_request_method_and_type(header, &parsed_header);
 	parsed_header.host = get_header_value(header, "Host");
-	parsed_header.etag = get_header_value(header, "Etag");
-	parsed_header.keep_alive = keep_alive(header);
-	parsed_header.range = get_header_range(header);
-	
-	char response[BUFFER_SIZE];
-	
-	if (parsed_header.cgi_or_file == STATIC_FILE)
+	char *document_root = get_config_value(parsed_header.host, "documentroot", config);
+	if (document_root)
 	{
-		char *file_path = strcat(get_config_value(parsed_header.host, "documentroot", config), parsed_header.requested_filename);
-		char *file_new_hash = compute_file_hash(file_path);
-		if (strcmp(parsed_header.etag, file_new_hash) == 0)
+		parsed_header.method = get_request_method_and_type(header, &parsed_header);	// here also we get requested filename and extension
+		parsed_header.etag = get_header_value(header, "Etag");
+		parsed_header.keep_alive = keep_alive(header);
+		parsed_header.range = get_header_range(header);
+		
+		
+		if (parsed_header.cgi_or_file == STATIC_FILE)
 		{
-			add_initial_header(response, "HTTP/1.0 304 Not Modified", strlen(response));
+			char *file_path = strcat(document_root, parsed_header.requested_filename);
+			char *file_new_hash = compute_file_hash(file_path);
+			if (strcmp(parsed_header.etag, file_new_hash) == 0)
+			{
+				add_initial_header(response, "HTTP/1.0 304 Not Modified", strlen(response));
+			}
+			else
+			{
+				char count_str[12], content_type[36];
+				FILE *fp = fopen(parsed_header.requested_filename, "r");
+				if (fp)
+				{
+					off_t *offset = (off_t *)&parsed_header.range->start;
+					size_t count = parsed_header.range->end - parsed_header.range->start < 0 ? get_file_size(fp) : parsed_header.range->end - parsed_header.range->start;
+					sprintf(count_str, "%d", count);
+					detect_content_type(content_type, parsed_header.ext);
+					add_header_key_value(response, "Content-Type", content_type);
+					add_header_key_value(response, "Content-Length", count_str);
+					add_header_key_value(response, "Cache-Control", "max-age=5");
+					add_header_key_value(response, "etag", file_new_hash);
+					add_initial_header(response, "HTTP/1.0 200 OK", strlen(response));
+					int out_fd = fileno(fp);
+					ssize_t bytes = sendfile(out_fd, in_fd, offset, count);
+					fclose(fp);
+				} else add_initial_header(response, "HTTP/1.0 404 Not Found", strlen(response));
+			}
 		}
 		else
 		{
-			char count_str[12], content_type[36];
-			FILE *fp = fopen(parsed_header.requested_filename, "r");
-			off_t *offset = (off_t *)&parsed_header.range->start;
-			size_t count = parsed_header.range->end - parsed_header.range->start < 0 ? get_file_size(fp) : parsed_header.range->end - parsed_header.range->start;
-			sprintf(count_str, "%d", count);
-			detect_content_type(content_type, parsed_header.ext);
-			add_header_key_value(response, "Content-Type", content_type);
-			add_header_key_value(response, "Content-Length", count_str);
-			add_header_key_value(response, "Cache-Control", "max-age=5");
-			add_header_key_value(response, "etag", file_new_hash);
-			add_initial_header(response, "HTTP/1.0 200 OK", strlen(response));
-			int out_fd = fileno(fp);
-			ssize_t bytes = sendfile(out_fd, in_fd, offset, count);
-			fclose(fp);
+			// CGI
 		}
 	}
-	else
+	else	// i.e. host is not valid or document directory isn't provided in config file
 	{
-		// CGI
-	}	
+		add_initial_header(response, "HTTP/1.0 404 Not Found", strlen(response));
+	}
 }
 
 static void get_header(char *request, char *header)
