@@ -1,6 +1,32 @@
 #include <stdio.h>
 #include "log_service.h"
+#inclide "assert.h"
 
+struct accesslog_params build_log_data( struct connect_time_and_ip time_ip, char *domain, char *requested_filename,
+												int sent_status_code, int num_of_bytes_sent, char *user_provided_info);
+{
+	struct accesslog_params *this = (struct accesslog_params *) malloc(sizeof(struct accesslog_params));
+	assert(this);
+	
+	this->time_ip = time_ip;
+	this->domain = domain;
+	this->requested_filename = requested_filename;
+	this->sent_status_code = sent_status_code;
+	this->num_of_bytes_sent = num_of_bytes_sent;
+	this->user_provided_info = user_provided_info;
+	
+	return this;
+}
+
+struct accesslog_params build_error_log(struct connect_time_and_ip time_and_ip_log, char *error_msg)
+{
+	struct accesslog_params *this = (struct accesslog_params *) malloc(sizeof(struct accesslog_params));
+	assert(this);
+	
+	this->time_ip = time_ip;
+	this.error_msg = error_msg;
+	return this;
+}
 
 void log_request(enum log_type log_level, void *log_data, char *logfile_path)
 {
@@ -9,8 +35,8 @@ void log_request(enum log_type log_level, void *log_data, char *logfile_path)
 	char log_str[512];
 	log_str[0] = '\0';
 	strcat(strcat(log_str, ((struct connect_time_and_ip *)log_data)->connect_time), " ");
-	strcat(strcat(log_str, ((struct connect_time_and_ip *)log_data)->Ip_address), (log_level == accesslog ? " " : ""));
-	if (log_level == accesslog)
+	strcat(strcat(log_str, ((struct connect_time_and_ip *)log_data)->Ip_address), (log_level == ACCESSLOG ? " " : ""));
+	if (log_level == ACCESSLOG)
 	{
 		struct accesslog_params *params = ((struct accesslog_params *)log_data);
 		char tmp[4];
@@ -18,7 +44,7 @@ void log_request(enum log_type log_level, void *log_data, char *logfile_path)
 		strcat(strcat(log_str, itoa(params->sent_status_code, tmp, 10)), " ");
 		strcat(strcat(log_str, itoa(params->num_of_bytes_sent, tmp, 10)), " ");
 		strcat(log_str, params->user_provided_info);
-	}
+	} else strcat(log_str, params->error_msg);
 	
 	FILE *fp = fopen(logfile_path, "a");
 	if (fp == NULL)
@@ -26,4 +52,18 @@ void log_request(enum log_type log_level, void *log_data, char *logfile_path)
 	
 	fprintf(fp, strcat(log_str, "\n"));
 	fclose(fp);
+}
+
+void log_struct_dispose(enum log_type log_level, void *log_data)
+{
+	if (log_data == NULL) return;
+	
+	free((struct connect_time_and_ip *)log_data)->connect_time);
+	free((struct connect_time_and_ip *)log_data)->Ip_address);
+	if (log_level == ACCESSLOG)
+	{
+		free((struct accesslog_params *)log_data->domain);
+		free((struct accesslog_params *)log_data->requested_filename);
+		free((struct accesslog_params *)log_data->user_provided_info);
+	} else free((struct accesslog_params *)log_data->error_msg);
 }

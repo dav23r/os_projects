@@ -21,6 +21,7 @@ struct config {
 void save_config(char *configfile, hashset *map);
 
 char* get_config_value(char *vhost_name, char *key, hashset *map);
+struct config *get_config_block(char *vhost_name, hashset *map);
 
 static void config_add_value(struct config *conf, char *key, char *value);
 static char * config_get_value(struct config *conf, char *key);

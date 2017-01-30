@@ -3,6 +3,7 @@
 #include "config_service.h"
 #include "cgi_runner.h"
 #include "scan_documents_directory.h"
+#include "log_service.h"
 #include <sys/stat.h>
 #include <time.h>
 #include <string.h>
@@ -19,16 +20,21 @@ void proccess_request(int in_fd, hashset *config)
 	{
 		char request[BUFFER_SIZE];
 		request[0] = '\0';
-		int bytes_recieved;
+		int bytes_recieved, status_code_sent, sent_content_len;
 		if ((bytes_recieved = recv(in_fd, request, BUFFER_SIZE, 0)) <= 0) break;
+		struct connect_time_and_ip time_and_ip_log;
+		time_and_ip_log.connect_time = get_formatted_datetime();
 		char header[BUFFER_SIZE], response[BUFFER_SIZE];
 		header[0] = '\0', response[0] = '\0';
 		get_header(request, header);
 		
 		struct header_info parsed_header;
 		parsed_header.host = get_header_value(header, "Host");
+		time_and_ip_log.Ip_address = get_config_value(parsed_header.host, "ip", config);
 		char *document_root = get_config_value(parsed_header.host, "documentroot", config);
-		char *cgi_bin = get_config_value(parsed_header.host, "cgi-bin", config);
+		char *cgi_bin = get_config_value(parsed_header.host, "cgi-bin", config), *error_msg = NULL;
+		bool error_occured;
+		enum log_type log_level = ACCESSLOG;
 		if ((strcmp(document_root, NO_KEY_VALUE) != 0 && strlen(document_root) > 0) ||
 			((strcmp(cgi_bin, NO_KEY_VALUE) != 0 && strlen(cgi_bin) > 0)))
 		{
@@ -42,7 +48,10 @@ void proccess_request(int in_fd, hashset *config)
 			if (parsed_header.cgi_or_file == STATIC_FILE || parsed_header.cgi_or_file == DIR)
 			{
 				if (strcmp(document_root, NO_KEY_VALUE) == 0 || strlen(document_root) == 0)
+				{
 					add_initial_header(response, "HTTP/1.0 404 Not Found", strlen(response));
+					status_code_sent = 404;
+				}
 				else
 				{
 					char *file_path = parsed_header.cgi_or_file == DIR ? get_dir_page_path(document_root, parsed_header.requested_objname) : strcat(document_root, parsed_header.requested_objname);
@@ -50,6 +59,7 @@ void proccess_request(int in_fd, hashset *config)
 					if (strcmp(parsed_header.etag, file_new_hash) == 0)
 					{
 						add_initial_header(response, "HTTP/1.0 304 Not Modified", strlen(response));
+						status_code_sent = 304;
 					}
 					else
 					{
@@ -59,18 +69,22 @@ void proccess_request(int in_fd, hashset *config)
 						if (fp)
 						{
 							off_t *offset = (off_t *)&parsed_header.range->start;
-							size_t count = parsed_header.range->end - parsed_header.range->start < 0 ? get_file_size(fp) : parsed_header.range->end - parsed_header.range->start;
-							sprintf(count_str, "%ld", count);
+							sent_content_len = parsed_header.range->end - parsed_header.range->start < 0 ? get_file_size(fp) : parsed_header.range->end - parsed_header.range->start;
+							sprintf(count_str, "%ld", sent_content_len);
 							detect_content_type(content_type, parsed_header.ext);
 							add_header_key_value(response, "Content-Type", content_type);
 							add_header_key_value(response, "Content-Length", count_str);
 							add_header_key_value(response, "Cache-Control", "max-age=5");
 							add_header_key_value(response, "etag", file_new_hash);
 							add_initial_header(response, "HTTP/1.0 200 OK", strlen(response));
+							status_code_sent = 200;
 							int out_fd = fileno(fp);
 							ssize_t bytes = sendfile(out_fd, in_fd, offset, count);
 							fclose(fp);
-						} else add_initial_header(response, "HTTP/1.0 404 Not Found", strlen(response));
+						} else {
+							add_initial_header(response, "HTTP/1.0 404 Not Found", strlen(response));
+							status_code_sent = 404;
+						}
 					}
 					free(file_path);
 					free(file_new_hash);
@@ -79,23 +93,32 @@ void proccess_request(int in_fd, hashset *config)
 			else // CGI
 			{
 				if (strcmp(cgi_bin, NO_KEY_VALUE) == 0 || strlen(cgi_bin) == 0)
+				{
 					add_initial_header(response, "HTTP/1.0 404 Not Found", strlen(response));
+					status_code_sent = 404;
+				}
 				else
 				{
 					parsed_header.content_type = get_header_value(header, "Content-Type");
 					parsed_header.content_length = get_header_value(header, "Content-Length");
 					parsed_header.requested_objname = strcat(cgi_bin, parsed_header.requested_objname + 1); // +1 not to have two slashes (//)
-					run_cgi_script(&parsed_header, in_fd, config);
+					run_cgi_script(&parsed_header, in_fd, get_config_block(parsed_header.host, config));
 				}
 			}
 		}
 		else	// i.e. host is not valid or neither document and cgi-bin directories aren't provided in config file
 		{
 			add_initial_header(response, "HTTP/1.0 404 Not Found", strlen(response));
+			status_code_sent = 404;
 		}
 		
 		if (strlen(response) == 0) // i.e. response is sent from cgi
 			send(in_fd, response, strlen(response), 0);
+		struct accesslog_params log;
+		if (!error_occured) log = build_log_data(time_and_ip_log, parsed_header.host, parsed_header.requested_objname, status_code_sent, sent_content_len, get_header_value(header, "User-Agent"));
+		else log = build_error_log(time_and_ip_log, error_msg);
+		log_request(log_level, log, get_config_value(parsed_header.host, "log", config));
+		log_struct_dispose(log_level, log);
 		bool keep_alive = parsed_header.keep_alive;
 		header_info_dispose(&parsed_header);
 		if (keep_alive) set_keep_alive(in_fd);
@@ -294,6 +317,16 @@ static void set_keep_alive(int socket_fd)
     timeout.tv_usec = 0;
 
     setsockopt(socket_fd, SOL_SOCKET, SO_RCVTIMEO, (char *)&timeout, sizeof(timeout));
+}
+
+static char * get_formatted_datetime()
+{
+	time_t rawtime;
+	struct tm * timeinfo;
+
+	time ( &rawtime );
+	timeinfo = localtime ( &rawtime );
+	return strdup("Current local time and date: %s", asctime (timeinfo));
 }
 
 static void header_info_dispose(struct header_info *header)

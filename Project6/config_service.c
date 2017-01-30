@@ -9,6 +9,8 @@ char* get_config_value(char *vhost_name, char *key, hashset *map)
 	return config_get_value(conf, key);
 }
 
+struct config *get_config_block(char *vhost_name, hashset *map) { return HashSetLookup(map, vhost_name); }
+
 void save_config(char *configfile, hashset *map)
 {
 	char buff[255];
@@ -57,15 +59,15 @@ static void config_add_value(struct config *conf, char *key, char *value)
 static char * config_get_value(struct config *conf, char *key)
 {
 	if (strcmp(key, "documentroot") == 0)
-		return conf->document_root;
+		return strdup(conf->document_root);
 	else if (strcmp(key, "cgi-bin") == 0)
-		return conf->cgi_bin;
+		return strdup(conf->cgi_bin);
 	else if (strcmp(key, "ip") == 0)
-		return conf->ip;
+		return strdup(conf->ip);
 	else if (strcmp(key, "port") == 0)
-		return conf->port;
+		return strdup(conf->port);
 	else if (strcmp(key, "log") == 0)
-		return conf->log;
+		return strdup(conf->log);
 }
 
 
