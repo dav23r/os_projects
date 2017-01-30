@@ -23,11 +23,11 @@ void work(char *config)
 	while (true) {
 		//daucdis sanam ar mova rame
 		epoll_wait(kepoll_fd, event, 1, -1);
-		Data dat = (Data *)event->data.ptr;
+		Data *dat = (Data *)event->data.ptr;
 		if(event->events & EPOLLIN) {
 			proccess_request(dat->fd, config);
 		}
-		epoll_ctl(epoll_fd, EPOLL_CTL_MOD, dat->fd, event);	
+		epoll_ctl(epoll_fd, EPOLL_CTL_DEL, dat->fd, event);	
 	}
 }	
 
