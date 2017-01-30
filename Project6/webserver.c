@@ -3,6 +3,17 @@
 #include <netdb.h>
 #include <netinet/in.h>
 #include <string.h>
+#include <sys/epoll.h>
+#include <errno.h>
+
+int epoll_fd;
+//possible struct for saving information in epoll
+typedef struct {
+    int fd;
+    int otherThing;
+} Data;
+
+
 
 int main(int argc, const char* argv[]){
   //https://www.tutorialspoint.com/unix_sockets/socket_server_example.htm
@@ -10,6 +21,12 @@ int main(int argc, const char* argv[]){
   char buffer[256];
   struct sockaddr_in serv_addr, cli_addr;
   int  n;
+  //creation of epoll
+  if((epoll_fd = epoll_create1(0)) == -1) {
+    perror("epoll_create");
+    exit(EXIT_FAILURE);
+  }
+
 
   /* First call to socket() function */
   sockfd = socket(AF_INET, SOCK_STREAM, 0);
@@ -25,10 +42,14 @@ int main(int argc, const char* argv[]){
   portno = 5001;
 
   serv_addr.sin_family = AF_INET;
-  //TODO replace with real IP
-  inet_aton("63.161.169.137", &serv_add.sin_addr.s_addr);
-  serv_addr.sin_port = htons(portno);
 
+  serv_add.sin_addr.s_addr = htonl(INADDR_ANY);
+  serv_addr.sin_port = htons(portno);
+  int val = 1;
+  if (setsockopt(sockfd, SOL_SOCKET, SO_REUSEADDR, &val, sizeof(val))<0){
+    perror("ERROR on setting socket options");
+    exit(1);
+  }
   /* Now bind the host address using bind() call.*/
   if (bind(sockfd, (struct sockaddr *) &serv_addr, sizeof(serv_addr)) < 0) {
     perror("ERROR on binding");
@@ -50,25 +71,20 @@ int main(int argc, const char* argv[]){
     perror("ERROR on accept");
     exit(1);
   }
-
-  /* If connection is established then start communicating */
-  memset(buffer,0,256);
-  n = read( newsockfd,buffer,255 );
-
-  if (n < 0) {
-    perror("ERROR reading from socket");
-    exit(1);
+  struct epoll_event event;
+  // event.data.ptr how you attach some persistent data to a fd in epoll
+  if((event.data.ptr = malloc(sizeof(Data))) == NULL) {
+    perror("malloc");
+    exit(EXIT_FAILURE);
+  }
+  event.events = EPOLLIN | EPOLLLT | EPOLLONESHOT;
+  //fd-s damateba epoll-is siashi
+  if((epoll_ctl(epoll_fd, EPOLL_CTL_ADD, newsockfd, &event)) == -1) {
+    perror("epoll_create");
+    exit(EXIT_FAILURE);
   }
 
-  printf("Here is the message: %s\n",buffer);
 
-  /* Write a response to the client */
-  n = write(newsockfd,"I got your message",18);
-
-  if (n < 0) {
-    perror("ERROR writing to socket");
-    exit(1);
-  }
 
   return 0;
 
