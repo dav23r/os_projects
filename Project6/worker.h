@@ -33,10 +33,12 @@ struct header_info {
 	char *host;
 	char *etag;
 	bool keep_alive;
-    // for cgi
+    /* for cgi */
     char *content_type;
     char *content_length;
-    //
+    char *path_info;
+    char *query_string;
+    /***********/
 	struct range_info *range;
 };
 

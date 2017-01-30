@@ -15,7 +15,8 @@ struct config {
 	char *log;
 };
 
-const char NO_KEY_VALUE[] = "no_key_value";
+// const char NO_KEY_VALUE[] = "no_key_value";
+#define NO_KEY_VALUE "no_key_value"
 
 void save_config(char *configfile, hashset *map);
 
