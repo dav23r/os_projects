@@ -1,6 +1,7 @@
 #include "worker.h"
 #include "response_builder.h"
 #include "config_service.h"
+#include "cgi_runner.h"
 #include "scan_documents_directory.h"
 #include <sys/stat.h>
 #include <time.h>
@@ -59,7 +60,7 @@ void proccess_request(int in_fd, char *config)
 						{
 							off_t *offset = (off_t *)&parsed_header.range->start;
 							size_t count = parsed_header.range->end - parsed_header.range->start < 0 ? get_file_size(fp) : parsed_header.range->end - parsed_header.range->start;
-							sprintf(count_str, "%d", count);
+							sprintf(count_str, "%ld", count);
 							detect_content_type(content_type, parsed_header.ext);
 							add_header_key_value(response, "Content-Type", content_type);
 							add_header_key_value(response, "Content-Length", count_str);
@@ -83,7 +84,7 @@ void proccess_request(int in_fd, char *config)
 				{
 					parsed_header.content_type = get_header_value(header, "Content-Type");
 					parsed_header.content_length = atoi(get_header_value(header, "Content-Length"));
-					run_cgi_script(parsed_header, in_fd, response);
+					run_cgi_script(&parsed_header, in_fd);
 				}
 			}
 		}
@@ -94,7 +95,7 @@ void proccess_request(int in_fd, char *config)
 		
 		send(in_fd, response, strlen(response), 0);
 		bool keep_alive = parsed_header.keep_alive;
-		header_info_despose(parsed_header);
+		header_info_dispose(&parsed_header);
 		if (keep_alive) set_keep_alive(in_fd);
 		else break;
 	}
@@ -126,7 +127,7 @@ static enum http_method get_request_method_and_type(char *header, struct header_
 	{
 		if (method_set)
 		{
-			const char *ext = get_filename_extension(token);
+			char *ext = get_filename_extension(token);
 			
 			if (strcmp(ext, "html") == 0 || strcmp(ext, "jpg") == 0 || strcmp(ext, "mp4") == 0)
 				header_struct->cgi_or_file = STATIC_FILE;
@@ -224,7 +225,7 @@ static char * compute_file_hash(char *full_path)
 	return strdup(res);
 }
 
-static const char *get_filename_extension(char *file_path)
+static char *get_filename_extension(char *file_path)
 {
 	const char *ext;
 	if (file_path[strlen(file_path)-1] == '/')
@@ -237,7 +238,7 @@ static const char *get_filename_extension(char *file_path)
 		else
 			ext = last_dot + 1;
 	}
-    return ext;
+    return (char *)ext;
 }
 
 static void detect_content_type(char *content_type, const char *ext)
@@ -293,7 +294,7 @@ static void set_keep_alive(int socket_fd)
     setsockopt(socket_fd, SOL_SOCKET, SO_RCVTIMEO, (char *)&timeout, sizeof(timeout));
 }
 
-static void header_info_despose(struct header_info *header)
+static void header_info_dispose(struct header_info *header)
 {
 	free(header->host);
 	free(header->etag);
