@@ -83,7 +83,7 @@ void proccess_request(int in_fd, char *config)
 				else
 				{
 					parsed_header.content_type = get_header_value(header, "Content-Type");
-					parsed_header.content_length = atoi(get_header_value(header, "Content-Length"));
+					parsed_header.content_length = get_header_value(header, "Content-Length");
 					run_cgi_script(&parsed_header, in_fd);
 				}
 			}
@@ -93,7 +93,8 @@ void proccess_request(int in_fd, char *config)
 			add_initial_header(response, "HTTP/1.0 404 Not Found", strlen(response));
 		}
 		
-		send(in_fd, response, strlen(response), 0);
+		if (strlen(response) == 0) // i.e. response is sent from cgi
+			send(in_fd, response, strlen(response), 0);
 		bool keep_alive = parsed_header.keep_alive;
 		header_info_dispose(&parsed_header);
 		if (keep_alive) set_keep_alive(in_fd);
@@ -104,9 +105,9 @@ void proccess_request(int in_fd, char *config)
 static void get_header(char *request, char *header)
 {
 	int i;
-	for (i = 0; i < BUFFER_SIZE - 3; i++)
+	for (i = 0; i < BUFFER_SIZE - 1; i++)
 	{
-		if (request[i] == '\r' && request[i+1] == '\n' && request[i+2] == '\r' && request[i+3] == '\n')
+		if (request[i] == '\n' && request[i+1] == '\n')
 		{
 			request[i] = '\0';
 			break;
@@ -121,7 +122,7 @@ static enum http_method get_request_method_and_type(char *header, struct header_
 	enum http_method ret = UNDEFINED;
 	bool method_set = false;
 	char *initial_line, *token;
-	initial_line = strtok (header, "\r\n");
+	initial_line = strtok (header, "\n");
 	token = strtok (initial_line, " ");
 	while (token != NULL)
 	{
@@ -161,12 +162,12 @@ static enum http_method get_request_method_and_type(char *header, struct header_
 static char *get_header_value(char *header, char *key)
 {
 	char *token;
-	token = strtok(header, " \r\n");
+	token = strtok(header, " \n");
 	while (token != NULL)
 	{
 		if (!strcmp(token, strcat(key, ":")))
-			return strtok(NULL, " \r\n");
-		token = strtok(NULL, " \r\n");
+			return strtok(NULL, " \n");
+		token = strtok(NULL, " \n");
 	}
 	return NULL;
 }
