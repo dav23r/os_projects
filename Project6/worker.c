@@ -5,6 +5,7 @@
 #include "scan_documents_directory.h"
 #include "log_service.h"
 #include <sys/stat.h>
+#include "webserver.h"
 #include <time.h>
 #include <string.h>
 #include <sys/sendfile.h>
@@ -22,7 +23,7 @@ void work(char *config)
 	
 	while (true) {
 		//daucdis sanam ar mova rame
-		epoll_wait(kepoll_fd, event, 1, -1);
+		epoll_wait(epoll_fd, event, 1, -1);
 		Data *dat = (Data *)event->data.ptr;
 		if(event->events & EPOLLIN) {
 			proccess_request(dat->fd, config);

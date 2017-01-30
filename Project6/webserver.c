@@ -6,13 +6,7 @@
 #include <sys/epoll.h>
 #include <errno.h>
 #include "config_service.h"
-
-int epoll_fd;
-//possible struct for saving information in epoll
-typedef struct {
-    int fd;
-    int otherThing;
-} Data;
+#include "webserver.h"
 
 
 
