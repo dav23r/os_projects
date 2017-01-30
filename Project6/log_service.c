@@ -20,7 +20,7 @@ void log_request(enum log_type log_level, void *log_data, char *logfile_path)
 		strcat(log_str, params->user_provided_info);
 	}
 	
-	FILE *fp = fopen(logfile_path, "w+");
+	FILE *fp = fopen(logfile_path, "a");
 	if (fp == NULL)
 		exit(EXIT_FAILURE);
 	

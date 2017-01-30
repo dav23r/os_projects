@@ -20,7 +20,7 @@ int main(int argc, const char* argv[]){
   if (argc < 1) on_error("config file not provided");
   hashset map;
   save_config(argv[0], &map);
-  
+
   //https://www.tutorialspoint.com/unix_sockets/socket_server_example.htm
   int sockfd, newsockfd, portno, clilen;
   char buffer[256];
