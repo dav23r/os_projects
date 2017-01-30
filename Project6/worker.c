@@ -85,7 +85,7 @@ void proccess_request(int in_fd, hashset *config)
 					parsed_header.content_type = get_header_value(header, "Content-Type");
 					parsed_header.content_length = get_header_value(header, "Content-Length");
 					parsed_header.requested_objname = strcat(cgi_bin, parsed_header.requested_objname + 1); // +1 not to have two slashes (//)
-					run_cgi_script(&parsed_header, in_fd);
+					run_cgi_script(&parsed_header, in_fd, config);
 				}
 			}
 		}

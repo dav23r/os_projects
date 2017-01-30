@@ -13,7 +13,7 @@ void set_up_environment(struct header_info *http_header);
 #define cgi_bin_path "./cgi_bin/"
 
 bool run_cgi_script(struct header_info *http_header, 
-                    int socket_fd){
+                    int socket_fd, hashset *config){
 
     char program_to_run[strlen(cgi_bin_path) + 
                         strlen(http_header->requested_objname) + 1];
