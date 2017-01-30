@@ -142,7 +142,6 @@ static void proccess_request(int in_fd, hashset *config)
 		bool keep_alive = parsed_header.keep_alive;
 		header_info_dispose(&parsed_header);
 		if (keep_alive) set_keep_alive(in_fd);
-		else break;
 	}
 }
 
