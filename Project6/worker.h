@@ -35,7 +35,7 @@ struct header_info {
 	bool keep_alive;
     // for cgi
     char *content_type;
-    int content_length;
+    char *content_length;
     //
 	struct range_info *range;
 };

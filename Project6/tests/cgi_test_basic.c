@@ -19,6 +19,10 @@ int main(void){
 
     struct header_info hinfo;
     hinfo.requested_objname = strdup("static_cgi.py");
+    hinfo.method = GET;
+    hinfo.content_type = "media/jpg";
+    hinfo.content_length = "122";
+
     char body[] = "Http body";
     write(sduplex[0], body, strlen(body) + 1);
 

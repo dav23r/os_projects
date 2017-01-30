@@ -40,15 +40,13 @@ bool run_cgi_script(struct header_info *http_header,
         /* Point both of them to the resourse socket_fd points to. */
         dup2(socket_fd, stdout_fd);
         dup2(socket_fd, stdin_fd);
-        set_up_environment(http_header);
+        //set_up_environment(http_header);
         execl(program_to_run, "cgi-script",  NULL);
         /* Later code will be executed only in case of error ocuring. */
         perror ("Error in child process!");
         return false;
     } else {
     /* Parent process waits for child to terminate. */
-        // TODO: should we close the socket???
-        // assert( close(socket_fd) == 0);   // Let it go..
         return (wait(NULL) != -1);        // There is only one child 
     }
 
@@ -63,10 +61,11 @@ void set_up_environment(struct header_info *http_header){
      
     setenv("GATEWAY-INTERFACE", "CGI/1.1", do_overwrite);
     setenv("SERVER-PROTOCOL", "INCLUDED", do_overwrite);
+
     setenv("REQUEST-METHOD", 
           (http_header->method == GET) ? "GET" : "POST",  do_overwrite);
 
-    // setenv("CONTENT-TYPE", http_header->content_type, do_overwrite);
-    // setenv("CONTENT-LENGTH", http_header->content_length, do_overwrite);
+    setenv("CONTENT-TYPE", http_header->content_type, do_overwrite);
+    setenv("CONTENT-LENGTH", http_header->content_length, do_overwrite);
 
 }
