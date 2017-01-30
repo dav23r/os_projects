@@ -13,7 +13,25 @@
 #include <unistd.h>
 
 
-void proccess_request(int in_fd, hashset *config)
+void work(char *config)
+{
+	// A single event we use as scratch space
+	struct epoll_event event;
+	//ertze meti arasodes gvinda rom amovighot, ert threads erti descriptor
+	event = calloc(1, sizeof(struct epoll_event));
+	
+	while (true) {
+		//daucdis sanam ar mova rame
+		epoll_wait(kepoll_fd, event, 1, -1);
+		Data dat = (Data *)event->data.ptr;
+		if(event->events & EPOLLIN) {
+			proccess_request(dat->fd, config);
+		}
+		epoll_ctl(epoll_fd, EPOLL_CTL_MOD, dat->fd, event);	
+	}
+}	
+
+static void proccess_request(int in_fd, hashset *config)
 {
 	if (in_fd < 0) return;
 	while (true)

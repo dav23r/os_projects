@@ -44,9 +44,10 @@ struct header_info {
 
 
 /* Public interface. */
-void proccess_request(int in_fd, char *config);
+void work(char *config);
 
 /* Static functions used withing 'worker.c'. */
+static void proccess_request(int in_fd, char *config);
 static void header_info_dispose(struct header_info *header);
 static void get_header(char *request, char *header);
 static enum http_method get_request_method_and_type(char *header, struct header_info *header_struct);
