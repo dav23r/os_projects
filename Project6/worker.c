@@ -88,15 +88,21 @@ static void proccess_request(int in_fd, hashset *config)
 						if (fp)
 						{
 							off_t *offset = (off_t *)&parsed_header.range->start;
-							sent_content_len = parsed_header.range->end - parsed_header.range->start < 0 ? get_file_size(fp) : parsed_header.range->end - parsed_header.range->start;
+							int file_size = get_file_size(fp);
+							sent_content_len = parsed_header.range->end - parsed_header.range->start < 0 ? file_size : parsed_header.range->end - parsed_header.range->start;
+							status_code_sent = parsed_header.range->end - parsed_header.range->start < 0 ? 200 : 206;
 							sprintf(count_str, "%ld", sent_content_len);
 							detect_content_type(content_type, parsed_header.ext);
 							add_header_key_value(response, "Content-Type", content_type);
 							add_header_key_value(response, "Content-Length", count_str);
+							if (status_code_sent == 206) {
+								add_header_key_value(response, "Accept-Ranges", "bytes");
+								add_header_key_value(response, "Content-Range", strcat(strcat(strcat(strcat(strcat("bytes ", parsed_header.range->start), "-"), parsed_header.range->end), "/"), file_size));
+							}
 							add_header_key_value(response, "Cache-Control", "max-age=5");
 							add_header_key_value(response, "etag", file_new_hash);
-							add_initial_header(response, "HTTP/1.0 200 OK", strlen(response));
-							status_code_sent = 200;
+							if (status_code_sent == 200) add_initial_header(response, "HTTP/1.0 200 OK", strlen(response));
+							else add_initial_header(response, "HTTP/1.0 206 Partial Content", strlen(response));
 							int out_fd = fileno(fp);
 							ssize_t bytes = sendfile(out_fd, in_fd, offset, count);
 							fclose(fp);
