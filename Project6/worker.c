@@ -12,7 +12,7 @@
 #include <unistd.h>
 
 
-void proccess_request(int in_fd, char *config)
+void proccess_request(int in_fd, hashset *config)
 {
 	if (in_fd < 0) return;
 	while (true)
