@@ -16,7 +16,6 @@
 */
 
 bool run_cgi_script(struct header_info *http_header, 
-                    int socket_fd, 
-                    char *program_to_run);
+                    int socket_fd);
 
 #endif

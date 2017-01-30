@@ -10,12 +10,20 @@ void set_up_environment(struct header_info *http_header);
 #define stdin_fd 0
 #define stdout_fd 1
 #define UNREACHEBLE false
+#define cgi_bin_path "./cgi_bin/"
+
 bool run_cgi_script(struct header_info *http_header, 
-                    int socket_fd, 
-                    char *program_to_run){
+                    int socket_fd){
+
+    char program_to_run[strlen(cgi_bin_path) + 
+                        strlen(http_header->requested_objname) + 1];
+    program_to_run[0] = '\0';
+    strcat(program_to_run, cgi_bin_path);
+    strcat(program_to_run, http_header->requested_objname);
 
     /* Assert existance of executable with given name. */
     if (access(program_to_run, X_OK) == -1) {
+        printf ("%s\n", program_to_run);
         perror ("Can't access executable!");
         return false;
     }

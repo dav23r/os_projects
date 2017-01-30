@@ -18,11 +18,13 @@ int main(void){
     }
 
     struct header_info hinfo;
+    hinfo.requested_objname = strdup("static_cgi.py");
     char body[] = "Http body";
     write(sduplex[0], body, strlen(body) + 1);
 
+
     printf ("Script started\n");
-    assert (run_cgi_script(&hinfo, sduplex[1], "../cgi-bin/print_environment.py"));
+    assert (run_cgi_script(&hinfo, sduplex[1]));
     printf ("Script finished, socket should contain output of script\n");
 
     char reader_buf[1024];
@@ -36,5 +38,6 @@ int main(void){
     printf (" --> End reading output <-- \n");
 
     assert (close(sduplex[0]) == 0);
+    
     return 0;
 }

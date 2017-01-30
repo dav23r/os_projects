@@ -28,6 +28,10 @@ int main(void){
     assert(uri_to_url(test5, res, buf_len));
     assert(strcmp("/%2b==", res) == 0);
 
+    char test6[] = "%5A%3C";
+    assert(uri_to_url(test6, res, buf_len));
+    assert(strcmp(test6, res) == 0);
+
     assert(uri_to_url("dummy", res, 5));
     assert(!uri_to_url("dummy", res, 4));
         

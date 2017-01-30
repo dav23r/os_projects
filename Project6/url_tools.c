@@ -5,6 +5,7 @@
 static char reserved_chars[] = "!#$&'()*+,/:;=?@[]";
 
 static int escape_seq(char *str, int first);
+static int strcontains(char *str, char seek);
 
 #define escape_size 3
 #define base 16
@@ -59,5 +60,14 @@ static int escape_seq(char *str, int i){
         power /= base;
         offset += 1;
     }
-    return res;
+    return strcontains(reserved_chars, res);
+}
+
+static int strcontains(char *str, char seek){
+    char ch;
+    int i = 0;
+    while (ch = str[i++])
+        if (ch == seek)
+            return ch;
+    return 0;
 }
