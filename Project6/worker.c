@@ -101,6 +101,7 @@ void proccess_request(int in_fd, hashset *config)
 				{
 					parsed_header.content_type = get_header_value(header, "Content-Type");
 					parsed_header.content_length = get_header_value(header, "Content-Length");
+					parsed_header.path_info = strdup(parsed_header.requested_objname);
 					parsed_header.requested_objname = strcat(cgi_bin, parsed_header.requested_objname + 1); // +1 not to have two slashes (//)
 					run_cgi_script(&parsed_header, in_fd, get_config_block(parsed_header.host, config));
 				}
@@ -152,7 +153,9 @@ static enum http_method get_request_method_and_type(char *header, struct header_
 	{
 		if (method_set)
 		{
-			char *ext = get_filename_extension(token);
+			token_copy = strdup(token);
+			header_struct->query_string = check_for_query_string(token_copy);
+			char *ext = get_filename_extension(token_copy);
 			
 			if (strcmp(ext, "html") == 0 || strcmp(ext, "jpg") == 0 || strcmp(ext, "mp4") == 0)
 				header_struct->cgi_or_file = STATIC_FILE;
@@ -160,7 +163,7 @@ static enum http_method get_request_method_and_type(char *header, struct header_
 				header_struct->cgi_or_file = DIR;
 			else header_struct->cgi_or_file = CGI;
 			
-			header_struct->requested_objname = token;
+			header_struct->requested_objname = token_copy;
 			header_struct->ext = ext;
 			return ret;
 		}
@@ -250,6 +253,17 @@ static char * compute_file_hash(char *full_path)
 	return strdup(res);
 }
 
+static char * check_for_query_string(char *token_copy)
+{
+	char *question_mark = strrchr(token_copy, '?');
+	if (question_mark)
+	{
+		*question_mark = '\0';
+		return strdup(question_mark + 1);
+	}
+	return NULL;
+}
+
 static char *get_filename_extension(char *file_path)
 {
 	const char *ext;
@@ -333,10 +347,12 @@ static void header_info_dispose(struct header_info *header)
 {
 	free(header->host);
 	free(header->etag);
-	free(header->ext);
 	free(header->requested_objname);
 	free(header->content_type);
 	free(header->range);
+	free(header->content_length);
+	free(header->path_info);
+	free(header->query_string);
 }
 
 

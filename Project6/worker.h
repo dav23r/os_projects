@@ -55,6 +55,7 @@ static bool keep_alive(char *header);
 static struct range_info get_range_info(char *header);
 static struct range_info * get_header_range(char *header);
 static char * compute_file_hash(char *full_path);
+static char * check_for_query_string(char *token_copy);
 static char * get_filename_extension(char *file_path);
 static void detect_content_type(char *content_type, const char *ext);
 static long int get_file_size(FILE *stream);
