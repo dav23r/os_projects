@@ -4,7 +4,7 @@
 // returns result version of response
 char * add_header_key_value(char *response, char *key, char *value)
 {
-	char *key_value = strcat(strcat(key, ":"), strcat(value, "\r\n"));
+	char *key_value = strcat(strcat(key, ":"), strcat(value, "\n"));
 	return strcat(key_value, response);
 }
 
@@ -22,7 +22,7 @@ void add_initial_header(char *response, char *content, int response_current_len)
 // returns result version of response
 char * add_body(char *response, char *body)
 {
-	strcat(response, "\r\n");
+	strcat(response, "\n");
 	return strcat(response, body);
 }
 
