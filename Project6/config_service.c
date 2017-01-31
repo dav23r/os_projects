@@ -1,17 +1,18 @@
 #include <stdio.h>
 #include <stdlib.h>
 #include "config_service.h"
+#include "assert.h"
 
-char* get_config_value(char *vhost_name, char *key, hashset *map)
+char* get_config_value(char *vhost_name, char *key, hashset *configs)
 {
-	struct config *conf = HashSetLookup(map, vhost_name);
+	struct config *conf = HashSetLookup(configs, vhost_name);
 	if (!conf) return strdup(NO_KEY_VALUE);
 	return config_get_value(conf, key);
 }
 
-struct config *get_config_block(char *vhost_name, hashset *map) { return HashSetLookup(map, vhost_name); }
+struct config *get_config_block(char *vhost_name, hashset *configs) { return HashSetLookup(configs, vhost_name); }
 
-void save_config(char *configfile, hashset *map)
+void save_config(char *configfile, hashset *configs)
 {
 	char buff[255];
 	FILE *fp = fopen(configfile, "r");
@@ -30,7 +31,7 @@ void save_config(char *configfile, hashset *map)
 		token = strtok(buff, delims);
 		if (strcmp(token, "vhost") == 0)
 		{
-			if (curr_conf != NULL) HashSetEnter(map, curr_conf);
+			if (curr_conf != NULL) HashSetEnter(configs, curr_conf);
 			curr_conf = malloc(sizeof(struct config));
 			curr_conf->vhost = strdup(strtok(NULL, delims));
 		}
@@ -40,6 +41,16 @@ void save_config(char *configfile, hashset *map)
 		}
 	}
 	fclose(fp);
+}
+
+vector * get_all_port_numbers(hashset *configs)
+{
+	vector *v = (vector *) malloc(sizeof(vector));
+	assert(v);
+	VectorNew(v, sizeof(int), NULL, int 4);
+	
+	// should get all ports using HashSetMapFunction on configs hashset
+	//VectorAppend(vector *v, const void *elemAddr)
 }
 
 static void config_add_value(struct config *conf, char *key, char *value)

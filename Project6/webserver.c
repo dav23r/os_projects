@@ -14,6 +14,8 @@ int main(int argc, const char* argv[]){
 	if (argc < 1) on_error("config file not provided");
 	hashset map;
 	save_config(argv[0], &map);
+	vector *ports = get_all_port_numbers(configs);
+	int ports_number = VectorLength(ports);
 	
 	// todo: run listener threads
 
