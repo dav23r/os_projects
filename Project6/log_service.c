@@ -1,6 +1,6 @@
 #include <stdio.h>
+#inclide <assert.h>
 #include "log_service.h"
-#inclide "assert.h"
 
 struct accesslog_params build_log_data( struct connect_time_and_ip time_ip, char *domain, char *requested_filename,
 												int sent_status_code, int num_of_bytes_sent, char *user_provided_info);

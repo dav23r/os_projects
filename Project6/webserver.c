@@ -2,9 +2,11 @@
 #include <stdlib.h>
 #include <netdb.h>
 #include <netinet/in.h>
+#include <netinet/tcp.h>
 #include <string.h>
 #include <sys/epoll.h>
 #include <errno.h>
+#include <pthread.h>
 #include "config_service.h"
 #include "webserver.h"
 
@@ -15,20 +17,23 @@ int main(int argc, const char* argv[]){
 	hashset map;
 	save_config(argv[0], &map);
 	vector *ports = get_all_port_numbers(configs);
-	int ports_number = VectorLength(ports);
+	int ports_number = VectorLength(ports), i = 0;
 	
 	// todo: run listener threads
+	pthread_t threads[ports_number];
+	for (; i < ports_number; ++i)
+		pthread_create(&threads[i], NULL, net_events_handler, VectorNth(ports, i));
 
 	// tofo: run 1024 worker threads
 
 	return 0;
 }
 
-void net_events_handler()
+void net_events_handler(void *aux)
 {
 	//https://www.tutorialspoint.com/unix_sockets/socket_server_example.htm
 	int sockfd, newsockfd, portno, clilen;
-	char buffer[256];
+	// char buffer[256];
 	struct sockaddr_in serv_addr, cli_addr;
 	int  n;
 	//creation of epoll
@@ -49,7 +54,7 @@ void net_events_handler()
 	/* Initialize socket structure */
 	memset((void *) &serv_addr, 0, sizeof(serv_addr));
 	//must be read from files
-	portno = 5001;
+	portno = *(int *)aux;
 
 	serv_addr.sin_family = AF_INET;
 
@@ -71,7 +76,7 @@ void net_events_handler()
 	 */
 
 	//TODO change 128 to some constant
-	listen(sockfd,128);
+	listen(sockfd, tcp_max_syn_backlog);
 	clilen = sizeof(cli_addr);
 
 	/* Accept actual connection from the client */

@@ -1,7 +1,7 @@
 #include <stdio.h>
 #include <stdlib.h>
+#include <assert.h>
 #include "config_service.h"
-#include "assert.h"
 
 char* get_config_value(char *vhost_name, char *key, hashset *configs)
 {
