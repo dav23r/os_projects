@@ -20,13 +20,14 @@ int main(int argc, const char* argv[]){
 	int ports_number = VectorLength(ports), i = 0;
 	
 	// todo: run listener threads
-	pthread_t threads[ports_number + WORKERS_NUM];	// ports_number listener threads, WORKERS_NUM worker threads
+	pthread_t *threads = (pthread_t *)calloc(ports_number + WORKERS_NUM, sizeof(struct pthread_t));;	// ports_number listener threads, WORKERS_NUM worker threads
+	assert(threads);
 	for (; i < ports_number; ++i)
-		pthread_create(&threads[i], NULL, net_events_handler, VectorNth(ports, i));
+		pthread_create(threads + 1, NULL, net_events_handler, VectorNth(ports, i));
 
 	// run WORKERS_NUM worker threads
 	for (; i < WORKERS_NUM; ++i)
-		pthread_create(&threads[i], NULL, work, &map);
+		pthread_create(threads + i, NULL, work, &map);
 
 	return 0;
 }
