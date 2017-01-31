@@ -49,8 +49,8 @@ vector * get_all_port_numbers(hashset *configs)
 	assert(v);
 	VectorNew(v, sizeof(int), NULL, int 4);
 	
-	// should get all ports using HashSetMapFunction on configs hashset
-	//VectorAppend(vector *v, const void *elemAddr)
+	HashSetMap(configs, ports_getter, v);
+	return v;
 }
 
 static void config_add_value(struct config *conf, char *key, char *value)
@@ -79,6 +79,11 @@ static char * config_get_value(struct config *conf, char *key)
 		return strdup(conf->port);
 	else if (strcmp(key, "log") == 0)
 		return strdup(conf->log);
+}
+
+static void ports_getter(void *elemAddr, void *auxData)
+{
+	VectorAppend((vector *)auxData, &((config *)elemAddr->port));
 }
 
 
