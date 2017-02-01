@@ -1,4 +1,5 @@
 #include <stdio.h>
+#include <time.h>
 #include <assert.h>
 #include <stdlib.h>
 #include <ctype.h>
@@ -18,40 +19,41 @@ int main(int argc, char *argv[]){
     }
 
     struct header_info hinfo;
-    hinfo.requested_objname = strdup(argv[1]);
+    hinfo.requested_objname = argv[1];
     hinfo.method = GET;
-    hinfo.content_type = "media/jpg";
-    hinfo.content_length = "122";
+    hinfo.content_type = "text";
+    hinfo.content_length = "4";
     hinfo.host = "google.com";
-    hinfo.path_info = "/";
+    hinfo.path_info = "%2Fpinfor%3D";
     hinfo.query_string = "a=bla&b=blu";
 
     struct config conf;
     conf.ip = "3.2.2.3";
     conf.vhost = "shota.ge";
     conf.document_root = "./my_app/doc_root";
-    conf.cgi_bin = "./my_app/cgi_bin";
+    conf.cgi_bin = "./my_app/test_cgi_bin";
     conf.port = "8888";
 
-    char body[] = "Http body";
+    // Body should be less than kernel buffer size when testing
+    char body[] = "BODY";
     write(sduplex[0], body, strlen(body) + 1);
-
 
     printf ("Script started\n");
     assert (run_cgi_script(&hinfo, sduplex[1], &conf));
     printf ("Script finished, socket should contain output of script\n");
 
-    char reader_buf[1024];
+    char reader_buf[1];
     printf (" --> Reading script's output <-- \n");
     while (true){
         int bytes = read(sduplex[0], reader_buf, sizeof(reader_buf));
-        printf("%.*s", bytes, reader_buf);
-        if (bytes < sizeof(reader_buf))
+        if (bytes == -1)
+            perror("Error in read");
+        if (bytes == 0)
             break;
+        printf("%.*s", bytes, reader_buf);
     }
     printf (" --> End reading output <-- \n");
 
     assert (close(sduplex[0]) == 0);
-    
     return 0;
 }
