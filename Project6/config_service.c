@@ -22,7 +22,7 @@ void save_config(char *configfile, hashset *configs)
 	const char delims[2] = ":";
 	char *token, *res;
 	struct config *curr_conf = NULL;
-	while (1)
+	while (true)
 	{
 		int ret = fscanf(fp,"%[^\n]", buff);
 		if (ret == EOF) break;
@@ -47,7 +47,7 @@ vector * get_all_port_numbers(hashset *configs)
 {
 	vector *v = (vector *) malloc(sizeof(vector));
 	assert(v);
-	VectorNew(v, sizeof(int), NULL, int 4);
+	VectorNew(v, sizeof(int), NULL, 4);
 	
 	HashSetMap(configs, ports_getter, v);
 	return v;
@@ -83,7 +83,7 @@ static char * config_get_value(struct config *conf, char *key)
 
 static void ports_getter(void *elemAddr, void *auxData)
 {
-	VectorAppend((vector *)auxData, &((config *)elemAddr->port));
+	VectorAppend((vector *)auxData, &(((struct config *)elemAddr)->port));
 }
 
 
