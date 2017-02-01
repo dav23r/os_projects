@@ -28,5 +28,6 @@ vector * get_all_port_numbers(hashset *configs);
 
 static void config_add_value(struct config *conf, char *key, char *value);
 static char * config_get_value(struct config *conf, char *key);
+static void ports_getter(void *elemAddr, void *auxData);
 
 #endif

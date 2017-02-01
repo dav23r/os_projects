@@ -67,7 +67,7 @@ char * scan_and_print_directory(char *directory_path, bool save_html_file)
 	{
 		//here, '/document directory pages' is a directory where this kind of genarated htmls go
 		FILE *fp = fopen(strcat("/document directory pages/", strcat(directory_path, ".html")), "w");
-		fprintf(fp, html);
+		fprintf(fp, "%s", html);
 		fclose(fp);
 		free(html);
 		return NULL;
