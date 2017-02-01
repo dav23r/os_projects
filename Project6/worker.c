@@ -14,7 +14,7 @@
 #include <unistd.h>
 
 
-void work(void *config)
+void * work(void *config)
 {
 	// A single event we use as scratch space
 	struct epoll_event event;
@@ -30,6 +30,7 @@ void work(void *config)
 		}
 		epoll_ctl(epoll_fd, EPOLL_CTL_DEL, dat->fd, event);	
 	}
+	return NULL;
 }	
 
 static void proccess_request(int in_fd, hashset *config)

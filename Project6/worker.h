@@ -44,7 +44,7 @@ struct header_info {
 
 
 /* Public interface. */
-void work(void *config);
+void * work(void *config);
 
 /* Static functions used withing 'worker.c'. */
 static void proccess_request(int in_fd, char *config);

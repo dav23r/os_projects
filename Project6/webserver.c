@@ -9,30 +9,31 @@
 #include <pthread.h>
 #include "config_service.h"
 #include "webserver.h"
+#include "worker.h"
 
 
-
+void * net_events_handler(void *aux);
 int main(int argc, const char* argv[]){
 	if (argc < 1) on_error("config file not provided");
-	hashset map;
-	save_config(argv[0], &map);
-	vector *ports = get_all_port_numbers(configs);
+	hashset configs;
+	save_config(argv[0], &configs);
+	vector *ports = get_all_port_numbers(&configs);
 	int ports_number = VectorLength(ports), i = 0;
 	
 	// todo: run listener threads
-	pthread_t *threads = (pthread_t *)calloc(ports_number + WORKERS_NUM, sizeof(struct pthread_t));;	// ports_number listener threads, WORKERS_NUM worker threads
+	pthread_t *threads = (pthread_t *)calloc(ports_number + WORKERS_NUM, sizeof(*threads));	// ports_number listener threads, WORKERS_NUM worker threads
 	assert(threads);
 	for (; i < ports_number; ++i)
-		pthread_create(threads + 1, NULL, net_events_handler, VectorNth(ports, i));
+		pthread_create(threads + i, NULL, net_events_handler, VectorNth(ports, i));
 
 	// run WORKERS_NUM worker threads
 	for (; i < WORKERS_NUM; ++i)
-		pthread_create(threads + i, NULL, work, &map);
+		pthread_create(threads + i, NULL, work, &configs);
 
 	return 0;
 }
 
-void net_events_handler(void *aux)
+void * net_events_handler(void *aux)
 {
 	while (true) {
 		//https://www.tutorialspoint.com/unix_sockets/socket_server_example.htm
@@ -103,5 +104,6 @@ void net_events_handler(void *aux)
 			exit(EXIT_FAILURE);
 		}
 	}
+	return NULL;
 }
 

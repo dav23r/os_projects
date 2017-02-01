@@ -12,7 +12,7 @@ char* get_config_value(char *vhost_name, char *key, hashset *configs)
 
 struct config *get_config_block(char *vhost_name, hashset *configs) { return HashSetLookup(configs, vhost_name); }
 
-void save_config(char *configfile, hashset *configs)
+void save_config(const char *configfile, hashset *configs)
 {
 	char buff[255];
 	FILE *fp = fopen(configfile, "r");

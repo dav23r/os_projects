@@ -19,7 +19,7 @@ struct config {
 // const char NO_KEY_VALUE[] = "no_key_value";
 #define NO_KEY_VALUE "no_key_value"
 
-void save_config(char *configfile, hashset *configs);
+void save_config(const char *configfile, hashset *configs);
 
 char* get_config_value(char *vhost_name, char *key, hashset *configs);
 struct config *get_config_block(char *vhost_name, hashset *configs);
