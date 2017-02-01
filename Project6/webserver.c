@@ -2,6 +2,7 @@
 #include <stdlib.h>
 #include <netdb.h>
 #include <netinet/in.h>
+#include <assert.h>
 #include <netinet/tcp.h>
 #include <string.h>
 #include <sys/epoll.h>
@@ -16,7 +17,7 @@
 
 void * net_events_handler(void *aux);
 int main(int argc, const char* argv[]){
-	if (argc < 1) on_error("config file not provided");
+	if (argc < 1) perror("config file not provided");
 	hashset configs;
 	save_config(argv[0], &configs);
 	vector *ports = get_all_port_numbers(&configs);

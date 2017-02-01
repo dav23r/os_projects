@@ -1,4 +1,5 @@
 #include "worker.h"
+#include <assert.h>
 #include "response_builder.h"
 #include "config_service.h"
 #include "cgi_runner.h"
