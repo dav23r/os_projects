@@ -12,14 +12,16 @@
 #include <sys/types.h>
 #include <sys/socket.h>
 #include <unistd.h>
+#include <sys/epoll.h>
 
 
 void * work(void *config)
 {
 	// A single event we use as scratch space
-	struct epoll_event event;
+	struct epoll_event *event;
 	//ertze meti arasodes gvinda rom amovighot, ert threads erti descriptor
-	event = calloc(1, sizeof(struct epoll_event));
+	event = (struct epoll_event *)calloc(1, sizeof(struct epoll_event));
+	assert(event);
 	
 	while (true) {
 		//daucdis sanam ar mova rame
@@ -92,20 +94,22 @@ static void proccess_request(int in_fd, hashset *config)
 							int file_size = get_file_size(fp);
 							sent_content_len = parsed_header.range->end - parsed_header.range->start < 0 ? file_size : parsed_header.range->end - parsed_header.range->start;
 							status_code_sent = parsed_header.range->end - parsed_header.range->start < 0 ? 200 : 206;
-							sprintf(count_str, "%ld", sent_content_len);
+							sprintf(count_str, "%d", sent_content_len);
 							detect_content_type(content_type, parsed_header.ext);
 							add_header_key_value(response, "Content-Type", content_type);
 							add_header_key_value(response, "Content-Length", count_str);
 							if (status_code_sent == 206) {
 								add_header_key_value(response, "Accept-Ranges", "bytes");
-								add_header_key_value(response, "Content-Range", strcat(strcat(strcat(strcat(strcat("bytes ", parsed_header.range->start), "-"), parsed_header.range->end), "/"), file_size));
+								char content_range_str[49];
+								sprintf(content_range_str, "bytes %d-%d/%d", parsed_header.range->start, parsed_header.range->end, file_size);
+								add_header_key_value(response, "Content-Range", content_range_str);
 							}
 							add_header_key_value(response, "Cache-Control", "max-age=5");
 							add_header_key_value(response, "etag", file_new_hash);
 							if (status_code_sent == 200) add_initial_header(response, "HTTP/1.0 200 OK", strlen(response));
 							else add_initial_header(response, "HTTP/1.0 206 Partial Content", strlen(response));
 							int out_fd = fileno(fp);
-							ssize_t bytes = sendfile(out_fd, in_fd, offset, count);
+							ssize_t bytes = sendfile(out_fd, in_fd, offset, sent_content_len);
 							fclose(fp);
 						} else {
 							add_initial_header(response, "HTTP/1.0 404 Not Found", strlen(response));
@@ -141,7 +145,7 @@ static void proccess_request(int in_fd, hashset *config)
 		
 		if (strlen(response) == 0) // i.e. response is sent from cgi
 			send(in_fd, response, strlen(response), 0);
-		struct accesslog_params log;
+		struct accesslog_params *log;
 		if (!error_occured) log = build_log_data(time_and_ip_log, parsed_header.host, parsed_header.requested_objname, status_code_sent, sent_content_len, get_header_value(header, "User-Agent"));
 		else log = build_error_log(time_and_ip_log, error_msg);
 		log_request(log_level, log, get_config_value(parsed_header.host, "log", config));
@@ -178,7 +182,7 @@ static enum http_method get_request_method_and_type(char *header, struct header_
 	{
 		if (method_set)
 		{
-			token_copy = strdup(token);
+			char *token_copy = strdup(token);
 			header_struct->query_string = check_for_query_string(token_copy);
 			char *ext = get_filename_extension(token_copy);
 			
@@ -361,11 +365,11 @@ static void set_keep_alive(int socket_fd)
 static char * get_formatted_datetime()
 {
 	time_t rawtime;
-	struct tm * timeinfo;
+	struct tm *timeinfo;
 
-	time ( &rawtime );
-	timeinfo = localtime ( &rawtime );
-	return strdup("Current local time and date: %s", asctime (timeinfo));
+	time (&rawtime);
+	timeinfo = localtime(&rawtime);
+	return strdup(asctime(timeinfo));
 }
 
 static void header_info_dispose(struct header_info *header)

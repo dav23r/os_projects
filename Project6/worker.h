@@ -4,6 +4,7 @@
 #include <stdlib.h>
 #include <string.h>
 #include <stdio.h>
+#include "hashset.h"
 #include "bool.h"
 
 #define BUFFER_SIZE 1024
@@ -47,7 +48,7 @@ struct header_info {
 void * work(void *config);
 
 /* Static functions used withing 'worker.c'. */
-static void proccess_request(int in_fd, char *config);
+static void proccess_request(int in_fd, hashset *config);
 static void header_info_dispose(struct header_info *header);
 static void get_header(char *request, char *header);
 static enum http_method get_request_method_and_type(char *header, struct header_info *header_struct);

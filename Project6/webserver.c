@@ -64,7 +64,7 @@ void * net_events_handler(void *aux)
 
 		serv_addr.sin_family = AF_INET;
 
-		serv_add.sin_addr.s_addr = htonl(INADDR_ANY);
+		serv_addr.sin_addr.s_addr = htonl(INADDR_ANY);
 		serv_addr.sin_port = htons(portno);
 		int val = 1;
 		if (setsockopt(sockfd, SOL_SOCKET, SO_REUSEADDR, &val, sizeof(val))<0){
@@ -97,7 +97,7 @@ void * net_events_handler(void *aux)
 			perror("malloc");
 			exit(EXIT_FAILURE);
 		}
-		event.events = EPOLLIN | EPOLLLT | EPOLLONESHOT;
+		event.events = EPOLLIN | EPOLLONESHOT;
 		//fd-s damateba epoll-is siashi
 		if((epoll_ctl(epoll_fd, EPOLL_CTL_ADD, newsockfd, &event)) == -1) {
 			perror("epoll_create");
