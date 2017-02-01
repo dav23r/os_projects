@@ -12,6 +12,8 @@
 #include "worker.h"
 
 
+#define LISTENERS_BACKLOG_SIZE 256
+
 void * net_events_handler(void *aux);
 int main(int argc, const char* argv[]){
 	if (argc < 1) on_error("config file not provided");
@@ -58,7 +60,6 @@ void * net_events_handler(void *aux)
 
 		/* Initialize socket structure */
 		memset((void *) &serv_addr, 0, sizeof(serv_addr));
-		//must be read from files
 		portno = *(int *)aux;
 
 		serv_addr.sin_family = AF_INET;
@@ -80,8 +81,7 @@ void * net_events_handler(void *aux)
 		 * go in sleep mode and will wait for the incoming connection
 		 */
 
-		//TODO change 128 to some constant
-		listen(sockfd, tcp_max_syn_backlog);
+		listen(sockfd, LISTENERS_BACKLOG_SIZE);
 		clilen = sizeof(cli_addr);
 
 		/* Accept actual connection from the client */
