@@ -23,21 +23,27 @@ void * work(void *config)
 	//ertze meti arasodes gvinda rom amovighot, ert threads erti descriptor
 	event = (struct epoll_event *)calloc(1, sizeof(struct epoll_event));
 	assert(event);
-	
+
 	while (true) {
 		//daucdis sanam ar mova rame
+		printf("ipol wait\n");
 		epoll_wait(epoll_fd, event, 1, -1);
-		Data *dat = (Data *)event->data.ptr;
-		if(event->events & EPOLLIN) {
+		Data *dat = (Data *)event[0].data.ptr;
+
+		printf("ipol wait done\n");
+		if(event[0].events & EPOLLIN) {
 			proccess_request(dat->fd, (hashset *)config);
 		}
-		epoll_ctl(epoll_fd, EPOLL_CTL_DEL, dat->fd, event);	
+		epoll_ctl(epoll_fd, EPOLL_CTL_DEL, dat->fd, event);
 	}
 	return NULL;
-}	
+}
 
 static void proccess_request(int in_fd, hashset *config)
 {
+	printf("worker got fd = %d\n", in_fd);
+	return;
+	assert(0);
 	if (in_fd < 0) return;
 	while (true)
 	{
@@ -50,7 +56,7 @@ static void proccess_request(int in_fd, hashset *config)
 		char header[BUFFER_SIZE], response[BUFFER_SIZE];
 		header[0] = '\0', response[0] = '\0';
 		get_header(request, header);
-		
+
 		struct header_info parsed_header;
 		parsed_header.host = get_header_value(header, "Host");
 		time_and_ip_log.Ip_address = get_config_value(parsed_header.host, "ip", config);
@@ -66,8 +72,8 @@ static void proccess_request(int in_fd, hashset *config)
 			parsed_header.etag = get_header_value(header, "Etag");
 			parsed_header.keep_alive = keep_alive(header);
 			parsed_header.range = get_header_range(header);
-			
-			
+
+
 			if (parsed_header.cgi_or_file == STATIC_FILE || parsed_header.cgi_or_file == DIR)
 			{
 				if (strcmp(document_root, NO_KEY_VALUE) == 0 || strlen(document_root) == 0)
@@ -143,7 +149,7 @@ static void proccess_request(int in_fd, hashset *config)
 			add_initial_header(response, "HTTP/1.0 404 Not Found", strlen(response));
 			status_code_sent = 404;
 		}
-		
+
 		if (strlen(response) == 0) // i.e. response is sent from cgi
 			send(in_fd, response, strlen(response), 0);
 		struct accesslog_params *log;
@@ -186,13 +192,13 @@ static enum http_method get_request_method_and_type(char *header, struct header_
 			char *token_copy = strdup(token);
 			header_struct->query_string = check_for_query_string(token_copy);
 			char *ext = get_filename_extension(token_copy);
-			
+
 			if (strcmp(ext, "html") == 0 || strcmp(ext, "jpg") == 0 || strcmp(ext, "mp4") == 0)
 				header_struct->cgi_or_file = STATIC_FILE;
 			else if (strcmp(ext, "/") == 0)
 				header_struct->cgi_or_file = DIR;
 			else header_struct->cgi_or_file = CGI;
-			
+
 			header_struct->requested_objname = token_copy;
 			header_struct->ext = ext;
 			return ret;
@@ -212,7 +218,7 @@ static enum http_method get_request_method_and_type(char *header, struct header_
 		}
 		token = strtok (NULL, " ");
 	}
-	
+
 	return ret;
 }
 
@@ -234,7 +240,7 @@ static bool keep_alive(char *header)
 	char *value = get_header_value(header, "Connection");
 	if (!value || strcmp(value, "keep-alive") != 0)
 		return false;
-	
+
 	return true;
 }
 
@@ -242,7 +248,7 @@ static struct range_info * get_header_range(char *header)
 {
 	struct range_info *res = (struct range_info *) malloc(sizeof(struct range_info));
 	char *value = get_header_value(header, "range");
-	
+
 	// full content requested
 	if (!value || strlen(value) == 0)
 	{
@@ -256,7 +262,7 @@ static struct range_info * get_header_range(char *header)
 		if (token && strlen(token) > 0)
 		{
 			res->start = atoi(token);
-			
+
 			if ((token = strtok(NULL, "- ")) != NULL && strlen(token) > 0)
 				res->end = atoi(token);
 			else
@@ -272,14 +278,14 @@ static char * compute_file_hash(char *full_path)
 	res[0] = '\0', tmp[0] = '\0';
 	struct stat attr;
 	stat(full_path, &attr);
-	
+
 	sprintf(tmp, "%u_%c", (unsigned)attr.st_size, '\0');
 	strcat(res, tmp);
 	sprintf(tmp, "%ld_%c", (long)attr.st_mtime, '\0');
 	strcat(res, tmp);
 	sprintf(tmp, "%ld%c", (long)attr.st_atime, '\0');
 	strcat(res, tmp);
-	
+
 	return strdup(res);
 }
 
@@ -337,12 +343,12 @@ static char * get_dir_page_path(char *document_root, char *dir_name)
 	if (file_exists(strcat(doc_root_copy_2, "index.html")))
 		return doc_root_copy_2;
 	free(doc_root_copy_2);
-	
+
 	char *doc_root_copy = strdup(document_root);
 	char *root_html_path = strcat(doc_root_copy, strcat("document directory pages/", document_root));
 	char *full_path_to_file = strcat(root_html_path, dir_name + 1);
 	full_path_to_file = strcat(full_path_to_file, ".html");
-	
+
 	if (!file_exists(full_path_to_file))
 		scan_and_print_directory(full_path_to_file, true);
 
@@ -356,7 +362,7 @@ static bool file_exists(char *file_path)
 
 static void set_keep_alive(int socket_fd)
 {
-	struct timeval timeout;      
+	struct timeval timeout;
     timeout.tv_sec = 5;
     timeout.tv_usec = 0;
 
@@ -384,5 +390,3 @@ static void header_info_dispose(struct header_info *header)
 	free(header->path_info);
 	free(header->query_string);
 }
-
-
