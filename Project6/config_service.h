@@ -24,10 +24,12 @@ void save_config(const char *configfile, hashset *configs);
 char* get_config_value(char *vhost_name, char *key, hashset *configs);
 struct config *get_config_block(char *vhost_name, hashset *configs);
 vector * get_all_port_numbers(hashset *configs);
+char *get_vhost(hashset *configs, char *port);
 
 
 static void config_add_value(struct config *conf, char *key, char *value);
 static char * config_get_value(struct config *conf, char *key);
 static void ports_getter(void *elemAddr, void *auxData);
+static void vhost_getter(void *elemAddr, void *auxData);
 
 #endif

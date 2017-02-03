@@ -3,6 +3,16 @@
 #include <assert.h>
 #include "config_service.h"
 
+struct vhost_getter_arg {
+	char *port;
+	char *ret;
+};
+
+void freee(void *a)
+{
+	free(*(char **)a);
+}
+
 char* get_config_value(char *vhost_name, char *key, hashset *configs)
 {
 	printf("count = %d\n", HashSetCount(configs));
@@ -59,10 +69,18 @@ vector * get_all_port_numbers(hashset *configs)
 {
 	vector *v = (vector *) malloc(sizeof(vector));
 	assert(v);
-	VectorNew(v, sizeof(char *), NULL, 4);
+	VectorNew(v, sizeof(char **), freee, 4);
 
 	HashSetMap(configs, ports_getter, v);
 	return v;
+}
+
+char *get_vhost(hashset *configs, char *port)
+{
+	struct vhost_getter_arg arg;
+	arg.port = port;
+	HashSetMap(configs, vhost_getter, &arg);
+	return arg.ret;
 }
 
 static void config_add_value(struct config *conf, char *key, char *value)
@@ -95,5 +113,11 @@ static char * config_get_value(struct config *conf, char *key)
 
 static void ports_getter(void *elemAddr, void *auxData)
 {
-	VectorAppend((vector *)auxData, ((struct config *)elemAddr)->port);
+	VectorAppend((vector *)auxData, &(((struct config *)elemAddr)->port));
+}
+
+static void vhost_getter(void *elemAddr, void *auxData)
+{
+	if (strcmp(((struct config *)elemAddr)->port, ((struct vhost_getter_arg *)auxData)->port) == 0)
+		((struct vhost_getter_arg *)auxData)->ret = ((struct config *)elemAddr)->vhost;
 }

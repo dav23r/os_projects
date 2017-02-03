@@ -41,9 +41,9 @@ char *replace(char *str)
 /*
  * generates html page of the given directory.
  * every entry of the directory is linken on itself for user.
- * if (entry->d_type == DT_REG) check 
+ * if (entry->d_type == DT_REG) check  fot directory, meybe useful next time
  */
-static char * generate_html(char *path, char *host, vector *entries)
+static char * generate_html(char *path, vector *entries)
 {
 	printf("%d\n", VectorLength(entries));
 	int last_allocated_size = 1024;
@@ -61,9 +61,10 @@ static char * generate_html(char *path, char *host, vector *entries)
 	for (i = 0; i < VectorLength(entries)-2; ++i)
 	{
 		link[0] = '\0';
-		strcpy(link, host);
-		strcat(link, path);
+		//strcpy(link, host);
+		strcpy(link, path);
 		char *entry_name = *(char **)VectorNth(entries, i);
+		//strcat(link, "/");
 		char *url = strcat(link, entry_name);
 		char open_tag[128];open_tag[0] = '\0';
 		strcat(strcat(strcat(open_tag, "<a href='"), url), "'>");
@@ -86,9 +87,9 @@ static char * generate_html(char *path, char *host, vector *entries)
 }
 
 // should be called when server starts
-char * scan_and_print_directory(char *directory_path, char *doc_root, char *host, bool save_html_file)
+char * scan_and_print_directory(char *directory_path, char *doc_root, bool save_html_file)
 {
-	printf("%s\n", directory_path);
+	printf("88888888888888888888888888888888888888888888888888888 - %s\n", directory_path);
 	DIR *dir = opendir (directory_path);
 	if (!dir) return NULL;
 	struct dirent *read;
@@ -105,7 +106,7 @@ char * scan_and_print_directory(char *directory_path, char *doc_root, char *host
 		// puts (read->d_name);
 	closedir (dir);
 
-	char *html = generate_html(remove_prefix(directory_path, doc_root), host, &root_entry_names);
+	char *html = generate_html(remove_prefix(directory_path, doc_root), &root_entry_names);
 	printf("html - %s\n", html);
 	if (save_html_file)
 	{

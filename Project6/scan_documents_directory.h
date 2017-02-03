@@ -5,7 +5,7 @@
 #include "bool.h"
 #include "config_service.h"
 
-char * scan_and_print_directory(char *directory_path, char *doc_root, char *host, bool save_html_file);
+char * scan_and_print_directory(char *directory_path, char *doc_root, bool save_html_file);
 char *replace(char *str);
 
 static char * remove_prefix(char *str, char *prefix);

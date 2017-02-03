@@ -94,8 +94,8 @@ static void proccess_request(int in_fd, hashset *config)
 				}
 				else
 				{
-					char *file_path = parsed_header.cgi_or_file == DIR ? get_dir_page_path(document_root, parsed_header.host, parsed_header.requested_objname) : strcat(document_root, parsed_header.requested_objname + 1);
-
+					char *file_path = parsed_header.cgi_or_file == DIR ? get_dir_page_path(document_root, parsed_header.requested_objname) : strcat(document_root, parsed_header.requested_objname + 1);
+					printf("------------------------------------------%s\n", file_path);
 					char *file_new_hash = compute_file_hash(file_path);
 					if (parsed_header.etag && strcmp(parsed_header.etag, file_new_hash) == 0)
 					{
@@ -355,6 +355,7 @@ static char * check_for_query_string(char *token_copy)
 
 static char *get_filename_extension(char *file_path)
 {
+	printf("`````````````````````````````````````````````````````````````````%s\n", file_path);
 	const char *ext;
 	if (file_path[strlen(file_path)-1] == '/')
 	file_path[strlen(file_path)-1] = '\0';
@@ -391,7 +392,7 @@ static long int get_file_size(FILE *stream)
 	long int len = ftell(stream);
 }
 
-static char * get_dir_page_path(char *document_root, char *host, char *dir_name)
+static char * get_dir_page_path(char *document_root, char *dir_name)
 {
 	char doc_root_copy_2[strlen(document_root)+ strlen(dir_name) + 16];
 	doc_root_copy_2[0] = '\0';
@@ -409,7 +410,7 @@ static char * get_dir_page_path(char *document_root, char *host, char *dir_name)
 	strcat(doc_root_copy, ".html");
 
 	if (!file_exists(doc_root_copy))
-		scan_and_print_directory(dir, document_root, host, true);
+		scan_and_print_directory(dir, document_root, true);
 	return strdup(doc_root_copy);
 }
 
