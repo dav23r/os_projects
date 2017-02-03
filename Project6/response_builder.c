@@ -4,8 +4,11 @@
 // returns result version of response
 char * add_header_key_value(char *response, char *key, char *value)
 {
-	char *key_value = strcat(strcat(key, ":"), strcat(value, "\n"));
-	return strcat(key_value, response);
+	strcat(response, key);
+	strcat(response, ": ");
+	strcat(response, value);
+	strcat(response, "\r\n");
+	return response;
 }
 
 // add first initial line of header
@@ -14,7 +17,7 @@ void add_initial_header(char *response, char *content, int response_current_len)
 	char tmp[response_current_len + strlen(content) + 1];
 	tmp[0] = '\0';
 	strcpy(tmp, content);
-	strcat(tmp, "\n");
+	strcat(tmp, "\r\n");
 	strcat(tmp, response);
 	memmove(response, tmp, strlen(tmp));
 }
@@ -22,7 +25,6 @@ void add_initial_header(char *response, char *content, int response_current_len)
 // returns result version of response
 char * add_body(char *response, char *body)
 {
-	strcat(response, "\n");
+	strcat(response, "\r\n");
 	return strcat(response, body);
 }
-

@@ -26,8 +26,8 @@ int main(int argc, const char* argv[]){
 	save_config(argv[1], &configs);
 	printf ("%d\n", 2);
 
-	char *doc_path = get_config_value("a.ge", "documentroot", &configs);
-	printf("%s\n", doc_path);
+	char *doc_path = get_config_value("127.0.0.1:8080", "documentroot", &configs);
+	printf("doccccccccccccccccccccccccccccccc - %s\n", doc_path);
 	scan_and_print_directory(doc_path, true);
 	vector *ports = get_all_port_numbers(&configs);
 	int ports_number = VectorLength(ports), i = 0;

@@ -6,6 +6,7 @@
 char* get_config_value(char *vhost_name, char *key, hashset *configs)
 {
 	printf("count = %d\n", HashSetCount(configs));
+	printf("%s\n", vhost_name);
 	struct config *conf = HashSetLookup(configs, vhost_name);
 	printf("conf null? %d\n", conf == NULL);
 	if (!conf) return strdup(NO_KEY_VALUE);
@@ -29,31 +30,20 @@ printf ("%s\n", configfile);
 	char buff[256];
 	while (fgets(buff, sizeof(buff), fp))
 	{
-		printf ("buffer - %s\n", buff);
 		if (strlen(buff) <= 1) continue;
 		token = strtok(buff, delims);
 		while (token) {
-			printf ("token - %s\n", token);
 			if (strcmp(token, "vhost") == 0)
 			{
-				printf ("%d\n", 11);
 				if (curr_conf.vhost != NULL) HashSetEnter(configs, &curr_conf);
-				printf ("%d\n", 12);
-				//curr_conf = malloc(sizeof(struct config));
-				printf ("%d\n", 13);
 				token = strtok(NULL, delims);
 				token[strlen(token)-1] = '\0';
-				printf("aa - %s\n", token);
 				curr_conf.vhost = strdup(token);
-				printf ("%d\n", 14);
 			}
 			else
 			{
-				printf("aaaa\n");
 				char *aa = token, *bb = strtok(NULL, delims);
 				bb[strlen(bb)-1] = '\0';
-				printf("aaa - %s\n", aa);
-				printf("bbb - %s\n", bb);
 				config_add_value(&curr_conf, strdup(token), strdup(bb));
 				token = bb;
 			}
@@ -61,14 +51,8 @@ printf ("%s\n", configfile);
 		}
 	}
 	fclose(fp);
-	/*printf("wwww- %d\n", strlen(curr_conf.vhost));
-	printf("wwww2- %d\n", strlen("a.ge"));
-	printf("cccc - %d\n", curr_conf.vhost[strlen(curr_conf.vhost)-1]);
-	printf("pppppp - %d\n", strcmp(curr_conf.vhost, "a.ge"));
-	printf("qqqqqq - %s\n", curr_conf.ip);*/
 	HashSetEnter(configs, &curr_conf);
-//	printf("answer = %s\n", ((struct config *)HashSetLookup(configs, "a.ge"))->ip);
-	//printf("yyyyyy - %s\n", ((struct config *)HashSetLookup(configs, "a.ge"))->vhost);
+
 }
 
 vector * get_all_port_numbers(hashset *configs)

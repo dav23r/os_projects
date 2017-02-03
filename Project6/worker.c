@@ -14,6 +14,9 @@
 #include <sys/socket.h>
 #include <unistd.h>
 #include <sys/epoll.h>
+#include <stdlib.h>
+#include <sys/stat.h>
+#include <fcntl.h>
 
 
 void * work(void *config)
@@ -34,6 +37,7 @@ void * work(void *config)
 		if(event[0].events & EPOLLIN) {
 			proccess_request(dat->fd, (hashset *)config);
 		}
+		close(dat->fd);
 		epoll_ctl(epoll_fd, EPOLL_CTL_DEL, dat->fd, event);
 	}
 	return NULL;
@@ -42,11 +46,10 @@ void * work(void *config)
 static void proccess_request(int in_fd, hashset *config)
 {
 	printf("worker got fd = %d\n", in_fd);
-	return;
-	assert(0);
 	if (in_fd < 0) return;
 	while (true)
 	{
+		printf("wait for rcv%s\n");
 		char request[BUFFER_SIZE];
 		request[0] = '\0';
 		int bytes_recieved, status_code_sent, sent_content_len;
@@ -56,38 +59,43 @@ static void proccess_request(int in_fd, hashset *config)
 		char header[BUFFER_SIZE], response[BUFFER_SIZE];
 		header[0] = '\0', response[0] = '\0';
 		get_header(request, header);
+		printf("header:\n%s\n", header);
 
 		struct header_info parsed_header;
 		parsed_header.host = get_header_value(header, "Host");
+		printf("hosttttttttttttttttttttttttt = %s\n", parsed_header.host);
 		time_and_ip_log.Ip_address = get_config_value(parsed_header.host, "ip", config);
+
 		char *document_root = get_config_value(parsed_header.host, "documentroot", config);
 		char *cgi_bin = get_config_value(parsed_header.host, "cgi-bin", config), *error_msg = NULL;
-		bool error_occured;
+		bool error_occured, file_send = false;
 		enum log_type log_level = ACCESSLOG;
 		if ((strcmp(document_root, NO_KEY_VALUE) != 0 && strlen(document_root) > 0) ||
 			((strcmp(cgi_bin, NO_KEY_VALUE) != 0 && strlen(cgi_bin) > 0)))
 		{
 			/* here also we get requested filename and extension if type is 'FILE', or program name and content-info if CGI */
 			parsed_header.method = get_request_method_and_type(header, &parsed_header);
+
 			parsed_header.etag = get_header_value(header, "Etag");
 			parsed_header.keep_alive = keep_alive(header);
 			parsed_header.range = get_header_range(header);
-
 
 			if (parsed_header.cgi_or_file == STATIC_FILE || parsed_header.cgi_or_file == DIR)
 			{
 				if (strcmp(document_root, NO_KEY_VALUE) == 0 || strlen(document_root) == 0)
 				{
-					add_initial_header(response, "HTTP/1.0 404 Not Found", strlen(response));
+					add_initial_header(response, "HTTP/1.1 404 Not Found", strlen(response));
 					status_code_sent = 404;
 				}
 				else
 				{
-					char *file_path = parsed_header.cgi_or_file == DIR ? get_dir_page_path(document_root, parsed_header.requested_objname) : strcat(document_root, parsed_header.requested_objname);
+					char *file_path = parsed_header.cgi_or_file == DIR ? get_dir_page_path(document_root, parsed_header.requested_objname) : strcat(document_root, parsed_header.requested_objname + 1);
+
 					char *file_new_hash = compute_file_hash(file_path);
-					if (strcmp(parsed_header.etag, file_new_hash) == 0)
+					if (parsed_header.etag && strcmp(parsed_header.etag, file_new_hash) == 0)
 					{
-						add_initial_header(response, "HTTP/1.0 304 Not Modified", strlen(response));
+						assert(0);
+						add_initial_header(response, "HTTP/1.1 304 Not Modified", strlen(response));
 						status_code_sent = 304;
 					}
 					else
@@ -97,7 +105,7 @@ static void proccess_request(int in_fd, hashset *config)
 						FILE *fp = fopen(file_path, "r");
 						if (fp)
 						{
-							off_t *offset = (off_t *)&parsed_header.range->start;
+							off_t offset = parsed_header.range->start;
 							int file_size = get_file_size(fp);
 							sent_content_len = parsed_header.range->end - parsed_header.range->start < 0 ? file_size : parsed_header.range->end - parsed_header.range->start;
 							status_code_sent = parsed_header.range->end - parsed_header.range->start < 0 ? 200 : 206;
@@ -105,6 +113,7 @@ static void proccess_request(int in_fd, hashset *config)
 							detect_content_type(content_type, parsed_header.ext);
 							add_header_key_value(response, "Content-Type", content_type);
 							add_header_key_value(response, "Content-Length", count_str);
+
 							if (status_code_sent == 206) {
 								add_header_key_value(response, "Accept-Ranges", "bytes");
 								char content_range_str[49];
@@ -113,25 +122,28 @@ static void proccess_request(int in_fd, hashset *config)
 							}
 							add_header_key_value(response, "Cache-Control", "max-age=5");
 							add_header_key_value(response, "etag", file_new_hash);
-							if (status_code_sent == 200) add_initial_header(response, "HTTP/1.0 200 OK", strlen(response));
-							else add_initial_header(response, "HTTP/1.0 206 Partial Content", strlen(response));
+							if (status_code_sent == 200) add_initial_header(response, "HTTP/1.1 200 OK", strlen(response));
+							else add_initial_header(response, "HTTP/1.1 206 Partial Content", strlen(response));
 							int out_fd = fileno(fp);
-							ssize_t bytes = sendfile(out_fd, in_fd, offset, sent_content_len);
+							send(in_fd, response, strlen(response), 0);
+							ssize_t bytes = sendfile(in_fd, out_fd, &offset, sent_content_len);
+							file_send = true;
 							fclose(fp);
 						} else {
-							add_initial_header(response, "HTTP/1.0 404 Not Found", strlen(response));
+							add_initial_header(response, "HTTP/1.1 404 Not Found", strlen(response));
 							status_code_sent = 404;
+							add_body(response, "<html><head></head><body><p>404 - NOT FOUND</body></html>");
 						}
 					}
-					free(file_path);
-					free(file_new_hash);
+					//free(file_path);
+					//free(file_new_hash);
 				}
 			}
 			else // CGI
 			{
 				if (strcmp(cgi_bin, NO_KEY_VALUE) == 0 || strlen(cgi_bin) == 0)
 				{
-					add_initial_header(response, "HTTP/1.0 404 Not Found", strlen(response));
+					add_initial_header(response, "HTTP/1.1 404 Not Found", strlen(response));
 					status_code_sent = 404;
 				}
 				else
@@ -146,20 +158,22 @@ static void proccess_request(int in_fd, hashset *config)
 		}
 		else	// i.e. host is not valid or neither document and cgi-bin directories aren't provided in config file
 		{
-			add_initial_header(response, "HTTP/1.0 404 Not Found", strlen(response));
+			add_initial_header(response, "HTTP/1.1 404 Not Found", strlen(response));
 			status_code_sent = 404;
 		}
 
-		if (strlen(response) == 0) // i.e. response is sent from cgi
+		if (strlen(response) != 0 && !file_send){ // i.e. response is sent from cgi
 			send(in_fd, response, strlen(response), 0);
+		}
 		struct accesslog_params *log;
 		if (!error_occured) log = build_log_data(time_and_ip_log, parsed_header.host, parsed_header.requested_objname, status_code_sent, sent_content_len, get_header_value(header, "User-Agent"));
 		else log = build_error_log(time_and_ip_log, error_msg);
 		log_request(log_level, log, get_config_value(parsed_header.host, "log", config));
 		log_struct_dispose(log_level, log);
 		bool keep_alive = parsed_header.keep_alive;
-		header_info_dispose(&parsed_header);
-		if (keep_alive) set_keep_alive(in_fd);
+		//header_info_dispose(&parsed_header);
+		if (keep_alive){ printf("keeped alive\n"); set_keep_alive(in_fd);}
+		else break;
 	}
 }
 
@@ -224,12 +238,18 @@ static enum http_method get_request_method_and_type(char *header, struct header_
 
 static char *get_header_value(char *header, char *key)
 {
-	char *token;
-	token = strtok(header, " \n");
+	char *token, tmp[strlen(key)+2], header_copy[strlen(header)+1];
+	strcpy(tmp, key);
+	strcat(tmp, ":");
+	strcpy(header_copy, header);
+	token = strtok(header_copy, " \n");
 	while (token != NULL)
 	{
-		if (!strcmp(token, strcat(key, ":")))
-			return strtok(NULL, " \n");
+		if (!strcmp(token, tmp)){
+			char *res = strtok(NULL, " \n");
+			res[strlen(res)-1] = '\0';
+			return strdup(res);
+		}
 		token = strtok(NULL, " \n");
 	}
 	return NULL;
@@ -274,7 +294,7 @@ static struct range_info * get_header_range(char *header)
 
 static char * compute_file_hash(char *full_path)
 {
-	char res[128], tmp[12];
+	char res[128], tmp[24];
 	res[0] = '\0', tmp[0] = '\0';
 	struct stat attr;
 	stat(full_path, &attr);
@@ -318,7 +338,7 @@ static char *get_filename_extension(char *file_path)
 
 static void detect_content_type(char *content_type, const char *ext)
 {
-	if (strcmp(ext, "html") == 0)
+	if (strcmp(ext, "html") == 0 || strcmp(ext, "/") == 0)
 		strcpy(content_type, "text/html");
 	else if (strcmp(ext, "mp4") == 0)
 		strcpy(content_type, "video/mp4");
@@ -339,20 +359,26 @@ static long int get_file_size(FILE *stream)
 
 static char * get_dir_page_path(char *document_root, char *dir_name)
 {
-	char *doc_root_copy_2 = strdup(document_root);
-	if (file_exists(strcat(doc_root_copy_2, "index.html")))
+	printf("%s-%s\n", document_root, dir_name);
+	char *doc_root_copy_2[strlen(document_root)+ strlen(dir_name) + 16];
+	doc_root_copy_2[0] = '\0';
+	strcpy(doc_root_copy_2, document_root);
+	strcat(doc_root_copy_2, dir_name+1);
+	strcat(doc_root_copy_2, "index.html");
+	printf("%s\n", doc_root_copy_2);
+	if (file_exists(doc_root_copy_2))
 		return doc_root_copy_2;
-	free(doc_root_copy_2);
 
-	char *doc_root_copy = strdup(document_root);
-	char *root_html_path = strcat(doc_root_copy, strcat("document directory pages/", document_root));
-	char *full_path_to_file = strcat(root_html_path, dir_name + 1);
-	full_path_to_file = strcat(full_path_to_file, ".html");
+	char *doc_root_copy[strlen(document_root) + 64];
+	doc_root_copy[0] = '\0';
+	//strcpy(doc_root_copy, document_root);
+	strcat(doc_root_copy, "document directory pages");
+	strcat(doc_root_copy, replace(document_root));
+	strcat(doc_root_copy, ".html");
 
-	if (!file_exists(full_path_to_file))
-		scan_and_print_directory(full_path_to_file, true);
-
-	return full_path_to_file;
+	if (!file_exists(doc_root_copy))
+		scan_and_print_directory(doc_root_copy, true);
+	return strdup(doc_root_copy);
 }
 
 static bool file_exists(char *file_path)

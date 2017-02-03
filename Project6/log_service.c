@@ -7,14 +7,14 @@ struct accesslog_params * build_log_data(struct connect_time_and_ip time_ip, cha
 {
 	struct accesslog_params *this = (struct accesslog_params *) malloc(sizeof(struct accesslog_params));
 	assert(this);
-	
+
 	this->time_ip = time_ip;
 	this->domain = domain;
 	this->requested_filename = requested_filename;
 	this->sent_status_code = sent_status_code;
 	this->num_of_bytes_sent = num_of_bytes_sent;
 	this->user_provided_info = user_provided_info;
-	
+
 	return this;
 }
 
@@ -22,7 +22,7 @@ struct accesslog_params * build_error_log(struct connect_time_and_ip time_and_ip
 {
 	struct accesslog_params *this = (struct accesslog_params *) malloc(sizeof(struct accesslog_params));
 	assert(this);
-	
+
 	this->time_ip = time_and_ip_log;
 	this->error_msg = error_msg;
 	return this;
@@ -31,7 +31,7 @@ struct accesslog_params * build_error_log(struct connect_time_and_ip time_and_ip
 void log_request(enum log_type log_level, void *log_data, char *logfile_path)
 {
 	if (log_data == NULL) return;
-	
+
 	char log_str[512];
 	log_str[0] = '\0';
 	strcat(strcat(log_str, ((struct connect_time_and_ip *)log_data)->connect_time), " ");
@@ -45,13 +45,14 @@ void log_request(enum log_type log_level, void *log_data, char *logfile_path)
 		strcat(log_str, tmp);
 		sprintf(tmp, "%d ", params->num_of_bytes_sent);
 		strcat(log_str, tmp);
-		strcat(log_str, params->user_provided_info);
+	//	strcat(log_str, params->user_provided_info);
+		//printf("%s\n", log_str);
 	} else strcat(log_str, ((struct accesslog_params *)log_data)->error_msg);
-	
+
 	FILE *fp = fopen(logfile_path, "a");
 	if (fp == NULL)
 		exit(EXIT_FAILURE);
-	
+
 	fprintf(fp, "%s\n", log_str);
 	fclose(fp);
 }
@@ -59,7 +60,7 @@ void log_request(enum log_type log_level, void *log_data, char *logfile_path)
 void log_struct_dispose(enum log_type log_level, void *log_data)
 {
 	if (log_data == NULL) return;
-	
+
 	free(((struct connect_time_and_ip *)log_data)->connect_time);
 	free(((struct connect_time_and_ip *)log_data)->Ip_address);
 	if (log_level == ACCESSLOG)

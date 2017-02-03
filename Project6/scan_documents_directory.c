@@ -11,7 +11,7 @@ void strings_vector_free_fn(void *elem)
 	free(*(char **)elem);
 }
 
-static char *replace(char *str)
+char *replace(char *str)
 {
 	char *res =malloc(strlen(str)+1);
 	int i;
@@ -34,7 +34,6 @@ static char * generate_html(char *path, vector *entries)
 	char *res = (char *) malloc(last_allocated_size);
 	res[0] = '\0';
 	assert(res);
-printf("%d\n",VectorLength(entries));
 	strcat(res, "<html>\n");
 	strcat(res, "<head>\n");
 	strcat(res, "<title>root</title>\n");
@@ -46,7 +45,7 @@ printf("%d\n",VectorLength(entries));
 	for (i = 1; i < VectorLength(entries)-1; ++i)
 	{
 		link[0] = '\0';
-		strcpy(link, path);
+		//strcpy(link, path);
 		char *entry_name = VectorNth(entries, i);
 		char *url = strcat(strcat(link, "/"), entry_name);
 		char open_tag[128];open_tag[0] = '\0';
@@ -56,8 +55,8 @@ printf("%d\n",VectorLength(entries));
 		char *close_tag = strcat(entry_name_copy, "</a><br>\n");
 		char *whole_tag = strcat(open_tag, close_tag);
 		if (strlen(res) + strlen(whole_tag) + 20 >= last_allocated_size)	// 20 is about num of chars needed for closing last two tags bellow
+
 		{
-			printf("alllloooo\n");
 			last_allocated_size *= 2;
 			res = (char *) realloc((void *) res, last_allocated_size);
 		}
@@ -72,10 +71,10 @@ printf("%d\n",VectorLength(entries));
 // should be called when server starts
 char * scan_and_print_directory(char *directory_path, bool save_html_file)
 {
-	printf("%s\n", directory_path);
+
 	DIR *dir = opendir (directory_path);
 	if (!dir){
-printf("sdcsd\n"); return NULL;}
+ return NULL;}
 	struct dirent *read;
 	vector root_entry_names;
 	VectorNew(&root_entry_names, sizeof(char *), strings_vector_free_fn, 4);
@@ -96,13 +95,11 @@ printf("sdcsd\n"); return NULL;}
 		strcat(strcat(dest_dir, filename), ".html");
 		free(filename);
 		FILE *fp = fopen(dest_dir, "w");
-		printf("%s\n", dest_dir);
 		if (!fp) {
 			perror("Unable to locate new html file");
 			exit(0);
 		}
 		fprintf(fp, "%s", html);
-		printf("%s\n", dest_dir);
 		fclose(fp);
 		free(html);
 		return NULL;
