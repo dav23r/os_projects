@@ -42,15 +42,14 @@ void * work(void *config)
 	return NULL;
 }
 
+char *error_msg;
 static void proccess_request(int in_fd, hashset *config)
 {
 	if (in_fd < 0) return;
 	while (true)
 	{
 		printf("processor got fd=%d\n", in_fd);
-		int *a = (int *) malloc(sizeof(int));
-		*a = 3;
-		printf("%d\n", *a);
+		if (error_msg) {free(error_msg); error_msg = NULL; }
 		char request[BUFFER_SIZE], response[BUFFER_SIZE];
 		memset(request,0,BUFFER_SIZE);
 		memset(response,0,BUFFER_SIZE);
@@ -59,9 +58,7 @@ static void proccess_request(int in_fd, hashset *config)
 		printf("%d\n", bytes_recieved);
 		printf("new request: %slen=%d\n", request, strlen(request));
 		struct connect_time_and_ip time_and_ip_log;
-		printf("`````````````````\n");
 		time_and_ip_log.connect_time = get_formatted_datetime();
-		printf("`````````````````\n");
 		char header[BUFFER_SIZE];
 		memset(header,0,BUFFER_SIZE);
 		get_header(request, header);
@@ -72,8 +69,8 @@ static void proccess_request(int in_fd, hashset *config)
 		time_and_ip_log.Ip_address = get_config_value(parsed_header.host, "ip", config);
 
 		char *document_root = get_config_value(parsed_header.host, "documentroot", config);
-		char *cgi_bin = get_config_value(parsed_header.host, "cgi-bin", config), *error_msg = NULL;
-		bool error_occured, file_send = false;
+		char *cgi_bin = get_config_value(parsed_header.host, "cgi-bin", config);
+		bool file_send = false;
 		enum log_type log_level = ACCESSLOG;
 		if ((strcmp(document_root, NO_KEY_VALUE) != 0 && strlen(document_root) > 0) ||
 			((strcmp(cgi_bin, NO_KEY_VALUE) != 0 && strlen(cgi_bin) > 0)))
@@ -82,6 +79,7 @@ static void proccess_request(int in_fd, hashset *config)
 			printf("beforeeeeeeeeeeeeeeeeeeeeeee = %s-%d\n", header, strlen(header));
 			parsed_header.method = get_request_method_and_type(header, &parsed_header);
 			printf("afterrrrrrrrrrrrrrrrrrrrr = %s-%d\n", header, strlen(header));
+			printf("aaaaaaaaaaaaa - - - - - %s\n", parsed_header.requested_objname);
 
 			parsed_header.etag = get_header_value(header, "Etag");
 			parsed_header.keep_alive = keep_alive(header);
@@ -96,7 +94,7 @@ static void proccess_request(int in_fd, hashset *config)
 				}
 				else
 				{
-					char *file_path = parsed_header.cgi_or_file == DIR ? get_dir_page_path(document_root, parsed_header.requested_objname) : strcat(document_root, parsed_header.requested_objname + 1);
+					char *file_path = parsed_header.cgi_or_file == DIR ? get_dir_page_path(document_root, parsed_header.host, parsed_header.requested_objname) : strcat(document_root, parsed_header.requested_objname + 1);
 
 					char *file_new_hash = compute_file_hash(file_path);
 					if (parsed_header.etag && strcmp(parsed_header.etag, file_new_hash) == 0)
@@ -137,6 +135,7 @@ static void proccess_request(int in_fd, hashset *config)
 							int out_fd = open(file_path, O_RDONLY);
 					        if (out_fd == -1)
 					        {
+					        	error_msg = strdup("cannot open requested static file");
 					            exit(EXIT_FAILURE);
 					        }
 					        strcat(response, "\n");
@@ -192,7 +191,7 @@ static void proccess_request(int in_fd, hashset *config)
 		printf("response - %s\n", response);
 		printf("%d\n", parsed_header.keep_alive);
 		struct accesslog_params *log;
-		if (!error_occured) log = build_log_data(time_and_ip_log, parsed_header.host, parsed_header.requested_objname, status_code_sent, sent_content_len, get_header_value(header, "User-Agent"));
+		if (!error_msg) log = build_log_data(time_and_ip_log, parsed_header.host, parsed_header.requested_objname, status_code_sent, sent_content_len, get_header_value(header, "User-Agent"));
 		else log = build_error_log(time_and_ip_log, error_msg);
 		log_request(log_level, log, get_config_value(parsed_header.host, "log", config));
 		log_struct_dispose(log_level, log);
@@ -277,7 +276,7 @@ static char *get_header_value(char *header, char *key)
 	token = strtok(header_copy, " \n");
 	while (token != NULL)
 	{
-		printf("tokennnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnn key = %s\n", token);
+//		printf("tokennnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnn key = %s\n", token);
 		if (!strcmp(token, tmp)){
 			char *res = strtok(NULL, "\n");
 			res[strlen(res)-1] = '\0';
@@ -358,15 +357,14 @@ static char *get_filename_extension(char *file_path)
 {
 	const char *ext;
 	if (file_path[strlen(file_path)-1] == '/')
-		ext = file_path + strlen(file_path)-1;
+	file_path[strlen(file_path)-1] = '\0';
+
+	const char *last_dot = strrchr(file_path, '.');
+	if(!last_dot || last_dot == file_path)
+		ext = strdup("/");
 	else
-	{
-		const char *last_dot = strrchr(file_path, '.');
-		if(!last_dot || last_dot == file_path)
-			return NULL;
-		else
-			ext = last_dot + 1;
-	}
+		ext = strdup(last_dot + 1);
+
     return (char *)ext;
 }
 
@@ -378,6 +376,8 @@ static void detect_content_type(char *content_type, const char *ext)
 		strcpy(content_type, "video/mp4");
 	else if (strcmp(ext, "jpg") == 0)
 		strcpy(content_type, "image/jpeg");
+	else
+		error_msg = strdup("cannot detect MIME type for given content");
 }
 
 static long int get_file_size(FILE *stream)
@@ -391,12 +391,13 @@ static long int get_file_size(FILE *stream)
 	long int len = ftell(stream);
 }
 
-static char * get_dir_page_path(char *document_root, char *dir_name)
+static char * get_dir_page_path(char *document_root, char *host, char *dir_name)
 {
 	char doc_root_copy_2[strlen(document_root)+ strlen(dir_name) + 16];
 	doc_root_copy_2[0] = '\0';
 	strcpy(doc_root_copy_2, document_root);
 	strcat(doc_root_copy_2, dir_name+1);
+	char dir[strlen(document_root) + strlen(dir_name)]; strcpy(dir, doc_root_copy_2);
 	strcat(doc_root_copy_2, "index.html");
 	if (file_exists(doc_root_copy_2))
 		return strdup(doc_root_copy_2);
@@ -404,11 +405,11 @@ static char * get_dir_page_path(char *document_root, char *dir_name)
 	char doc_root_copy[strlen(document_root) + 64];
 	doc_root_copy[0] = '\0';
 	strcat(doc_root_copy, "document directory pages");
-	strcat(doc_root_copy, replace(document_root));
+	strcat(doc_root_copy, replace(dir));
 	strcat(doc_root_copy, ".html");
 
 	if (!file_exists(doc_root_copy))
-		scan_and_print_directory(doc_root_copy, true);
+		scan_and_print_directory(dir, document_root, host, true);
 	return strdup(doc_root_copy);
 }
 
@@ -423,7 +424,8 @@ static void set_keep_alive(int socket_fd)
     timeout.tv_sec = 5;
     timeout.tv_usec = 0;
 
-    setsockopt(socket_fd, SOL_SOCKET, SO_RCVTIMEO, (char *)&timeout, sizeof(timeout));
+    if (setsockopt(socket_fd, SOL_SOCKET, SO_RCVTIMEO, (char *)&timeout, sizeof(timeout)) < 0)
+    	error_msg = strdup("cannot keep socket alive");
 }
 
 static char * get_formatted_datetime()
@@ -443,6 +445,7 @@ static void header_info_dispose(struct header_info *header)
 	if (header->host) free(header->host);
 	if (header->etag) free(header->etag);
 	if (header->requested_objname) free(header->requested_objname);
+	if (header->ext) free(header->ext);
 	if (header->content_type) free(header->content_type);
 	if (header->range) free(header->range);
 	if (header->content_length) free(header->content_length);

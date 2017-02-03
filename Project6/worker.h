@@ -61,7 +61,7 @@ static char * check_for_query_string(char *token_copy);
 static char * get_filename_extension(char *file_path);
 static void detect_content_type(char *content_type, const char *ext);
 static long int get_file_size(FILE *stream);
-static char * get_dir_page_path(char *document_root, char *dir_name);
+static char * get_dir_page_path(char *document_root, char *host, char *dir_name);
 static bool file_exists(char *file_path);
 static void set_keep_alive(int socket_fd);
 static char * get_formatted_datetime();

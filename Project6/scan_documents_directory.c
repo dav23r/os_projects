@@ -11,6 +11,20 @@ void strings_vector_free_fn(void *elem)
 	free(*(char **)elem);
 }
 
+static int count_files_in_dir(char *dirpath)
+{
+	int file_count = 0;
+	DIR * dirp;
+	struct dirent * entry;
+
+	dirp = opendir(dirpath); 
+	while ((entry = readdir(dirp)) != NULL) {
+        file_count++;
+	}
+	closedir(dirp);
+	return file_count;
+}
+
 char *replace(char *str)
 {
 	char *res =malloc(strlen(str)+1);
@@ -27,9 +41,11 @@ char *replace(char *str)
 /*
  * generates html page of the given directory.
  * every entry of the directory is linken on itself for user.
+ * if (entry->d_type == DT_REG) check 
  */
-static char * generate_html(char *path, vector *entries)
+static char * generate_html(char *path, char *host, vector *entries)
 {
+	printf("%d\n", VectorLength(entries));
 	int last_allocated_size = 1024;
 	char *res = (char *) malloc(last_allocated_size);
 	res[0] = '\0';
@@ -42,12 +58,13 @@ static char * generate_html(char *path, vector *entries)
 	char link[256];
 	//printf("%s\n", link);
 	int i;
-	for (i = 1; i < VectorLength(entries)-1; ++i)
+	for (i = 0; i < VectorLength(entries)-2; ++i)
 	{
 		link[0] = '\0';
-		//strcpy(link, path);
-		char *entry_name = VectorNth(entries, i);
-		char *url = strcat(strcat(link, "/"), entry_name);
+		strcpy(link, host);
+		strcat(link, path);
+		char *entry_name = *(char **)VectorNth(entries, i);
+		char *url = strcat(link, entry_name);
 		char open_tag[128];open_tag[0] = '\0';
 		strcat(strcat(strcat(open_tag, "<a href='"), url), "'>");
 		char entry_name_copy[strlen(entry_name) + 10]; entry_name_copy[0] = '\0';
@@ -69,22 +86,26 @@ static char * generate_html(char *path, vector *entries)
 }
 
 // should be called when server starts
-char * scan_and_print_directory(char *directory_path, bool save_html_file)
+char * scan_and_print_directory(char *directory_path, char *doc_root, char *host, bool save_html_file)
 {
-
+	printf("%s\n", directory_path);
 	DIR *dir = opendir (directory_path);
-	if (!dir){
- return NULL;}
+	if (!dir) return NULL;
 	struct dirent *read;
 	vector root_entry_names;
-	VectorNew(&root_entry_names, sizeof(char *), strings_vector_free_fn, 4);
+	VectorNew(&root_entry_names, sizeof(char **), strings_vector_free_fn, 4);
+	int count = count_files_in_dir(directory_path), i = 0;
+	printf("%d\n", count);
+	char *arr[count];
 
-	while ((read = readdir (dir)) != NULL)
-		VectorAppend(&root_entry_names, &read->d_name);
+	while ((read = readdir (dir)) != NULL && i++ < count) {
+		arr[i] = strdup(read->d_name);
+		VectorAppend(&root_entry_names, &arr[i]);
+	}
 		// puts (read->d_name);
 	closedir (dir);
 
-	char *html = generate_html(directory_path, &root_entry_names);
+	char *html = generate_html(remove_prefix(directory_path, doc_root), host, &root_entry_names);
 	printf("html - %s\n", html);
 	if (save_html_file)
 	{
@@ -102,8 +123,18 @@ char * scan_and_print_directory(char *directory_path, bool save_html_file)
 		fprintf(fp, "%s", html);
 		fclose(fp);
 		free(html);
+		VectorDispose(&root_entry_names);
 		return NULL;
 	}
 	else
 		return html;
+}
+
+static char * remove_prefix(char *str, char *prefix)
+{
+	printf("%s-%s\n", str, prefix);
+	if (strlen(prefix) > strlen(str)) return NULL;
+	int i;
+	for (i = 0; i < strlen(prefix)-1; i++, str++);
+	return str;
 }
