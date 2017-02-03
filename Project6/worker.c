@@ -29,6 +29,7 @@ void * work(void *config)
 
 	while (true) {
 		//daucdis sanam ar mova rame
+		printf("epoll waiting...\n");
 		epoll_wait(epoll_fd, event, 1, -1);
 		Data *dat = (Data *)event[0].data.ptr;
 
@@ -46,18 +47,28 @@ static void proccess_request(int in_fd, hashset *config)
 	if (in_fd < 0) return;
 	while (true)
 	{
-		char request[BUFFER_SIZE];
-		request[0] = '\0';
+		printf("processor got fd=%d\n", in_fd);
+		int *a = (int *) malloc(sizeof(int));
+		*a = 3;
+		printf("%d\n", *a);
+		char request[BUFFER_SIZE], response[BUFFER_SIZE];
+		memset(request,0,BUFFER_SIZE);
+		memset(response,0,BUFFER_SIZE);
 		int bytes_recieved, status_code_sent, sent_content_len;
 		if ((bytes_recieved = recv(in_fd, request, BUFFER_SIZE, 0)) <= 0) break;
+		printf("%d\n", bytes_recieved);
+		printf("new request: %slen=%d\n", request, strlen(request));
 		struct connect_time_and_ip time_and_ip_log;
+		printf("`````````````````\n");
 		time_and_ip_log.connect_time = get_formatted_datetime();
-		char header[BUFFER_SIZE], response[BUFFER_SIZE];
-		header[0] = '\0', response[0] = '\0';
+		printf("`````````````````\n");
+		char header[BUFFER_SIZE];
+		memset(header,0,BUFFER_SIZE);
 		get_header(request, header);
 
 		struct header_info parsed_header;
 		parsed_header.host = get_header_value(header, "Host");
+		printf("after hosttttttttttttttttttttttttt = %d\n", strlen(header));
 		time_and_ip_log.Ip_address = get_config_value(parsed_header.host, "ip", config);
 
 		char *document_root = get_config_value(parsed_header.host, "documentroot", config);
@@ -68,7 +79,9 @@ static void proccess_request(int in_fd, hashset *config)
 			((strcmp(cgi_bin, NO_KEY_VALUE) != 0 && strlen(cgi_bin) > 0)))
 		{
 			/* here also we get requested filename and extension if type is 'FILE', or program name and content-info if CGI */
+			printf("beforeeeeeeeeeeeeeeeeeeeeeee = %s-%d\n", header, strlen(header));
 			parsed_header.method = get_request_method_and_type(header, &parsed_header);
+			printf("afterrrrrrrrrrrrrrrrrrrrr = %s-%d\n", header, strlen(header));
 
 			parsed_header.etag = get_header_value(header, "Etag");
 			parsed_header.keep_alive = keep_alive(header);
@@ -95,13 +108,15 @@ static void proccess_request(int in_fd, hashset *config)
 					else
 					{
 						char count_str[12], content_type[36];
+						memset(count_str,0,12); memset(content_type,0,36);
 						count_str[0] = '\0', content_type[0] = '\0';
+						printf("%s\n", file_path);
 						FILE *fp = fopen(file_path, "r");
 						if (fp)
 						{
 							off_t offset = parsed_header.range->start;
 							int file_size = get_file_size(fp);
-							sent_content_len = parsed_header.range->end - parsed_header.range->start < 0 ? file_size : parsed_header.range->end - parsed_header.range->start;
+							sent_content_len = parsed_header.range->end - parsed_header.range->start < 0 ? file_size : parsed_header.range->end - parsed_header.range->start + 1;
 							status_code_sent = parsed_header.range->end - parsed_header.range->start < 0 ? 200 : 206;
 							sprintf(count_str, "%d", sent_content_len);
 							detect_content_type(content_type, parsed_header.ext);
@@ -118,9 +133,23 @@ static void proccess_request(int in_fd, hashset *config)
 							add_header_key_value(response, "etag", file_new_hash);
 							if (status_code_sent == 200) add_initial_header(response, "HTTP/1.1 200 OK", strlen(response));
 							else add_initial_header(response, "HTTP/1.1 206 Partial Content", strlen(response));
-							int out_fd = fileno(fp);
+							//int out_fd = fileno(fp);
+							int out_fd = open(file_path, O_RDONLY);
+					        if (out_fd == -1)
+					        {
+					            exit(EXIT_FAILURE);
+					        }
+					        strcat(response, "\n");
 							send(in_fd, response, strlen(response), 0);
-							ssize_t bytes = sendfile(in_fd, out_fd, &offset, sent_content_len);
+							//ssize_t bytes = sendfile(in_fd, out_fd, &offset, sent_content_len);
+					        int remain_data = sent_content_len, sent_bytes;
+					        /* Sending file data */
+					        while (((sent_bytes = sendfile(in_fd, out_fd, &offset, BUFFER_SIZE)) > 0) && (remain_data > 0))
+					        {
+					                fprintf(stdout, "1. Server sent %d bytes from file's data, offset is now : %d and remaining data = %d\n", sent_bytes, offset, remain_data);
+					                remain_data -= sent_bytes;
+					                fprintf(stdout, "2. Server sent %d bytes from file's data, offset is now : %d and remaining data = %d\n", sent_bytes, offset, remain_data);
+					        }
 							file_send = true;
 							fclose(fp);
 						} else {
@@ -159,13 +188,18 @@ static void proccess_request(int in_fd, hashset *config)
 		if (strlen(response) != 0 && !file_send){ // i.e. response is sent from cgi
 			send(in_fd, response, strlen(response), 0);
 		}
+		printf("request - %s\n", request);
+		printf("response - %s\n", response);
+		printf("%d\n", parsed_header.keep_alive);
 		struct accesslog_params *log;
 		if (!error_occured) log = build_log_data(time_and_ip_log, parsed_header.host, parsed_header.requested_objname, status_code_sent, sent_content_len, get_header_value(header, "User-Agent"));
 		else log = build_error_log(time_and_ip_log, error_msg);
 		log_request(log_level, log, get_config_value(parsed_header.host, "log", config));
 		log_struct_dispose(log_level, log);
 		bool keep_alive = parsed_header.keep_alive;
+		printf("%d\n", keep_alive);
 		//header_info_dispose(&parsed_header);
+		printf("processor cycle doneeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeee\n");
 		if (keep_alive){ printf("keeped alive\n"); set_keep_alive(in_fd);}
 		else break;
 	}
@@ -188,6 +222,7 @@ static void get_header(char *request, char *header)
 // returns request method, also sets request type in passed header struct
 static enum http_method get_request_method_and_type(char *header, struct header_info *header_struct)
 {
+	header = strdup(header);
 	enum http_method ret = UNDEFINED;
 	bool method_set = false;
 	char *initial_line, *token;
@@ -232,15 +267,19 @@ static enum http_method get_request_method_and_type(char *header, struct header_
 
 static char *get_header_value(char *header, char *key)
 {
+
 	char *token, tmp[strlen(key)+2], header_copy[strlen(header)+1];
+	tmp[0] = '\0'; header_copy[0] = '\0';
 	strcpy(tmp, key);
 	strcat(tmp, ":");
 	strcpy(header_copy, header);
+	printf("key = %s\n", tmp);
 	token = strtok(header_copy, " \n");
 	while (token != NULL)
 	{
+		printf("tokennnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnn key = %s\n", token);
 		if (!strcmp(token, tmp)){
-			char *res = strtok(NULL, " \n");
+			char *res = strtok(NULL, "\n");
 			res[strlen(res)-1] = '\0';
 			return strdup(res);
 		}
@@ -252,6 +291,7 @@ static char *get_header_value(char *header, char *key)
 static bool keep_alive(char *header)
 {
 	char *value = get_header_value(header, "Connection");
+	printf("1111111111111111 - %s\n", value);
 	if (!value || strcmp(value, "keep-alive") != 0)
 		return false;
 
@@ -398,12 +438,14 @@ static char * get_formatted_datetime()
 
 static void header_info_dispose(struct header_info *header)
 {
-	free(header->host);
-	free(header->etag);
-	free(header->requested_objname);
-	free(header->content_type);
-	free(header->range);
-	free(header->content_length);
-	free(header->path_info);
-	free(header->query_string);
+	if (!header) return;
+
+	if (header->host) free(header->host);
+	if (header->etag) free(header->etag);
+	if (header->requested_objname) free(header->requested_objname);
+	if (header->content_type) free(header->content_type);
+	if (header->range) free(header->range);
+	if (header->content_length) free(header->content_length);
+	if (header->path_info) free(header->path_info);
+	if (header->query_string) free(header->query_string);
 }
