@@ -29,11 +29,9 @@ void * work(void *config)
 
 	while (true) {
 		//daucdis sanam ar mova rame
-		printf("ipol wait\n");
 		epoll_wait(epoll_fd, event, 1, -1);
 		Data *dat = (Data *)event[0].data.ptr;
 
-		printf("ipol wait done\n");
 		if(event[0].events & EPOLLIN) {
 			proccess_request(dat->fd, (hashset *)config);
 		}
@@ -45,11 +43,9 @@ void * work(void *config)
 
 static void proccess_request(int in_fd, hashset *config)
 {
-	printf("worker got fd = %d\n", in_fd);
 	if (in_fd < 0) return;
 	while (true)
 	{
-		printf("wait for rcv%s\n");
 		char request[BUFFER_SIZE];
 		request[0] = '\0';
 		int bytes_recieved, status_code_sent, sent_content_len;
@@ -59,11 +55,9 @@ static void proccess_request(int in_fd, hashset *config)
 		char header[BUFFER_SIZE], response[BUFFER_SIZE];
 		header[0] = '\0', response[0] = '\0';
 		get_header(request, header);
-		printf("header:\n%s\n", header);
 
 		struct header_info parsed_header;
 		parsed_header.host = get_header_value(header, "Host");
-		printf("hosttttttttttttttttttttttttt = %s\n", parsed_header.host);
 		time_and_ip_log.Ip_address = get_config_value(parsed_header.host, "ip", config);
 
 		char *document_root = get_config_value(parsed_header.host, "documentroot", config);
@@ -359,19 +353,16 @@ static long int get_file_size(FILE *stream)
 
 static char * get_dir_page_path(char *document_root, char *dir_name)
 {
-	printf("%s-%s\n", document_root, dir_name);
-	char *doc_root_copy_2[strlen(document_root)+ strlen(dir_name) + 16];
+	char doc_root_copy_2[strlen(document_root)+ strlen(dir_name) + 16];
 	doc_root_copy_2[0] = '\0';
 	strcpy(doc_root_copy_2, document_root);
 	strcat(doc_root_copy_2, dir_name+1);
 	strcat(doc_root_copy_2, "index.html");
-	printf("%s\n", doc_root_copy_2);
 	if (file_exists(doc_root_copy_2))
-		return doc_root_copy_2;
+		return strdup(doc_root_copy_2);
 
-	char *doc_root_copy[strlen(document_root) + 64];
+	char doc_root_copy[strlen(document_root) + 64];
 	doc_root_copy[0] = '\0';
-	//strcpy(doc_root_copy, document_root);
 	strcat(doc_root_copy, "document directory pages");
 	strcat(doc_root_copy, replace(document_root));
 	strcat(doc_root_copy, ".html");
