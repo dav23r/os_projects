@@ -45,8 +45,8 @@ void log_request(enum log_type log_level, void *log_data, char *logfile_path)
 		strcat(log_str, tmp);
 		sprintf(tmp, "%d ", params->num_of_bytes_sent);
 		strcat(log_str, tmp);
-	//	strcat(log_str, params->user_provided_info);
-		//printf("%s\n", log_str);
+		strcat(log_str, params->user_provided_info);
+		strcat(log_str, "\n");
 	} else strcat(log_str, ((struct accesslog_params *)log_data)->error_msg);
 
 	FILE *fp = fopen(logfile_path, "a");
@@ -63,10 +63,7 @@ void log_struct_dispose(enum log_type log_level, void *log_data)
 
 	free(((struct connect_time_and_ip *)log_data)->connect_time);
 	free(((struct connect_time_and_ip *)log_data)->Ip_address);
-	if (log_level == ACCESSLOG)
-	{
-		free(((struct accesslog_params *)log_data)->domain);
-		free(((struct accesslog_params *)log_data)->requested_filename);
-		free(((struct accesslog_params *)log_data)->user_provided_info);
-	} else free(((struct accesslog_params *)log_data)->error_msg);
+	
+	if (log_level == ACCESSLOG) free(((struct accesslog_params *)log_data)->user_provided_info);
+	else free(((struct accesslog_params *)log_data)->error_msg);
 }
