@@ -36,13 +36,13 @@ void * work(void *config)
 		if(event[0].events & EPOLLIN) {
 			proccess_request(dat->fd, (hashset *)config);
 		}
-		close(dat->fd);
 		epoll_ctl(epoll_fd, EPOLL_CTL_DEL, dat->fd, event);
+		close(dat->fd);
 	}
 	return NULL;
 }
 
-char *error_msg;
+char *error_msg; enum log_type log_level;
 static void proccess_request(int in_fd, hashset *config)
 {
 	if (in_fd < 0) return;
@@ -53,7 +53,7 @@ static void proccess_request(int in_fd, hashset *config)
 		char request[BUFFER_SIZE], response[BUFFER_SIZE];
 		memset(request,0,BUFFER_SIZE);
 		memset(response,0,BUFFER_SIZE);
-		int bytes_recieved, status_code_sent, sent_content_len;
+		int bytes_recieved = 0, status_code_sent = 0, sent_content_len = 0;
 		if ((bytes_recieved = recv(in_fd, request, BUFFER_SIZE, 0)) <= 0) break;
 		printf("%d\n", bytes_recieved);
 		printf("new request: %slen=%d\n", request, strlen(request));
@@ -71,7 +71,7 @@ static void proccess_request(int in_fd, hashset *config)
 		char *document_root = get_config_value(parsed_header.host, "documentroot", config);
 		char *cgi_bin = get_config_value(parsed_header.host, "cgi-bin", config);
 		bool file_send = false;
-		enum log_type log_level = ACCESSLOG;
+		log_level = ACCESSLOG;
 		if ((strcmp(document_root, NO_KEY_VALUE) != 0 && strlen(document_root) > 0) ||
 			((strcmp(cgi_bin, NO_KEY_VALUE) != 0 && strlen(cgi_bin) > 0)))
 		{
@@ -84,6 +84,7 @@ static void proccess_request(int in_fd, hashset *config)
 			parsed_header.etag = get_header_value(header, "Etag");
 			parsed_header.keep_alive = keep_alive(header);
 			parsed_header.range = get_header_range(header);
+			if ((parsed_header.range->end > 0 || parsed_header.range->start > 0) && parsed_header.range->end  -parsed_header.range->start > 0) {printf("%d-%d\n", parsed_header.range->start, parsed_header.range->end);}
 
 			if (parsed_header.cgi_or_file == STATIC_FILE || parsed_header.cgi_or_file == DIR)
 			{
@@ -110,12 +111,19 @@ static void proccess_request(int in_fd, hashset *config)
 						count_str[0] = '\0', content_type[0] = '\0';
 						printf("%s\n", file_path);
 						FILE *fp = fopen(file_path, "r");
+						printf("aaaaaaaaaaaaaaaa\n");
 						if (fp)
 						{
+							printf("fp not null fp not null fp not null fp not null\n");
 							off_t offset = parsed_header.range->start;
 							int file_size = get_file_size(fp);
-							sent_content_len = parsed_header.range->end - parsed_header.range->start < 0 ? file_size : parsed_header.range->end - parsed_header.range->start + 1;
-							status_code_sent = parsed_header.range->end - parsed_header.range->start < 0 ? 200 : 206;
+							status_code_sent = 206;
+							if(parsed_header.range->start >= 0 && parsed_header.range->end >= 0){printf("1111111111111111111111111111111111111111111\n"); sent_content_len = parsed_header.range->end - parsed_header.range->start + 1;}
+							else if (parsed_header.range->end < 0 && parsed_header.range->start >= 0) {printf("22222222222222222222222222222222222\n"); sent_content_len = file_size - parsed_header.range->start;}
+							else if (parsed_header.range->start < 0 && parsed_header.range->end >= 0) {printf("3333333333333333333333333333333333333\n"); offset = 0; sent_content_len = parsed_header.range->end + 1; }
+							else {printf("444444444444444444444444444444444444444 - %d\n", file_size); offset = 0; sent_content_len = file_size; status_code_sent = 200; }
+							
+					        printf("len = %d\n", sent_content_len);
 							sprintf(count_str, "%d", sent_content_len);
 							detect_content_type(content_type, parsed_header.ext);
 							add_header_key_value(response, "Content-Type", content_type);
@@ -124,7 +132,7 @@ static void proccess_request(int in_fd, hashset *config)
 							if (status_code_sent == 206) {
 								add_header_key_value(response, "Accept-Ranges", "bytes");
 								char content_range_str[49];
-								sprintf(content_range_str, "bytes %d-%d/%d", parsed_header.range->start, parsed_header.range->end, file_size);
+								sprintf(content_range_str, "bytes %d-%d/%d", offset, offset + sent_content_len-1, file_size);
 								add_header_key_value(response, "Content-Range", content_range_str);
 							}
 							add_header_key_value(response, "Cache-Control", "max-age=5");
@@ -136,27 +144,37 @@ static void proccess_request(int in_fd, hashset *config)
 					        if (out_fd == -1)
 					        {
 					        	error_msg = strdup("cannot open requested static file");
+					        	log_level = ERRORLOG;
 					            exit(EXIT_FAILURE);
 					        }
 					        strcat(response, "\n");
 							send(in_fd, response, strlen(response), 0);
 							//ssize_t bytes = sendfile(in_fd, out_fd, &offset, sent_content_len);
-					        int remain_data = sent_content_len, sent_bytes;
+					        int remain_data = sent_content_len, sent_bytes, answ = 0;
 					        /* Sending file data */
-					        while (((sent_bytes = sendfile(in_fd, out_fd, &offset, BUFFER_SIZE)) > 0) && (remain_data > 0))
+					        printf("qqqqqqqqqqqqqqqqq - %d-%d\n", sent_content_len, offset);
+					        while (true)
 					        {
-					                fprintf(stdout, "1. Server sent %d bytes from file's data, offset is now : %d and remaining data = %d\n", sent_bytes, offset, remain_data);
-					                remain_data -= sent_bytes;
-					                fprintf(stdout, "2. Server sent %d bytes from file's data, offset is now : %d and remaining data = %d\n", sent_bytes, offset, remain_data);
+					            /*fprintf(stdout, "1. Server sent %d bytes from file's data, offset is now : %d and remaining data = %d\n", sent_bytes, offset, remain_data);
+					            remain_data -= sent_bytes;
+					            fprintf(stdout, "2. Server sent %d bytes from file's data, offset is now : %d and remaining data = %d\n", sent_bytes, offset, remain_data);*/
+					            answ = sendfile(in_fd, out_fd, &offset, BUFFER_SIZE);
+					            asm volatile("");
+					            if (answ <= 0) break;
 					        }
+					        	//printf("%d-%d\n", sent_content_len, offset);
+					        printf("\n\nlen = %d-size = %d\n", sent_content_len, file_size);
 							file_send = true;
+							close(out_fd);
 							fclose(fp);
 						} else {
+							printf("fp null fp null fp null fp null fp null \n");
 							add_initial_header(response, "HTTP/1.1 404 Not Found", strlen(response));
 							status_code_sent = 404;
 							add_body(response, "<html><head></head><body><p>404 - NOT FOUND</body></html>");
 						}
 					}
+					printf("out out  out out  out out  out out  \n");
 					//free(file_path);
 					//free(file_new_hash);
 				}
@@ -191,10 +209,11 @@ static void proccess_request(int in_fd, hashset *config)
 		printf("response - %s\n", response);
 		printf("%d\n", parsed_header.keep_alive);
 		struct accesslog_params *log;
+		printf("%d\n", parsed_header.requested_objname ==NULL);
 		if (!error_msg) log = build_log_data(time_and_ip_log, parsed_header.host, parsed_header.requested_objname, status_code_sent, sent_content_len, get_header_value(header, "User-Agent"));
 		else log = build_error_log(time_and_ip_log, error_msg);
 		log_request(log_level, log, get_config_value(parsed_header.host, "log", config));
-		log_struct_dispose(log_level, log);
+		//log_struct_dispose(log_level, log);
 		bool keep_alive = parsed_header.keep_alive;
 		printf("%d\n", keep_alive);
 		//header_info_dispose(&parsed_header);
@@ -276,8 +295,8 @@ static char *get_header_value(char *header, char *key)
 	token = strtok(header_copy, " \n");
 	while (token != NULL)
 	{
-//		printf("tokennnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnn key = %s\n", token);
 		if (!strcmp(token, tmp)){
+			printf("%s\n", tmp);
 			char *res = strtok(NULL, "\n");
 			res[strlen(res)-1] = '\0';
 			return strdup(res);
@@ -300,28 +319,38 @@ static bool keep_alive(char *header)
 static struct range_info * get_header_range(char *header)
 {
 	struct range_info *res = (struct range_info *) malloc(sizeof(struct range_info));
-	char *value = get_header_value(header, "range");
+	char *value = get_header_value(header, "Range");
 
 	// full content requested
 	if (!value || strlen(value) == 0)
 	{
-		res->start = 0;
+		res->start = -1;
 		res->end = -1;
 	}
 	else
 	{
 		char *token;
-		token = strtok(value, "- ");
+		token = strtok(value, "bytes= -");
+		printf("111111111111111111111111111111111111111111111111111111111111111 - %s\n", token);
 		if (token && strlen(token) > 0)
 		{
 			res->start = atoi(token);
 
-			if ((token = strtok(NULL, "- ")) != NULL && strlen(token) > 0)
+		printf("111111111111111111111111111111111111111111111111111111111111111 - %d\n", res->start);
+			if ((token = strtok(NULL, "- ")) != NULL && strlen(token) > 0){
+
+		printf("111111111111111111111111111111111111111111111111111111111111111 - %s\n", token);
 				res->end = atoi(token);
-			else
+			}
+			else{
+
+		printf("22222222222222222222222222222222222222222222222222222222 - %s\n", token);
 				res->end = -1;	// i.e. by the end
+			}
 		}
 	}
+	printf("3333333333333333333333333333333333333333333333333 - %d\n", res->start);
+	printf("3333333333333333333333333333333333333333333333333 - %d\n", res->end);
 	return res;
 }
 
@@ -377,8 +406,10 @@ static void detect_content_type(char *content_type, const char *ext)
 		strcpy(content_type, "video/mp4");
 	else if (strcmp(ext, "jpg") == 0)
 		strcpy(content_type, "image/jpeg");
-	else
-		error_msg = strdup("cannot detect MIME type for given content");
+	else{
+		error_msg = strdup(" cannot detect MIME type for given content");
+		log_level = ERRORLOG;
+	}
 }
 
 static long int get_file_size(FILE *stream)
@@ -425,8 +456,10 @@ static void set_keep_alive(int socket_fd)
     timeout.tv_sec = 5;
     timeout.tv_usec = 0;
 
-    if (setsockopt(socket_fd, SOL_SOCKET, SO_RCVTIMEO, (char *)&timeout, sizeof(timeout)) < 0)
-    	error_msg = strdup("cannot keep socket alive");
+    if (setsockopt(socket_fd, SOL_SOCKET, SO_RCVTIMEO, (char *)&timeout, sizeof(timeout)) < 0){
+    	error_msg = strdup(" cannot keep socket alive");
+    	log_level = ERRORLOG;
+    }
 }
 
 static char * get_formatted_datetime()

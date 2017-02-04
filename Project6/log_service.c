@@ -5,9 +5,10 @@
 struct accesslog_params * build_log_data(struct connect_time_and_ip time_ip, char *domain, char *requested_filename,
 					int sent_status_code, int num_of_bytes_sent, char *user_provided_info)
 {
+	printf("zzzzzzzzzzzzzzzzzzzzzzzzzzzz\n");
 	struct accesslog_params *this = (struct accesslog_params *) malloc(sizeof(struct accesslog_params));
 	assert(this);
-
+printf("zdzd donsk %s\n", requested_filename);
 	this->time_ip = time_ip;
 	this->domain = domain;
 	this->requested_filename = requested_filename;
@@ -35,11 +36,12 @@ void log_request(enum log_type log_level, void *log_data, char *logfile_path)
 	char log_str[512];
 	log_str[0] = '\0';
 	strcat(strcat(log_str, ((struct connect_time_and_ip *)log_data)->connect_time), " ");
-	strcat(strcat(log_str, ((struct connect_time_and_ip *)log_data)->Ip_address), (log_level == ACCESSLOG ? " " : ""));
+	strcat(strcat(log_str, ((struct connect_time_and_ip *)log_data)->Ip_address), (log_level == ACCESSLOG ? " " : "\n"));
 	if (log_level == ACCESSLOG)
 	{
+		printf("%s\n", log_str);
 		struct accesslog_params *params = ((struct accesslog_params *)log_data);
-		char tmp[16];
+		char tmp[32];
 		strcat(strcat(log_str, params->requested_filename), " ");
 		sprintf(tmp, "%d ", params->sent_status_code);
 		strcat(log_str, tmp);

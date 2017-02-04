@@ -13,6 +13,7 @@
 #include "worker.h"
 #include "scan_documents_directory.h"
 #include "hash.h"
+#include <signal.h>
 
 
 #define LISTENERS_BACKLOG_SIZE 256
@@ -25,6 +26,7 @@ struct listener_thread_args {
 void * net_events_handler(void *aux);
 int main(int argc, const char* argv[]){
 	if (argc < 2) perror("config file not provided");
+	signal(SIGPIPE, SIG_IGN);
 	hashset configs;
 	HashSetNew(&configs, sizeof(struct config), 4, hash, cmp, freeFn);
 	printf ("%d\n", 1);

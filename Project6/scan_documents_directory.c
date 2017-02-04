@@ -58,8 +58,9 @@ static char * generate_html(char *path, vector *entries)
 	char link[256];
 	//printf("%s\n", link);
 	int i;
-	for (i = 0; i < VectorLength(entries)-2; ++i)
+	for (i = 0; i < VectorLength(entries); ++i)
 	{
+		if (strcmp(*(char **)VectorNth(entries, i), ".") == 0 || strcmp(*(char **)VectorNth(entries, i), "..") == 0) continue;
 		link[0] = '\0';
 		//strcpy(link, host);
 		strcpy(link, path);
@@ -67,7 +68,7 @@ static char * generate_html(char *path, vector *entries)
 		//strcat(link, "/");
 		char *url = strcat(link, entry_name);
 		char open_tag[128];open_tag[0] = '\0';
-		strcat(strcat(strcat(open_tag, "<a href='"), url), "'>");
+		strcat(strcat(strcat(open_tag, "<a href=\""), url), "\">");
 		char entry_name_copy[strlen(entry_name) + 10]; entry_name_copy[0] = '\0';
 		strcpy(entry_name_copy, entry_name);
 		char *close_tag = strcat(entry_name_copy, "</a><br>\n");
