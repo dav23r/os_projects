@@ -98,7 +98,7 @@ static void proccess_request(int in_fd, hashset *config)
 				{
 					char *file_path = parsed_header.cgi_or_file == DIR ? get_dir_page_path(document_root, parsed_header.requested_objname) : strcat(document_root, parsed_header.requested_objname + 1);
 					printf("------------------------------------------%s\n", file_path);
-					char *file_new_hash = compute_file_hash(file_path);
+					char *file_new_hash = compute_file_hash(file_path, parsed_header.range);
 					if (parsed_header.etag && strcmp(parsed_header.etag, file_new_hash) == 0)
 					{
 						add_initial_header(response, "HTTP/1.1 304 Not Modified", strlen(response));
@@ -140,6 +140,7 @@ static void proccess_request(int in_fd, hashset *config)
 							if (status_code_sent == 200) add_initial_header(response, "HTTP/1.1 200 OK", strlen(response));
 							else add_initial_header(response, "HTTP/1.1 206 Partial Content", strlen(response));
 							//int out_fd = fileno(fp);
+							fclose(fp);
 							int out_fd = open(file_path, O_RDONLY);
 					        if (out_fd == -1)
 					        {
@@ -166,7 +167,6 @@ static void proccess_request(int in_fd, hashset *config)
 					        printf("\n\nlen = %d-size = %d\n", sent_content_len, file_size);
 							file_send = true;
 							close(out_fd);
-							fclose(fp);
 						} else {
 							printf("fp null fp null fp null fp null fp null \n");
 							add_initial_header(response, "HTTP/1.1 404 Not Found", strlen(response));
@@ -372,9 +372,9 @@ static struct range_info * get_header_range(char *header)
 	return res;
 }
 
-static char * compute_file_hash(char *full_path)
+static char * compute_file_hash(char *full_path, struct range_info *range)
 {
-	char res[128], tmp[24];
+	char res[128], tmp[32];
 	res[0] = '\0', tmp[0] = '\0';
 	struct stat attr;
 	stat(full_path, &attr);
@@ -383,7 +383,11 @@ static char * compute_file_hash(char *full_path)
 	strcat(res, tmp);
 	sprintf(tmp, "%ld_%c", (long)attr.st_mtime, '\0');
 	strcat(res, tmp);
-	sprintf(tmp, "%ld%c", (long)attr.st_atime, '\0');
+	sprintf(tmp, "%ld_%c", (long)attr.st_atime, '\0');
+	strcat(res, tmp);
+	sprintf(tmp, "%d_%c", range->start, '\0');
+	strcat(res, tmp);
+	sprintf(tmp, "%d%c", range->end, '\0');
 	strcat(res, tmp);
 
 	return strdup(res);
@@ -448,6 +452,7 @@ static char * get_dir_page_path(char *document_root, char *dir_name)
 	strcpy(doc_root_copy_2, document_root);
 	strcat(doc_root_copy_2, dir_name+1);
 	char dir[strlen(document_root) + strlen(dir_name)]; strcpy(dir, doc_root_copy_2);
+	if (doc_root_copy_2[strlen(doc_root_copy_2)-1] != '/') strcat(doc_root_copy_2, "/");
 	strcat(doc_root_copy_2, "index.html");
 	if (file_exists(doc_root_copy_2))
 		return strdup(doc_root_copy_2);

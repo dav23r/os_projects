@@ -65,7 +65,7 @@ static char * generate_html(char *path, vector *entries)
 		//strcpy(link, host);
 		strcpy(link, path);
 		char *entry_name = *(char **)VectorNth(entries, i);
-		//strcat(link, "/");
+		if (link[strlen(link)-1] != '/') strcat(link, "/");
 		char *url = strcat(link, entry_name);
 		char open_tag[128];open_tag[0] = '\0';
 		strcat(strcat(strcat(open_tag, "<a href=\""), url), "\">");
