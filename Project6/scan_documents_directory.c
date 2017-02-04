@@ -113,7 +113,7 @@ char * scan_and_print_directory(char *directory_path, char *doc_root, bool save_
 	{
 		//here, '/document directory pages' is a directory where this kind of genarated htmls go
 		char dest_dir[128]; dest_dir[0] = '\0';
-		strcpy(dest_dir, "document directory pages");
+		strcpy(dest_dir, "document_directory_pages");
 		char *filename = replace(directory_path);
 		strcat(strcat(dest_dir, filename), ".html");
 		free(filename);

@@ -9,7 +9,7 @@ typedef struct {
     int otherThing;
 } Data;
 
-#define WORKERS_NUM 1
+#define WORKERS_NUM 1024
 
 
 #endif

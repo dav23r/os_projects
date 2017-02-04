@@ -31,6 +31,7 @@ void * work(void *config)
 		//daucdis sanam ar mova rame
 		printf("epoll waiting...\n");
 		epoll_wait(epoll_fd, event, 1, -1);
+		printf("epollllll\n");
 		Data *dat = (Data *)event[0].data.ptr;
 
 		if(event[0].events & EPOLLIN) {
@@ -81,7 +82,7 @@ static void proccess_request(int in_fd, hashset *config)
 			printf("afterrrrrrrrrrrrrrrrrrrrr = %s-%d\n", header, strlen(header));
 			printf("aaaaaaaaaaaaa - - - - - %s\n", parsed_header.requested_objname);
 
-			parsed_header.etag = get_header_value(header, "Etag");
+			parsed_header.etag = get_header_value(header, "If-None-Match");
 			parsed_header.keep_alive = keep_alive(header);
 			parsed_header.range = get_header_range(header);
 			if ((parsed_header.range->end > 0 || parsed_header.range->start > 0) && parsed_header.range->end  -parsed_header.range->start > 0) {printf("%d-%d\n", parsed_header.range->start, parsed_header.range->end);}
@@ -100,7 +101,6 @@ static void proccess_request(int in_fd, hashset *config)
 					char *file_new_hash = compute_file_hash(file_path);
 					if (parsed_header.etag && strcmp(parsed_header.etag, file_new_hash) == 0)
 					{
-						assert(0);
 						add_initial_header(response, "HTTP/1.1 304 Not Modified", strlen(response));
 						status_code_sent = 304;
 					}
@@ -122,7 +122,7 @@ static void proccess_request(int in_fd, hashset *config)
 							else if (parsed_header.range->end < 0 && parsed_header.range->start >= 0) {printf("22222222222222222222222222222222222\n"); sent_content_len = file_size - parsed_header.range->start;}
 							else if (parsed_header.range->start < 0 && parsed_header.range->end >= 0) {printf("3333333333333333333333333333333333333\n"); offset = 0; sent_content_len = parsed_header.range->end + 1; }
 							else {printf("444444444444444444444444444444444444444 - %d\n", file_size); offset = 0; sent_content_len = file_size; status_code_sent = 200; }
-							
+
 					        printf("len = %d\n", sent_content_len);
 							sprintf(count_str, "%d", sent_content_len);
 							detect_content_type(content_type, parsed_header.ext);
@@ -206,6 +206,7 @@ static void proccess_request(int in_fd, hashset *config)
 			send(in_fd, response, strlen(response), 0);
 		}
 		printf("request - %s\n", request);
+		printf("%d\n", strlen(response));
 		printf("response - %s\n", response);
 		printf("%d\n", parsed_header.keep_alive);
 		struct accesslog_params *log;
@@ -213,7 +214,7 @@ static void proccess_request(int in_fd, hashset *config)
 		if (!error_msg) log = build_log_data(time_and_ip_log, parsed_header.host, parsed_header.requested_objname, status_code_sent, sent_content_len, get_header_value(header, "User-Agent"));
 		else log = build_error_log(time_and_ip_log, error_msg);
 		log_request(log_level, log, get_config_value(parsed_header.host, "log", config));
-		//log_struct_dispose(log_level, log);
+		log_struct_dispose(log_level, log);
 		bool keep_alive = parsed_header.keep_alive;
 		printf("%d\n", keep_alive);
 		//header_info_dispose(&parsed_header);
@@ -244,8 +245,13 @@ static enum http_method get_request_method_and_type(char *header, struct header_
 	enum http_method ret = UNDEFINED;
 	bool method_set = false;
 	char *initial_line, *token;
-	initial_line = strtok (header, "\n");
-	token = strtok (initial_line, " ");
+	char *tokenizer_outer = strdup(header); char *tokenizer_outer_old = tokenizer_outer;
+
+	initial_line = strtok_r (tokenizer_outer, "\n", &tokenizer_outer);
+
+	char *tokenizer_inner = strdup(initial_line);
+	char *tokenizer_inner_old = tokenizer_inner;
+	token = strtok_r (tokenizer_inner, " ", &tokenizer_inner);
 	while (token != NULL)
 	{
 		if (method_set)
@@ -262,6 +268,10 @@ static enum http_method get_request_method_and_type(char *header, struct header_
 
 			header_struct->requested_objname = token_copy;
 			header_struct->ext = ext;
+
+			free (tokenizer_outer_old);
+			free (tokenizer_inner_old);
+
 			return ret;
 		}
 		else
@@ -277,9 +287,11 @@ static enum http_method get_request_method_and_type(char *header, struct header_
 				method_set = true;
 			}
 		}
-		token = strtok (NULL, " ");
+		token = strtok_r (tokenizer_inner, " ", &tokenizer_inner);
 	}
 
+	free (tokenizer_outer_old);
+	free (tokenizer_inner_old);
 	return ret;
 }
 
@@ -292,17 +304,20 @@ static char *get_header_value(char *header, char *key)
 	strcat(tmp, ":");
 	strcpy(header_copy, header);
 	printf("key = %s\n", tmp);
-	token = strtok(header_copy, " \n");
+	char *tokenizer = strdup(header_copy);
+	char *tokenizer_old = tokenizer;
+	token = strtok_r(tokenizer, " \n", &tokenizer);
 	while (token != NULL)
 	{
 		if (!strcmp(token, tmp)){
 			printf("%s\n", tmp);
-			char *res = strtok(NULL, "\n");
+			char *res = strtok_r(tokenizer, "\n", &tokenizer);
 			res[strlen(res)-1] = '\0';
 			return strdup(res);
 		}
-		token = strtok(NULL, " \n");
+		token = strtok_r(tokenizer, " \n", &tokenizer);
 	}
+	free (tokenizer_old);
 	return NULL;
 }
 
@@ -330,14 +345,16 @@ static struct range_info * get_header_range(char *header)
 	else
 	{
 		char *token;
-		token = strtok(value, "bytes= -");
+		char *tokenizer = strdup(value);
+		char *tokenizer_old;
+		token = strtok_r(tokenizer, "bytes= -", &tokenizer);
 		printf("111111111111111111111111111111111111111111111111111111111111111 - %s\n", token);
 		if (token && strlen(token) > 0)
 		{
 			res->start = atoi(token);
 
 		printf("111111111111111111111111111111111111111111111111111111111111111 - %d\n", res->start);
-			if ((token = strtok(NULL, "- ")) != NULL && strlen(token) > 0){
+			if ((token = strtok_r(tokenizer, "- ", &tokenizer)) != NULL && strlen(token) > 0){
 
 		printf("111111111111111111111111111111111111111111111111111111111111111 - %s\n", token);
 				res->end = atoi(token);
@@ -348,6 +365,7 @@ static struct range_info * get_header_range(char *header)
 				res->end = -1;	// i.e. by the end
 			}
 		}
+		free (tokenizer_old);
 	}
 	printf("3333333333333333333333333333333333333333333333333 - %d\n", res->start);
 	printf("3333333333333333333333333333333333333333333333333 - %d\n", res->end);
@@ -436,7 +454,7 @@ static char * get_dir_page_path(char *document_root, char *dir_name)
 
 	char doc_root_copy[strlen(document_root) + 64];
 	doc_root_copy[0] = '\0';
-	strcat(doc_root_copy, "document directory pages");
+	strcat(doc_root_copy, "document_directory_pages");
 	strcat(doc_root_copy, replace(dir));
 	strcat(doc_root_copy, ".html");
 

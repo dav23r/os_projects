@@ -40,25 +40,28 @@ printf ("%s\n", configfile);
 	char buff[256];
 	while (fgets(buff, sizeof(buff), fp))
 	{
+		char *tmp = strdup(buff);
+		char *ptr = tmp;
 		if (strlen(buff) <= 1) continue;
-		token = strtok(buff, delims);
+		token = strtok_r(tmp, delims, &tmp);
 		while (token) {
 			if (strcmp(token, "vhost") == 0)
 			{
 				if (curr_conf.vhost != NULL) HashSetEnter(configs, &curr_conf);
-				token = strtok(NULL, delims);
+				token = strtok_r(tmp, delims, &tmp);
 				token[strlen(token)-1] = '\0';
 				curr_conf.vhost = strdup(token);
 			}
 			else
 			{
-				char *aa = token, *bb = strtok(NULL, delims);
+				char *aa = token, *bb = strtok_r(tmp, delims, &tmp);
 				bb[strlen(bb)-1] = '\0';
 				config_add_value(&curr_conf, strdup(token), strdup(bb));
 				token = bb;
 			}
-			token = strtok(NULL, delims);
+			token = strtok_r(tmp, delims, &tmp);
 		}
+		free (ptr);
 	}
 	fclose(fp);
 	HashSetEnter(configs, &curr_conf);
