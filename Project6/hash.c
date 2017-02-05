@@ -2,6 +2,7 @@
 #include "config_service.h"
 #include <stdlib.h>
 
+/* free ,compare and hash functions for configs hashset */
 
 void freeFn(void *elemAddr){
   struct config *c = (struct config *)elemAddr;

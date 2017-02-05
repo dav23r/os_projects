@@ -9,5 +9,6 @@ char * scan_and_print_directory(char *directory_path, char *doc_root, bool save_
 char *replace(char *str);
 
 static char * remove_prefix(char *str, char *prefix);
+void strings_vector_free_fn(void *elem);
 
 #endif

@@ -2,13 +2,12 @@
 #include <assert.h>
 #include "log_service.h"
 
+// creates and returns struct accesslog_params object for the given parameters
 struct accesslog_params * build_log_data(struct connect_time_and_ip time_ip, char *domain, char *requested_filename,
 					int sent_status_code, int num_of_bytes_sent, char *user_provided_info)
 {
-	printf("zzzzzzzzzzzzzzzzzzzzzzzzzzzz\n");
 	struct accesslog_params *this = (struct accesslog_params *) malloc(sizeof(struct accesslog_params));
 	assert(this);
-printf("zdzd donsk %s\n", requested_filename);
 	this->time_ip = time_ip;
 	this->domain = domain;
 	this->requested_filename = requested_filename;
@@ -19,6 +18,7 @@ printf("zdzd donsk %s\n", requested_filename);
 	return this;
 }
 
+// creates and returns struct error log object for the given parameters
 struct accesslog_params * build_error_log(struct connect_time_and_ip time_and_ip_log, char *error_msg)
 {
 	struct accesslog_params *this = (struct accesslog_params *) malloc(sizeof(struct accesslog_params));
@@ -29,6 +29,7 @@ struct accesslog_params * build_error_log(struct connect_time_and_ip time_and_ip
 	return this;
 }
 
+// writes given log in logs file
 void log_request(enum log_type log_level, void *log_data, char *logfile_path)
 {
 	if (log_data == NULL) return;
@@ -39,7 +40,6 @@ void log_request(enum log_type log_level, void *log_data, char *logfile_path)
 	strcat(strcat(log_str, ((struct connect_time_and_ip *)log_data)->Ip_address), (log_level == ACCESSLOG ? " " : "\n"));
 	if (log_level == ACCESSLOG)
 	{
-		printf("%s\n", log_str);
 		struct accesslog_params *params = ((struct accesslog_params *)log_data);
 		char tmp[32];
 		strcat(strcat(log_str, params->requested_filename), " ");

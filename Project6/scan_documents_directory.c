@@ -6,11 +6,8 @@
 #include <stdlib.h>
 #include <assert.h>
 
-void strings_vector_free_fn(void *elem)
-{
-	free(*(char **)elem);
-}
 
+// returns how many files or directories are in the given directory 
 static int count_files_in_dir(char *dirpath)
 {
 	int file_count = 0;
@@ -25,6 +22,7 @@ static int count_files_in_dir(char *dirpath)
 	return file_count;
 }
 
+// replaces front slashes with plus signs
 char *replace(char *str)
 {
 	char *res =malloc(strlen(str)+1);
@@ -45,7 +43,6 @@ char *replace(char *str)
  */
 static char * generate_html(char *path, vector *entries)
 {
-	printf("%d\n", VectorLength(entries));
 	int last_allocated_size = 1024;
 	char *res = (char *) malloc(last_allocated_size);
 	res[0] = '\0';
@@ -56,13 +53,11 @@ static char * generate_html(char *path, vector *entries)
 	strcat(res, "</head>\n");
 	strcat(res, "<body>\n");
 	char link[256];
-	//printf("%s\n", link);
 	int i;
 	for (i = 0; i < VectorLength(entries); ++i)
 	{
 		if (strcmp(*(char **)VectorNth(entries, i), ".") == 0 || strcmp(*(char **)VectorNth(entries, i), "..") == 0) continue;
 		link[0] = '\0';
-		//strcpy(link, host);
 		strcpy(link, path);
 		char *entry_name = *(char **)VectorNth(entries, i);
 		if (link[strlen(link)-1] != '/') strcat(link, "/");
@@ -87,28 +82,24 @@ static char * generate_html(char *path, vector *entries)
 	return res;
 }
 
-// should be called when server starts
+// scnas the directory and genarates its appropriate html. should be called when server starts.
 char * scan_and_print_directory(char *directory_path, char *doc_root, bool save_html_file)
 {
-	printf("88888888888888888888888888888888888888888888888888888 - %s\n", directory_path);
 	DIR *dir = opendir (directory_path);
 	if (!dir) return NULL;
 	struct dirent *read;
 	vector root_entry_names;
 	VectorNew(&root_entry_names, sizeof(char **), strings_vector_free_fn, 4);
 	int count = count_files_in_dir(directory_path), i = 0;
-	printf("%d\n", count);
 	char *arr[count];
 
 	while ((read = readdir (dir)) != NULL && i++ < count) {
 		arr[i] = strdup(read->d_name);
 		VectorAppend(&root_entry_names, &arr[i]);
 	}
-		// puts (read->d_name);
 	closedir (dir);
 
 	char *html = generate_html(remove_prefix(directory_path, doc_root), &root_entry_names);
-	printf("html - %s\n", html);
 	if (save_html_file)
 	{
 		//here, '/document directory pages' is a directory where this kind of genarated htmls go
@@ -134,9 +125,13 @@ char * scan_and_print_directory(char *directory_path, char *doc_root, bool save_
 
 static char * remove_prefix(char *str, char *prefix)
 {
-	printf("%s-%s\n", str, prefix);
 	if (strlen(prefix) > strlen(str)) return NULL;
 	int i;
 	for (i = 0; i < strlen(prefix)-1; i++, str++);
 	return str;
+}
+
+void strings_vector_free_fn(void *elem)
+{
+	free(*(char **)elem);
 }

@@ -18,6 +18,7 @@
 
 #define LISTENERS_BACKLOG_SIZE 256
 
+// args struct for listener threads
 struct listener_thread_args {
 	char **port;
 	hashset *confs;
@@ -29,70 +30,48 @@ int main(int argc, const char* argv[]){
 	signal(SIGPIPE, SIG_IGN);
 	hashset configs;
 	HashSetNew(&configs, sizeof(struct config), 4, hash, cmp, freeFn);
-	printf ("%d\n", 1);
 	save_config(argv[1], &configs);
-	printf ("%d\n", 2);
-
 	vector *ports = get_all_port_numbers(&configs);
 	int ports_number = VectorLength(ports), i = 0;
-
-
-			//creation of epoll
 	if((epoll_fd = epoll_create1(0)) == -1) {
 		perror("epoll_create");
 		exit(EXIT_FAILURE);
 	}
-
-	// todo: run listener threads
 	pthread_t *threads = (pthread_t *)calloc(ports_number + WORKERS_NUM, sizeof(*threads));	// ports_number listener threads, WORKERS_NUM worker threads
 	assert(threads);
-
 	struct listener_thread_args buffer[ports_number];
 	for (; i < ports_number; ++i){
-		printf("listener\n");
 		struct listener_thread_args args;
 		args.port = VectorNth(ports, i);
 		args.confs = &configs;
 		memcpy(&buffer[i], &args, sizeof(struct listener_thread_args));
 		pthread_create(threads + i, NULL, net_events_handler, &buffer[i]);
 	}
-
 	// run WORKERS_NUM worker threads
 	for (; i < ports_number + WORKERS_NUM; ++i){
-		printf("worker\n");
 		pthread_create(threads + i, NULL, work, &configs);
 	}
-
 	for (i=0; i < ports_number + WORKERS_NUM; i++){
-		printf("joined\n");
 		pthread_join(threads[i], NULL);
 	}
-
 	free(threads);
 	VectorDispose(ports);
-
 	return 0;
 }
 
+// listens for the given port and adds accepted fd-s in epoll
 void * net_events_handler(void *aux)
 {
 	struct listener_thread_args *args = (struct listener_thread_args *)aux;
 	hashset *configs = args->confs;
-	printf("qqqqqqq- - - - %s\n", *(char **)(args->port));
 	char *vhost = get_vhost(configs, *(char **)(args->port));
 	char *doc_path = get_config_value(vhost, "documentroot", configs);
-	printf("doccccccccccccccccccccccccccccccc - %s\n", doc_path);
 	scan_and_print_directory(doc_path, doc_path, true);
 
 	//https://www.tutorialspoint.com/unix_sockets/socket_server_example.htm
 	int sockfd, newsockfd, portno, clilen;
 	struct sockaddr_in serv_addr, cli_addr;
-	int n;
-
-
-	/* First call to socket() function */
 	sockfd = socket(AF_INET, SOCK_STREAM, 0);
-
 	if (sockfd < 0) {
 		perror("ERROR opening socket");
 		exit(1);
@@ -120,14 +99,12 @@ void * net_events_handler(void *aux)
 	/* Now start listening for the clients, here process will
 	 * go in sleep mode and will wait for the incoming connection
 	 */
-	printf("epoll = %d\n", epoll_fd);
 	listen(sockfd, LISTENERS_BACKLOG_SIZE);
 	clilen = sizeof(cli_addr);
 	while (true) {
 		printf("waiting for connect\n");
 		/* Accept actual connection from the client */
 		newsockfd = accept(sockfd, (struct sockaddr *)&cli_addr, &clilen);
-		printf("fd = %d\n", newsockfd);
 		if (newsockfd < 0) {
 			perror("ERROR on accept");
 			exit(1);

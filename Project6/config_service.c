@@ -3,6 +3,7 @@
 #include <assert.h>
 #include "config_service.h"
 
+// argument struct for HashsetMao function that retrives vhost according to the given port number
 struct vhost_getter_arg {
 	char *port;
 	char *ret;
@@ -13,21 +14,20 @@ void freee(void *a)
 	free(*(char **)a);
 }
 
+// returns config value connected to the vhost and key
 char* get_config_value(char *vhost_name, char *key, hashset *configs)
 {
-	printf("count = %d\n", HashSetCount(configs));
-	printf("%s\n", vhost_name);
 	struct config *conf = HashSetLookup(configs, vhost_name);
-	printf("conf null? %d\n", conf == NULL);
 	if (!conf) return strdup(NO_KEY_VALUE);
 	return config_get_value(conf, key);
 }
 
+// returns config of the vhost
 struct config *get_config_block(char *vhost_name, hashset *configs) { return HashSetLookup(configs, vhost_name); }
 
+// reads configs file and stores in memory
 void save_config(const char *configfile, hashset *configs)
 {
-printf ("%s\n", configfile);
 	//char buff[255];
 	FILE *fp = fopen(configfile, "r");
 	if (fp == NULL)
@@ -65,9 +65,9 @@ printf ("%s\n", configfile);
 	}
 	fclose(fp);
 	HashSetEnter(configs, &curr_conf);
-
 }
 
+// return all port numbers from configs
 vector * get_all_port_numbers(hashset *configs)
 {
 	vector *v = (vector *) malloc(sizeof(vector));
@@ -78,6 +78,7 @@ vector * get_all_port_numbers(hashset *configs)
 	return v;
 }
 
+// returns vhostname for the post
 char *get_vhost(hashset *configs, char *port)
 {
 	struct vhost_getter_arg arg;
@@ -86,6 +87,7 @@ char *get_vhost(hashset *configs, char *port)
 	return arg.ret;
 }
 
+// adds new key-value for given config block
 static void config_add_value(struct config *conf, char *key, char *value)
 {
 	if (strcmp(key, "documentroot") == 0)
@@ -100,6 +102,7 @@ static void config_add_value(struct config *conf, char *key, char *value)
 		conf->log = value;
 }
 
+// returns value for given config block's key
 static char * config_get_value(struct config *conf, char *key)
 {
 	if (strcmp(key, "documentroot") == 0)

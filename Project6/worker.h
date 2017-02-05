@@ -66,5 +66,42 @@ static bool file_exists(char *file_path);
 static void set_keep_alive(int socket_fd);
 static char * get_formatted_datetime();
 
+
+#define INIT_WORKER \
+						if (error_msg) {free(error_msg); error_msg = NULL; } \
+						char request[BUFFER_SIZE], response[BUFFER_SIZE], header[BUFFER_SIZE]; \
+						memset(request,0,BUFFER_SIZE); memset(response,0,BUFFER_SIZE); memset(header,0,BUFFER_SIZE); \
+						int bytes_recieved = 0, status_code_sent = 0, sent_content_len = 0; \
+						if ((bytes_recieved = recv(in_fd, request, BUFFER_SIZE, 0)) <= 0) break; \
+						struct connect_time_and_ip time_and_ip_log; \
+						time_and_ip_log.connect_time = get_formatted_datetime(); \
+						get_header(request, header); \
+						struct header_info parsed_header; \
+						parsed_header.host = get_header_value(header, "Host"); \
+						time_and_ip_log.Ip_address = get_config_value(parsed_header.host, "ip", config); \
+						char *document_root = get_config_value(parsed_header.host, "documentroot", config); \
+						char *cgi_bin = get_config_value(parsed_header.host, "cgi-bin", config); \
+						bool file_send = false; \
+						log_level = ACCESSLOG;
+
+#define SET_HEADERS \
+						add_header_key_value(response, "Content-Type", content_type); \
+						add_header_key_value(response, "Content-Length", count_str); \
+						if (status_code_sent == 206) { \
+							add_header_key_value(response, "Accept-Ranges", "bytes"); \
+							char content_range_str[49]; \
+							sprintf(content_range_str, "bytes %jd-%ld/%d", (intmax_t)offset, offset + sent_content_len-1, file_size); \
+							add_header_key_value(response, "Content-Range", content_range_str); \
+						} \
+						add_header_key_value(response, "Cache-Control", "max-age=5"); \
+						add_header_key_value(response, "etag", file_new_hash);
+
+#define FILE_EXIT \
+						{ \
+					        	error_msg = strdup("cannot open requested static file"); \
+					        	log_level = ERRORLOG; \
+					            exit(EXIT_FAILURE); \
+					    }
+
 #endif
 
