@@ -175,9 +175,6 @@ static enum http_method get_request_method_and_type(char *header, struct header_
 			header_struct->requested_objname = token_copy;
 			header_struct->ext = ext;
 
-			//free (tokenizer_outer_old);
-			//free (tokenizer_inner_old);
-
 			return ret;
 		}
 		else
@@ -196,8 +193,7 @@ static enum http_method get_request_method_and_type(char *header, struct header_
 		token = strtok_r (tokenizer_inner, " ", &tokenizer_inner);
 	}
 
-	//free (tokenizer_outer_old);
-	//free (tokenizer_inner_old);
+
 	return ret;
 }
 
@@ -221,7 +217,7 @@ static char *get_header_value(char *header, char *key)
 		}
 		token = strtok_r(tokenizer, " \n", &tokenizer);
 	}
-	//free (tokenizer_old);
+
 	return NULL;
 }
 
@@ -259,7 +255,7 @@ static struct range_info * get_header_range(char *header)
 			else
 				res->end = -1;	// i.e. by the end
 		}
-		// free (tokenizer_old);
+		
 	}
 	return res;
 }
